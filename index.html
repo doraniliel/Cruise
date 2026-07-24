@@ -266,6 +266,53 @@
   .wall-item .what { font-size: 0.98rem; line-height: 1.4; margin-top: 0.15em; word-break: break-word; }
   .wall-empty { text-align: center; opacity: 0.6; font-size: 0.9rem; padding: 0.5rem; }
   .wall-login { align-self: center; }
+  .react-bar { display: flex; gap: 0.35rem; margin-top: 0.5rem; }
+  .react {
+    font-family: inherit; font-size: 0.8rem; color: #fff; cursor: pointer;
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px; padding: 0.2em 0.6em; transition: transform 0.1s ease;
+  }
+  .react:active { transform: scale(0.92); }
+  .react.on { background: rgba(255, 210, 63, 0.22); border-color: var(--accent); }
+  .react span { font-variant-numeric: tabular-nums; }
+
+  /* מקטע יומי — צ'ק-אין, סקר, לוח מובילים */
+  .daily { display: flex; flex-direction: column; gap: 1rem; width: min(92vw, 32rem); }
+  .checkin-row, .poll, .leaderboard {
+    background: rgba(8, 16, 26, 0.5); border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 18px; padding: 1rem 1.1rem;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .checkin-head, .lb-head { font-size: 1rem; font-weight: 800; text-align: center; margin-bottom: 0.6rem; }
+  .checkin-names { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+  .chip-name {
+    font-size: 0.85rem; font-weight: 700; background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 999px; padding: 0.3em 0.8em;
+  }
+  .checkin-empty { opacity: 0.6; font-size: 0.88rem; }
+  .streak { text-align: center; margin-top: 0.6rem; font-weight: 800; color: var(--accent); }
+  .poll-q { font-size: 1.05rem; font-weight: 800; text-align: center; margin-bottom: 0.75rem; text-wrap: balance; }
+  .poll-opts { display: flex; flex-direction: column; gap: 0.5rem; }
+  .poll-opt {
+    position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between;
+    font-family: inherit; font-size: 0.95rem; font-weight: 700; color: #fff; cursor: pointer;
+    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px; padding: 0.65em 0.9em; text-align: right;
+  }
+  .poll-opt .fillbar {
+    position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 0%;
+    background: rgba(255, 210, 63, 0.22); z-index: 0; transition: width 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+  .poll-opt.mine { border-color: var(--accent); }
+  .poll-opt .lbl, .poll-opt .pct { position: relative; z-index: 1; }
+  .poll-opt .pct { opacity: 0.85; font-variant-numeric: tabular-nums; }
+  .poll-hint { text-align: center; font-size: 0.8rem; opacity: 0.7; margin-top: 0.6rem; }
+  .lb-list { display: flex; flex-direction: column; gap: 0.35rem; }
+  .lb-item { display: flex; align-items: center; padding: 0.35em 0.55em; border-radius: 10px; }
+  .lb-item.me { background: rgba(255, 255, 255, 0.08); }
+  .lb-rank { font-weight: 800; color: var(--accent); min-width: 1.6em; }
+  .lb-name { flex: 1; text-align: right; font-weight: 700; }
+  .lb-pts { font-variant-numeric: tabular-nums; opacity: 0.85; font-weight: 700; }
 
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -322,6 +369,23 @@
     <button class="btn" id="reroll" type="button">🎲 עוד אחת</button>
     <button class="btn share" id="share" type="button">שתפו בוואטסאפ ↗</button>
   </div>
+
+  <section class="daily" id="daily" hidden>
+    <div class="checkin-row">
+      <div class="checkin-head">👋 מי כאן היום</div>
+      <div class="checkin-names" id="checkinNames">—</div>
+      <div class="streak" id="streak" hidden></div>
+    </div>
+    <div class="poll" id="pollCard">
+      <div class="poll-q" id="pollQ">…</div>
+      <div class="poll-opts" id="pollOpts"></div>
+      <div class="poll-hint" id="pollHint"></div>
+    </div>
+    <div class="leaderboard">
+      <div class="lb-head">🏆 לוח מובילים</div>
+      <div class="lb-list" id="lbList"></div>
+    </div>
+  </section>
 
   <section class="social" id="social" hidden>
     <button class="hype" id="hypeBtn" type="button">
@@ -645,6 +709,9 @@
   function finishIdentify(name, pin) {
     try { localStorage.setItem("cruiseName", name); localStorage.setItem("cruisePin", pin); } catch (e) {}
     renderGreeting(); updateWallLock(); closeSheet(); celebrate(1600); reroll();
+    if (typeof doCheckin === "function") doCheckin();
+    if (typeof loadWall === "function") loadWall();
+    if (typeof renderPoll === "function") renderPoll();
   }
   function becomeGuest() {
     try { localStorage.removeItem("cruiseName"); localStorage.removeItem("cruisePin"); } catch (e) {}
@@ -816,20 +883,45 @@
     var h = Math.floor(m / 60); if (h < 24) return "לפני " + h + " ש'";
     return "לפני " + Math.floor(h / 24) + " י'";
   }
+  var REACTS = ["❤️", "😂", "🔥"];
   function loadWall() {
-    api("wall?select=name,body,created_at&order=created_at.desc&limit=40").then(function (r) { return r.json(); })
-      .then(function (rows) {
-        if (!Array.isArray(rows)) return;
-        if (rows.length === 0) {
-          wallList.innerHTML = "<div class='wall-empty'>עדיין אין הודעות — תהיו הראשונים 🌊</div>";
-          return;
-        }
-        wallList.innerHTML = rows.map(function (m) {
-          return "<div class='wall-item'><div><span class='who'>" + esc(m.name || "אנונימי") +
-            "</span> <span class='when'>· " + timeAgo(m.created_at) + "</span></div><div class='what'>" +
-            esc(m.body) + "</div></div>";
+    Promise.all([
+      api("wall?select=id,name,body,created_at&order=created_at.desc&limit=40").then(function (r) { return r.json(); }),
+      api("reactions?select=msg_id,emoji,name").then(function (r) { return r.json(); }).catch(function () { return []; })
+    ]).then(function (res) {
+      var rows = res[0], reacts = res[1];
+      if (!Array.isArray(rows)) return;
+      var me = myName();
+      var rmap = {};
+      (Array.isArray(reacts) ? reacts : []).forEach(function (x) {
+        rmap[x.msg_id] = rmap[x.msg_id] || {};
+        rmap[x.msg_id][x.emoji] = rmap[x.msg_id][x.emoji] || { count: 0, mine: false };
+        rmap[x.msg_id][x.emoji].count++;
+        if (me && x.name === me) rmap[x.msg_id][x.emoji].mine = true;
+      });
+      if (rows.length === 0) {
+        wallList.innerHTML = "<div class='wall-empty'>עדיין אין הודעות — תהיו הראשונים 🌊</div>";
+        return;
+      }
+      wallList.innerHTML = rows.map(function (m) {
+        var bar = REACTS.map(function (e) {
+          var info = (rmap[m.id] && rmap[m.id][e]) || { count: 0, mine: false };
+          return "<button class='react" + (info.mine ? " on" : "") + "' data-msg='" + m.id +
+            "' data-emoji='" + e + "'>" + e + " <span>" + (info.count || "") + "</span></button>";
         }).join("");
-      }).catch(function () {});
+        return "<div class='wall-item'><div><span class='who'>" + esc(m.name || "אנונימי") +
+          "</span> <span class='when'>· " + timeAgo(m.created_at) + "</span></div><div class='what'>" +
+          esc(m.body) + "</div><div class='react-bar'>" + bar + "</div></div>";
+      }).join("");
+    }).catch(function () {});
+  }
+  function toggleReaction(msgId, emoji) {
+    var name = myName(), pin = myPin();
+    if (!name || !pin) { openSheet(); return; }
+    api("rpc/toggle_reaction", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_name: name, p_pin: pin, p_msg: Number(msgId), p_emoji: emoji })
+    }).then(function () { loadWall(); loadLeaderboard(); }).catch(function () {});
   }
   function updateWallLock() {
     if (!wallText || !wallSend) return;
@@ -855,15 +947,150 @@
       .then(function () { wallSend.disabled = false; updateWallLock(); });
   }
 
+  // ---- מקטע יומי: צ'ק-אין, סקר, לוח מובילים ----
+  var checkinNames = document.getElementById("checkinNames");
+  var streakEl = document.getElementById("streak");
+  var pollQ = document.getElementById("pollQ");
+  var pollOpts = document.getElementById("pollOpts");
+  var pollHint = document.getElementById("pollHint");
+  var lbList = document.getElementById("lbList");
+
+  function utcToday() { return new Date().toISOString().slice(0, 10); }
+
+  var POLLS = [
+    { q: "מי יאחר הכי הרבה לטיסה?", opts: ["אלון", "טל", "ערן", "מישהו מפתיע"] },
+    { q: "מי יירדם ראשון על הסיפון?", opts: ["אלון", "טל", "רפאלה", "ליאל"] },
+    { q: "מי ינצח בפוקר בערב הראשון?", opts: ["ערן", "אלכס", "ירון", "הבית תמיד מנצח"] },
+    { q: "מי יאבד משהו בקרוז?", opts: ["אלון", "ליאל", "ערן", "אלכס"] },
+    { q: "מי ייגע לרוית בראש (שוב)?", opts: ["אלכס", "ליאל", "ילד אקראי", "אף אחד — רוצים לחיות"] },
+    { q: "מי יישרף הכי גרוע בשמש?", opts: ["ליאל", "טל", "ערן", "ירון"] },
+    { q: "מי יביא הכי הרבה מזוודות?", opts: ["רוית", "טל", "איריס", "רפאלה"] },
+    { q: "כמה פעמים טל יבדוק את הלו״ז ביום הראשון?", opts: ["פחות מ-5", "5–10", "10–20", "אינסוף"] },
+    { q: "מי יחזור עם הכי הרבה סיפורים?", opts: ["ירון", "ערן", "ליאל", "אלון"] },
+    { q: "מי יבכה ראשון מהתרגשות?", opts: ["טל", "רפאלה", "ליאל", "אלכס"] }
+  ];
+  function currentPoll() {
+    var d = utcToday();
+    var idx = parseInt(d.replace(/-/g, ""), 10) % POLLS.length;
+    return { id: d, def: POLLS[idx] };
+  }
+
+  function doCheckin() {
+    var name = myName(), pin = myPin();
+    if (!name || !pin) return;
+    api("rpc/do_checkin", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_name: name, p_pin: pin })
+    }).then(function () { loadCheckins(); loadLeaderboard(); }).catch(function () {});
+  }
+  function loadCheckins() {
+    if (!checkinNames) return;
+    api("checkins?select=name&day=eq." + utcToday()).then(function (r) { return r.json(); })
+      .then(function (rows) {
+        if (!Array.isArray(rows)) return;
+        if (rows.length === 0) { checkinNames.innerHTML = "<span class='checkin-empty'>אף אחד עדיין… תהיו הראשונים</span>"; }
+        else {
+          checkinNames.innerHTML = rows.map(function (x) {
+            return "<span class='chip-name'>" + esc(x.name) + "</span>";
+          }).join("");
+        }
+      }).catch(function () {});
+    var me = myName();
+    if (me) {
+      api("checkins?select=day&name=eq." + encodeURIComponent(me) + "&order=day.desc&limit=90")
+        .then(function (r) { return r.json(); }).then(function (rows) {
+          if (!Array.isArray(rows) || rows.length === 0) { streakEl.hidden = true; return; }
+          var days = rows.map(function (x) { return x.day; });
+          var set = {}; days.forEach(function (d) { set[d] = true; });
+          var streak = 0;
+          var cur = new Date(utcToday() + "T00:00:00Z");
+          // אם לא נכנס היום, נתחיל מאתמול כדי לא לאפס סתם
+          if (!set[cur.toISOString().slice(0, 10)]) cur.setUTCDate(cur.getUTCDate() - 1);
+          while (set[cur.toISOString().slice(0, 10)]) { streak++; cur.setUTCDate(cur.getUTCDate() - 1); }
+          if (streak >= 2) { streakEl.hidden = false; streakEl.textContent = "🔥 רצף שלך: " + streak + " ימים ברצף"; }
+          else { streakEl.hidden = true; }
+        }).catch(function () {});
+    } else { streakEl.hidden = true; }
+  }
+
+  function renderPoll() {
+    if (!pollQ) return;
+    var p = currentPoll();
+    pollQ.textContent = "🗳️ " + p.def.q;
+    api("votes?select=name,choice&poll=eq." + encodeURIComponent(p.id)).then(function (r) { return r.json(); })
+      .then(function (rows) {
+        rows = Array.isArray(rows) ? rows : [];
+        var total = rows.length, tally = {}, me = myName(), myChoice = null;
+        rows.forEach(function (v) {
+          tally[v.choice] = (tally[v.choice] || 0) + 1;
+          if (me && v.name === me) myChoice = v.choice;
+        });
+        pollOpts.innerHTML = p.def.opts.map(function (opt) {
+          var c = tally[opt] || 0;
+          var pct = total ? Math.round(c / total * 100) : 0;
+          var mine = myChoice === opt;
+          return "<button class='poll-opt" + (mine ? " mine" : "") + "' data-choice='" + esc(opt) + "'>" +
+            "<span class='fillbar' style='width:" + pct + "%'></span>" +
+            "<span class='lbl'>" + (mine ? "✓ " : "") + esc(opt) + "</span>" +
+            "<span class='pct'>" + (total ? pct + "%" : "") + "</span></button>";
+        }).join("");
+        pollHint.textContent = myChoice ? ("הצבעת: " + myChoice + " · אפשר לשנות") :
+          (total ? total + " הצביעו · מה דעתך?" : "היו הראשונים להצביע");
+      }).catch(function () {});
+  }
+  function vote(choice) {
+    var name = myName(), pin = myPin();
+    if (!name || !pin) { openSheet(); return; }
+    var p = currentPoll();
+    api("rpc/cast_vote", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_name: name, p_pin: pin, p_poll: p.id, p_choice: choice })
+    }).then(function () { renderPoll(); loadLeaderboard(); }).catch(function () {});
+  }
+
+  function loadLeaderboard() {
+    if (!lbList) return;
+    api("rpc/leaderboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        if (!Array.isArray(rows)) return;
+        var me = myName();
+        var top = rows.filter(function (x) { return x.points > 0; });
+        if (top.length === 0) { lbList.innerHTML = "<div class='checkin-empty' style='text-align:center'>עדיין אין נקודות — כל כניסה, הצבעה והודעה שוות נקודות 🌟</div>"; return; }
+        lbList.innerHTML = top.slice(0, 10).map(function (x, i) {
+          var medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1) + ".";
+          return "<div class='lb-item" + (me && x.name === me ? " me" : "") + "'>" +
+            "<span class='lb-rank'>" + medal + "</span>" +
+            "<span class='lb-name'>" + esc(x.name) + "</span>" +
+            "<span class='lb-pts'>" + x.points + "</span></div>";
+        }).join("");
+      }).catch(function () {});
+  }
+
+  function startDaily() {
+    document.getElementById("daily").hidden = false;
+    pollOpts.addEventListener("click", function (e) {
+      var b = e.target.closest(".poll-opt"); if (b) vote(b.getAttribute("data-choice"));
+    });
+    doCheckin();
+    loadCheckins(); renderPoll(); loadLeaderboard();
+    window.setInterval(function () { loadCheckins(); renderPoll(); loadLeaderboard(); }, 12000);
+  }
+
   if (hypeBtn) {
     document.getElementById("social").hidden = false;
     hypeBtn.addEventListener("click", tapHype);
     if (wallLoginBtn) wallLoginBtn.addEventListener("click", openSheet);
     wallSend.addEventListener("click", sendWall);
     wallText.addEventListener("keydown", function (e) { if (e.key === "Enter") sendWall(); });
+    wallList.addEventListener("click", function (e) {
+      var b = e.target.closest(".react");
+      if (b) toggleReaction(b.getAttribute("data-msg"), b.getAttribute("data-emoji"));
+    });
     updateWallLock();
     loadHype(); loadWall();
     window.setInterval(function () { loadHype(); loadWall(); }, 6000);
+    startDaily();
   }
 
   // ---- הפעלה ----
