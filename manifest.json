@@ -1,0 +1,17 @@
+{
+  "name": "הקרוז הגדול",
+  "short_name": "הקרוז",
+  "description": "ספירה לאחור משותפת לקרוז — 1 באוקטובר 2026",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#071019",
+  "theme_color": "#0e6e7a",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="ספירה לאחור משותפת לקרוז של 1 באוקטובר 2026, עם בדיחה יומית חדשה לכל מספר ימים שנותר.">
 <meta name="theme-color" content="#0e6e7a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="הקרוז">
 <title>הקרוז הגדול — ספירה לאחור</title>
 <style>
   /* ברירת מחדל = יום */
@@ -19,48 +25,27 @@
     --accent: #ffd23f;
   }
   :root[data-phase="dawn"] {
-    --sky-top: #26305c;
-    --sky-mid: #e97d6a;
-    --sky-low: #ffc78c;
-    --sea-top: #3a7d95;
-    --sea-bot: #163a52;
-    --orb: #ffdba6;
-    --orb-glow: rgba(255, 190, 130, 0.55);
-    --accent: #ffb27d;
+    --sky-top: #26305c; --sky-mid: #e97d6a; --sky-low: #ffc78c;
+    --sea-top: #3a7d95; --sea-bot: #163a52;
+    --orb: #ffdba6; --orb-glow: rgba(255, 190, 130, 0.55); --accent: #ffb27d;
   }
   :root[data-phase="day"] {
-    --sky-top: #3aa0e0;
-    --sky-mid: #8fd0f0;
-    --sky-low: #d6effb;
-    --sea-top: #1f9ea0;
-    --sea-bot: #0b5a68;
-    --orb: #fff3b0;
-    --orb-glow: rgba(255, 235, 130, 0.6);
-    --accent: #ffd23f;
+    --sky-top: #3aa0e0; --sky-mid: #8fd0f0; --sky-low: #d6effb;
+    --sea-top: #1f9ea0; --sea-bot: #0b5a68;
+    --orb: #fff3b0; --orb-glow: rgba(255, 235, 130, 0.6); --accent: #ffd23f;
   }
   :root[data-phase="sunset"] {
-    --sky-top: #2a2a6b;
-    --sky-mid: #ff7e5a;
-    --sky-low: #ffcf6a;
-    --sea-top: #6a4a8a;
-    --sea-bot: #241640;
-    --orb: #ff9e4a;
-    --orb-glow: rgba(255, 140, 70, 0.6);
-    --accent: #ff9e4a;
+    --sky-top: #2a2a6b; --sky-mid: #ff7e5a; --sky-low: #ffcf6a;
+    --sea-top: #6a4a8a; --sea-bot: #241640;
+    --orb: #ff9e4a; --orb-glow: rgba(255, 140, 70, 0.6); --accent: #ff9e4a;
   }
   :root[data-phase="night"] {
-    --sky-top: #050a1c;
-    --sky-mid: #0f1a3a;
-    --sky-low: #1b2b4d;
-    --sea-top: #0c2438;
-    --sea-bot: #04101c;
-    --orb: #eef2fa;
-    --orb-glow: rgba(200, 215, 255, 0.4);
-    --accent: #7fb0ff;
+    --sky-top: #050a1c; --sky-mid: #0f1a3a; --sky-low: #1b2b4d;
+    --sea-top: #0c2438; --sea-bot: #04101c;
+    --orb: #eef2fa; --orb-glow: rgba(200, 215, 255, 0.4); --accent: #7fb0ff;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   html, body { height: 100%; }
 
   body {
@@ -75,165 +60,164 @@
   }
 
   .scene {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    background: linear-gradient(
-      180deg,
-      var(--sky-top) 0%,
-      var(--sky-mid) 42%,
-      var(--sky-low) 57%,
-      var(--sea-top) 57.2%,
-      var(--sea-bot) 100%
-    );
+    position: fixed; inset: 0; z-index: 0; overflow: hidden;
+    background: linear-gradient(180deg,
+      var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-low) 57%,
+      var(--sea-top) 57.2%, var(--sea-bot) 100%);
     transition: background 1.2s ease;
   }
-
   .orb {
-    position: absolute;
-    top: 16%;
-    left: 50%;
-    width: min(28vw, 170px);
-    height: min(28vw, 170px);
-    margin-left: min(-14vw, -85px);
+    position: absolute; top: 16%; left: 50%;
+    width: min(28vw, 170px); height: min(28vw, 170px); margin-left: min(-14vw, -85px);
     border-radius: 50%;
     background: radial-gradient(circle at 50% 50%, var(--orb) 0%, var(--orb) 56%, transparent 72%);
     box-shadow: 0 0 90px 26px var(--orb-glow);
     animation: bob 9s ease-in-out infinite;
     transition: background 1.2s ease, box-shadow 1.2s ease;
   }
-
   .glints { position: absolute; inset: 0; }
-
-  .waves {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -2px;
-    width: 100%;
-    height: 44vh;
-  }
+  .waves { position: absolute; left: 0; right: 0; bottom: -2px; width: 100%; height: 44vh; }
   .wave { position: absolute; left: 0; width: 200%; height: 100%; }
   .wave path { fill: rgba(255, 255, 255, 0.08); }
   .wave.back { animation: drift 15s linear infinite; opacity: 0.5; }
   .wave.front { animation: drift 9s linear infinite reverse; opacity: 0.9; bottom: 0; }
   .wave.front path { fill: rgba(255, 255, 255, 0.13); }
-
   .ship {
-    position: absolute;
-    bottom: 29vh;
-    right: -80px;
+    position: absolute; bottom: 29vh; right: -80px;
     font-size: clamp(2rem, 6vw, 3.4rem);
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
     animation: sail 28s linear infinite, sway 4s ease-in-out infinite;
   }
 
+  .confetti { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+
   .wrap {
-    position: relative;
-    z-index: 2;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(1rem, 3.4vh, 2rem);
+    position: relative; z-index: 2; min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(0.85rem, 3vh, 1.7rem);
     padding: clamp(1.5rem, 5vw, 3rem);
     text-align: center;
   }
 
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55em;
-    font-size: clamp(0.72rem, 2.6vw, 0.95rem);
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #fff;
-    background: rgba(8, 16, 26, 0.5);
-    padding: 0.5em 1.15em;
-    border-radius: 999px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+  .greet {
+    display: inline-flex; align-items: center; gap: 0.5em;
+    font-size: clamp(0.72rem, 2.6vw, 0.92rem); font-weight: 700;
+    color: #fff; background: rgba(8, 16, 26, 0.5);
+    padding: 0.45em 1.05em; border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    cursor: pointer; transition: transform 0.15s ease;
+  }
+  .greet:hover { transform: translateY(-1px); }
+  .greet .edit { opacity: 0.6; font-weight: 600; }
+
+  .eyebrow {
+    font-size: clamp(0.72rem, 2.6vw, 0.95rem); font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase; color: #fff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   }
 
-  /* ---- הטיימר ---- */
   .timer {
-    display: flex;
-    flex-direction: row-reverse;
-    justify-content: center;
-    align-items: stretch;
+    display: flex; flex-direction: row-reverse; justify-content: center; align-items: stretch;
     gap: clamp(0.3rem, 1.8vw, 0.9rem);
     background: rgba(8, 16, 26, 0.42);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 24px;
     padding: clamp(0.9rem, 3.4vw, 1.6rem) clamp(0.8rem, 3.2vw, 1.8rem);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 22px 55px -22px rgba(0, 0, 0, 0.6);
   }
   .unit {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4em;
-    min-width: clamp(3rem, 17vw, 5.2rem);
-    padding: 0 clamp(0.2rem, 1.2vw, 0.6rem);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.4em; min-width: clamp(3rem, 17vw, 5.2rem); padding: 0 clamp(0.2rem, 1.2vw, 0.6rem);
   }
   .unit + .unit { border-inline-end: 1px solid rgba(255, 255, 255, 0.12); }
   .num {
-    font-size: clamp(2.4rem, 12vw, 5rem);
-    font-weight: 800;
-    line-height: 0.95;
-    color: #fff;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    font-size: clamp(2.4rem, 12vw, 5rem); font-weight: 800; line-height: 0.95; color: #fff;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
     text-shadow: 0 3px 20px rgba(0, 0, 0, 0.45);
   }
   .num.sec { color: var(--accent); transition: color 1.2s ease; }
   .ulabel {
-    font-size: clamp(0.62rem, 2.5vw, 0.9rem);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.85);
+    font-size: clamp(0.62rem, 2.5vw, 0.9rem); font-weight: 700;
+    letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.85);
   }
 
   .subtitle {
-    font-size: clamp(1.1rem, 4.6vw, 1.55rem);
-    font-weight: 700;
-    color: #fff;
+    font-size: clamp(1.1rem, 4.6vw, 1.55rem); font-weight: 700; color: #fff;
     text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
   }
 
+  .progress {
+    width: min(90vw, 30rem); display: flex; flex-direction: column; gap: 0.5em;
+  }
+  .progress .track {
+    height: 10px; border-radius: 999px; overflow: hidden;
+    background: rgba(8, 16, 26, 0.45); border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+  .progress .fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), #ffffff);
+    border-radius: 999px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .progress .plabel {
+    font-size: clamp(0.7rem, 2.6vw, 0.85rem); font-weight: 600; color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+  }
+
   .message {
-    max-width: 34ch;
-    font-size: clamp(1.05rem, 4.3vw, 1.42rem);
-    font-weight: 600;
-    line-height: 1.55;
-    color: #fff;
-    background: rgba(8, 16, 26, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 20px;
-    padding: clamp(1.2rem, 4.2vw, 1.7rem) clamp(1.3rem, 5vw, 2rem);
+    max-width: 34ch; font-size: clamp(1.05rem, 4.3vw, 1.42rem); font-weight: 600;
+    line-height: 1.55; color: #fff;
+    background: rgba(8, 16, 26, 0.5); border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 20px; padding: clamp(1.2rem, 4.2vw, 1.7rem) clamp(1.3rem, 5vw, 2rem);
     box-shadow: 0 20px 55px -22px rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    position: relative;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-    text-wrap: pretty;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    position: relative; transition: opacity 0.35s ease, transform 0.35s ease; text-wrap: pretty;
   }
   .message::before {
-    content: "😈";
-    position: absolute;
-    top: -0.72em;
-    inset-inline-start: 1.1em;
-    font-size: 1.55em;
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+    content: "😈"; position: absolute; top: -0.72em; inset-inline-start: 1.1em;
+    font-size: 1.55em; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
   }
   .message.fade { opacity: 0; transform: translateY(8px); }
+
+  .actions { display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5em;
+    font-family: inherit; font-size: clamp(0.85rem, 3.4vw, 1rem); font-weight: 700; color: #fff;
+    background: rgba(8, 16, 26, 0.5); border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px; padding: 0.7em 1.3em; cursor: pointer;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0) scale(0.97); }
+  .btn.share { background: rgba(37, 211, 102, 0.92); border-color: rgba(255, 255, 255, 0.25); color: #06331c; }
+  .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  /* חלון "מי אתה?" */
+  .sheet {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    background: rgba(4, 10, 18, 0.66); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease;
+  }
+  .sheet.open { opacity: 1; visibility: visible; }
+  .sheet-card {
+    width: min(92vw, 26rem); background: rgba(12, 24, 38, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 24px;
+    padding: clamp(1.4rem, 5vw, 2rem); text-align: center;
+    box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.7);
+  }
+  .sheet-card h2 { font-size: 1.4rem; margin-bottom: 0.35em; }
+  .sheet-card p { font-size: 0.9rem; color: rgba(255, 255, 255, 0.75); margin-bottom: 1.2em; }
+  .name-grid { display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: center; }
+  .name-btn {
+    font-family: inherit; font-size: 0.98rem; font-weight: 700; color: #fff;
+    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px; padding: 0.6em 1.05em; cursor: pointer; transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .name-btn:hover { background: rgba(255, 255, 255, 0.16); }
+  .name-btn:active { transform: scale(0.96); }
+  .name-btn.guest { width: 100%; margin-top: 0.3rem; background: transparent; color: rgba(255,255,255,0.7); }
 
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -243,7 +227,7 @@
   @media (prefers-reduced-motion: reduce) {
     .orb, .wave, .ship { animation: none !important; }
     .ship { display: none; }
-    .scene, .orb, .num.sec { transition: none !important; }
+    .scene, .orb, .num.sec, .progress .fill { transition: none !important; }
   }
 </style>
 </head>
@@ -264,8 +248,10 @@
     </g>
   </svg>
 </div>
+<canvas class="confetti" aria-hidden="true"></canvas>
 
 <main class="wrap">
+  <button class="greet" id="greet" type="button" hidden></button>
   <span class="eyebrow">הקרוז הגדול · 1 באוקטובר 2026</span>
 
   <div class="timer" id="timer" aria-live="polite">
@@ -277,16 +263,36 @@
 
   <div class="subtitle" id="subtitle">עד שאנחנו בים 🚢</div>
 
+  <div class="progress">
+    <div class="track"><div class="fill" id="pfill"></div></div>
+    <div class="plabel" id="plabel">כבר בדרך…</div>
+  </div>
+
   <p class="message" id="message">טוען את הבדיחה של היום…</p>
+
+  <div class="actions">
+    <button class="btn" id="reroll" type="button">🎲 עוד אחת</button>
+    <button class="btn share" id="share" type="button">שתפו בוואטסאפ ↗</button>
+  </div>
 </main>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="sheet-card">
+    <h2 id="sheet-title">מי אתה? 🚢</h2>
+    <p>נזהה אותך כדי לכוון אליך בדיחות. (נשמר רק במכשיר שלך)</p>
+    <div class="name-grid" id="nameGrid"></div>
+  </div>
+</div>
 
 <script>
   "use strict";
 
-  // ---- יעד: 1 באוקטובר 2026, חצות מקומי (חודשים 0-11, אוקטובר = 9) ----
-  var TARGET = new Date(2026, 9, 1, 0, 0, 0);
+  var TARGET = new Date(2026, 9, 1, 0, 0, 0);           // 1 באוקטובר 2026, חצות מקומי
+  var START = new Date(2026, 6, 24, 0, 0, 0);           // תחילת הספירה (24 ביולי)
 
-  // ---- מאגר ההודעות: מפתח = מספר הימים המלאים שנותרו ----
+  var CAST = ["טל", "רוית", "ערן", "אלכס", "ירון", "אלון", "ליאל", "רפאלה"];
+
+  // ---- בדיחת היום לפי מספר הימים המלאים שנותרו ----
   var MESSAGES = {
     75: "עוד 75 יום. אפילו אלון היה מגיע בזמן אם היו לו 75 ימים התראה. אולי.",
     74: "74 יום. רוית הכינה רשימה, טל כבר הדפיס אותה בשלושה עותקים.",
@@ -366,11 +372,53 @@
     0: "היום טסים!! ✈️🚢 אלון — קום עכשיו. טל — נשום. רוית — שמרי על הראש. ערן — קלפים בכיס. ליאל — ידיים לעצמך (בינתיים). רפאלה — את גיבורה. שנצא לדרך!"
   };
 
-  function fallback(d) {
-    return "עוד " + d + " יום. כל כך הרבה זמן שאפילו אלון עדיין לא התחיל לחשוב לאחר. תחזרו לספור בקרוב 🍹";
-  }
+  // ---- בונוס: בדיחות כלליות לכפתור 🎲 ----
+  var BONUS = [
+    "מי שלא ארז — שיתחיל. מי שארז — טל, תפסיק לבדוק שוב.",
+    "הים קורא. גם הבופה.",
+    "עוד קצת והמדים היחידים יהיו כפכפים.",
+    "תזכורת: דרכון, מטען, שמש. את אלון תשאירו... לא, קחו גם אותו.",
+    "בקרוז אין רשת. ערן, זה אומר פוקר אמיתי בלבד.",
+    "מי שמביא צ'ארג'ר — מלך. מי ששוכח — אלון.",
+    "הכריש הכי מסוכן בקרוז זה רוית אם נוגעים לה בראש.",
+    "ספירה לאחור זה 90% התרגשות ו-10% 'מה לארוז'.",
+    "טל הכין לו״ז. הים לא קרא אותו.",
+    "שמש, מלח וחברים. וגם קצת דרמה. בעיקר דרמה.",
+    "מי שישן ראשון בקרוז — מתעורר מצויר. חוק ידוע.",
+    "המזוודה הכי כבדה תהיה של מי שאמר 'אני נוסע קליל'.",
+    "16 אנשים, תוכנית אחת: כיף. ו-15 דעות על ארוחת ערב.",
+    "אלון עדיין 'בדרך'. לאן? לא ברור. מתי? גם לא.",
+    "רוית מובילה, טל מתעד, כולם נהנים.",
+    "עוד קצת ומחליפים התראות עבודה בהתראות 'הבר נפתח'."
+  ];
+
+  // ---- בדיחות אישיות לפי מי שמזוהה ----
+  var PERSONAL = {
+    "טל": ["טל, בדקת את הלו״ז? כן. עוד פעם? כן. ורוית עדיין תשנה הכול.",
+           "אתה אחראי על הזמנים. רוית אחראית עליך. ליה אחראית על שניכם."],
+    "רוית": ["רוית — אם מישהו נוגע לך בראש בקרוז, יש ים שלם להיפטר ממנו.",
+             "הבוסית האמיתית של הטיול. טל רק חושב שזה הוא."],
+    "ערן": ["ערן, כמה צ'יפים הברחת למזוודה? 'רק כמה'. שקרן.",
+            "פוקר פייס? עליך רואים הכול מקילומטר, גדול."],
+    "אלכס": ["אלכס, ידיים בכיסים — הראש של רוית מסומן באדום.",
+             "גבוה כל כך שאתה מברך את העננים בדרך לקבינה."],
+    "ירון": ["ירון, תשמור סיפור מפלורנטין לכל ערב. יש לנו הרבה ערבים.",
+             "החדר עם אלון: אחד ישן, השני עדיין מחפש את המפתח."],
+    "אלון": ["אלון, אם אתה קורא את זה — אתה כבר מאחר למשהו.",
+             "קבעת 8:00, הגעת 10:30, קראת לזה 'בערך בזמן'."],
+    "ליאל": ["ליאל, טל וערן קנו מגן חזה. אתה יודע בדיוק למה.",
+             "החופשה של כולם, הפרויקט של ליאל: פטמות."],
+    "רפאלה": ["רפאלה, עוד כמה ימי סבלנות מול ליאל ואת חופשייה. כאילו.",
+              "המשימה שלך: לשרוד את הקרוז בלי להטביע את ליאל."]
+  };
 
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function pick(arr, avoid) {
+    if (arr.length === 0) return "";
+    var v; var tries = 0;
+    do { v = arr[Math.floor(Math.random() * arr.length)]; tries++; } while (v === avoid && tries < 8);
+    return v;
+  }
 
   var dEl = document.getElementById("days");
   var hEl = document.getElementById("hours");
@@ -378,57 +426,77 @@
   var sEl = document.getElementById("secs");
   var subEl = document.getElementById("subtitle");
   var msgEl = document.getElementById("message");
+  var pfill = document.getElementById("pfill");
+  var plabel = document.getElementById("plabel");
+  var greetBtn = document.getElementById("greet");
   var lastDays = null;
+  var currentText = "";
   var departed = false;
+  var MILESTONES = { 50: 1, 40: 1, 30: 1, 25: 1, 21: 1, 14: 1, 10: 1, 7: 1, 5: 1, 3: 1, 2: 1, 1: 1, 0: 1 };
 
-  function updateMessage(days) {
-    var text = MESSAGES[days] || fallback(days);
+  function myName() { try { return localStorage.getItem("cruiseName") || ""; } catch (e) { return ""; } }
+
+  function setMessage(text) {
+    currentText = text;
     msgEl.classList.add("fade");
     window.setTimeout(function () {
       msgEl.textContent = text;
       msgEl.classList.remove("fade");
-    }, 200);
+    }, 180);
+  }
+
+  function dayJoke(days) { return MESSAGES[days] || ("עוד " + days + " יום. עדיין מוקדם אפילו לאלון לאחר. תחזרו לספור בקרוב 🍹"); }
+
+  function reroll() {
+    var pool = BONUS.slice();
+    var name = myName();
+    if (name && PERSONAL[name]) pool = pool.concat(PERSONAL[name]);
+    setMessage(pick(pool, currentText));
+  }
+
+  function updateProgress() {
+    var now = new Date();
+    var pct = (now - START) / (TARGET - START) * 100;
+    if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+    pfill.style.width = pct.toFixed(1) + "%";
+    plabel.textContent = "כבר " + Math.floor(pct) + "% מאחורינו · יאללה 🌊";
   }
 
   function tick() {
     var ms = TARGET - new Date();
-
     if (ms <= 0) {
-      dEl.textContent = "0";
-      hEl.textContent = "00";
-      mEl.textContent = "00";
-      sEl.textContent = "00";
+      dEl.textContent = "0"; hEl.textContent = "00"; mEl.textContent = "00"; sEl.textContent = "00";
       subEl.textContent = "אנחנו כבר בים! 🚢";
+      pfill.style.width = "100%"; plabel.textContent = "100% — יצאנו לדרך! 🎉";
       if (!departed) {
         departed = true;
-        msgEl.textContent = "הקרוז יצא לדרך! אם אתם קוראים את זה מהמרפסת של הספינה — תשתו משהו, מגיע לכם. ליאל, ידיים לעצמך.";
+        setMessage("הקרוז יצא לדרך! אם אתם קוראים את זה מהמרפסת של הספינה — תשתו משהו, מגיע לכם. ליאל, ידיים לעצמך.");
+        celebrate(2600);
       }
       return;
     }
-
     var totalSec = Math.floor(ms / 1000);
     var days = Math.floor(totalSec / 86400);
     var hours = Math.floor((totalSec % 86400) / 3600);
     var mins = Math.floor((totalSec % 3600) / 60);
     var secs = totalSec % 60;
-
-    dEl.textContent = days;
-    hEl.textContent = pad(hours);
-    mEl.textContent = pad(mins);
-    sEl.textContent = pad(secs);
+    dEl.textContent = days; hEl.textContent = pad(hours); mEl.textContent = pad(mins); sEl.textContent = pad(secs);
 
     if (days !== lastDays) {
+      var first = lastDays === null;
       lastDays = days;
       subEl.textContent = days === 0 ? "היום זה קורה ✈️" : "עד שאנחנו בים 🚢";
-      updateMessage(days);
+      setMessage(dayJoke(days));
+      updateProgress();
+      if (MILESTONES[days] && !first) celebrate(2200);
+      if (MILESTONES[days] && first) window.setTimeout(function () { celebrate(2000); }, 500);
     }
   }
 
   // ---- מראה לפי שעה ביום ----
   var starIntensity = 0.15;
   function applyPhase() {
-    var h = new Date().getHours();
-    var phase;
+    var h = new Date().getHours(), phase;
     if (h >= 5 && h < 7) phase = "dawn";
     else if (h >= 7 && h < 17) phase = "day";
     else if (h >= 17 && h < 20) phase = "sunset";
@@ -437,55 +505,140 @@
     starIntensity = phase === "night" ? 1 : (phase === "day" ? 0.12 : 0.5);
   }
 
-  applyPhase();
-  tick();
-  window.setInterval(tick, 1000);
-  window.setInterval(applyPhase, 60000);
+  // ---- זיהוי אישי ----
+  var sheet = document.getElementById("sheet");
+  var nameGrid = document.getElementById("nameGrid");
+  function renderGreeting() {
+    var name = myName();
+    if (name) {
+      greetBtn.hidden = false;
+      greetBtn.innerHTML = "היי " + name + " 👋 <span class='edit'>(החלף)</span>";
+    } else {
+      greetBtn.hidden = true;
+    }
+  }
+  function openSheet() { sheet.classList.add("open"); }
+  function closeSheet() { sheet.classList.remove("open"); }
+  function chooseName(name) {
+    try { if (name) localStorage.setItem("cruiseName", name); else localStorage.removeItem("cruiseName"); } catch (e) {}
+    renderGreeting();
+    closeSheet();
+    if (name) { celebrate(1600); reroll(); }
+  }
+  (function buildSheet() {
+    CAST.forEach(function (n) {
+      var b = document.createElement("button");
+      b.className = "name-btn"; b.type = "button"; b.textContent = n;
+      b.addEventListener("click", function () { chooseName(n); });
+      nameGrid.appendChild(b);
+    });
+    var g = document.createElement("button");
+    g.className = "name-btn guest"; g.type = "button"; g.textContent = "אני סתם צופה 👀";
+    g.addEventListener("click", function () { chooseName(""); });
+    nameGrid.appendChild(g);
+  })();
+  greetBtn.addEventListener("click", openSheet);
+  sheet.addEventListener("click", function (e) { if (e.target === sheet) closeSheet(); });
 
-  // ---- כוכבים / נצנוצים (עוצמה משתנה לפי שעה, מכבד reduced-motion) ----
+  // ---- כפתורים ----
+  document.getElementById("reroll").addEventListener("click", reroll);
+  document.getElementById("share").addEventListener("click", function () {
+    var d = lastDays === null ? "" : lastDays;
+    var text = "🚢 הקרוז הגדול — נשארו " + d + " ימים! ספירה לאחור עם בדיחה יומית: ";
+    var url = location.href.split("#")[0];
+    if (navigator.share) {
+      navigator.share({ title: "הקרוז הגדול", text: text, url: url }).catch(function () {});
+    } else {
+      window.open("https://wa.me/?text=" + encodeURIComponent(text + url), "_blank");
+    }
+  });
+
+  // ---- קונפטי ----
+  var confettiCanvas = document.querySelector(".confetti");
+  var cctx = confettiCanvas.getContext("2d");
+  var confs = [], confActive = false, confUntil = 0, cdpr = Math.min(window.devicePixelRatio || 1, 2);
+  var CONF_COLORS = ["#ff6e4e", "#ffd23f", "#37c2b4", "#ffffff", "#7fb0ff"];
+  function sizeConfetti() {
+    confettiCanvas.width = Math.floor(window.innerWidth * cdpr);
+    confettiCanvas.height = Math.floor(window.innerHeight * cdpr);
+    confettiCanvas.style.width = window.innerWidth + "px";
+    confettiCanvas.style.height = window.innerHeight + "px";
+  }
+  function celebrate(duration) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    sizeConfetti();
+    var W = confettiCanvas.width, N = 130;
+    for (var i = 0; i < N; i++) {
+      confs.push({
+        x: Math.random() * W, y: -Math.random() * confettiCanvas.height * 0.3,
+        vx: (Math.random() - 0.5) * 3 * cdpr, vy: (Math.random() * 3 + 2) * cdpr,
+        r: (Math.random() * 5 + 3) * cdpr, rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.3, color: CONF_COLORS[Math.floor(Math.random() * CONF_COLORS.length)]
+      });
+    }
+    confUntil = performance.now() + (duration || 2000);
+    if (!confActive) { confActive = true; requestAnimationFrame(confFrame); }
+  }
+  function confFrame(t) {
+    cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    for (var i = confs.length - 1; i >= 0; i--) {
+      var c = confs[i];
+      c.x += c.vx; c.y += c.vy; c.vy += 0.05 * cdpr; c.rot += c.vr;
+      cctx.save(); cctx.translate(c.x, c.y); cctx.rotate(c.rot);
+      cctx.fillStyle = c.color; cctx.fillRect(-c.r / 2, -c.r / 2, c.r, c.r * 0.6);
+      cctx.restore();
+      if (c.y > confettiCanvas.height + 20) confs.splice(i, 1);
+    }
+    if (confs.length > 0 || t < confUntil) { requestAnimationFrame(confFrame); }
+    else { confActive = false; cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height); }
+  }
+  window.addEventListener("resize", sizeConfetti);
+
+  // ---- נצנוצים / כוכבים ----
   (function () {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     var canvas = document.querySelector(".glints");
     var ctx = canvas.getContext("2d");
-    var dots = [];
-    var W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
-
+    var dots = [], W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
     function resize() {
       W = canvas.width = Math.floor(window.innerWidth * dpr);
       H = canvas.height = Math.floor(window.innerHeight * dpr);
-      canvas.style.width = window.innerWidth + "px";
-      canvas.style.height = window.innerHeight + "px";
+      canvas.style.width = window.innerWidth + "px"; canvas.style.height = window.innerHeight + "px";
       dots = [];
       var count = Math.round((window.innerWidth * window.innerHeight) / 12000);
       for (var i = 0; i < count; i++) {
-        dots.push({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          r: (Math.random() * 1.6 + 0.4) * dpr,
-          a: Math.random(),
-          s: Math.random() * 0.02 + 0.005
-        });
+        dots.push({ x: Math.random() * W, y: Math.random() * H, r: (Math.random() * 1.6 + 0.4) * dpr,
+          a: Math.random(), s: Math.random() * 0.02 + 0.005 });
       }
     }
-
     function frame() {
       ctx.clearRect(0, 0, W, H);
       for (var i = 0; i < dots.length; i++) {
-        var d = dots[i];
-        d.a += d.s;
+        var d = dots[i]; d.a += d.s;
         var alpha = (0.2 + Math.abs(Math.sin(d.a)) * 0.6) * starIntensity;
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255," + alpha + ")";
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255," + alpha + ")"; ctx.fill();
       }
       requestAnimationFrame(frame);
     }
-
-    window.addEventListener("resize", resize);
-    resize();
-    requestAnimationFrame(frame);
+    window.addEventListener("resize", resize); resize(); requestAnimationFrame(frame);
   })();
+
+  // ---- הפעלה ----
+  applyPhase();
+  renderGreeting();
+  if (!myName()) { try { if (!localStorage.getItem("cruiseAsked")) { localStorage.setItem("cruiseAsked", "1"); openSheet(); } } catch (e) {} }
+  tick();
+  updateProgress();
+  window.setInterval(tick, 1000);
+  window.setInterval(applyPhase, 60000);
+  window.setInterval(updateProgress, 60000);
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("service-worker.js").catch(function () {});
+    });
+  }
 </script>
 </body>
 </html>
