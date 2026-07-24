@@ -278,6 +278,28 @@
   .react:active { transform: scale(0.92); }
   .react.on { background: rgba(255, 210, 63, 0.22); border-color: var(--accent); }
   .react span { font-variant-numeric: tabular-nums; }
+  .reply-btn {
+    font-family: inherit; font-size: 0.8rem; color: #fff; cursor: pointer;
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px; padding: 0.2em 0.7em; transition: transform 0.1s ease;
+  }
+  .reply-btn:active { transform: scale(0.92); }
+  .replies {
+    margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.45rem;
+    border-inline-start: 2px solid rgba(255, 255, 255, 0.14); padding-inline-start: 0.7rem;
+  }
+  .reply-item { text-align: right; }
+  .reply-item .who { font-weight: 700; color: var(--accent); font-size: 0.82rem; }
+  .reply-item .when { font-size: 0.68rem; opacity: 0.55; }
+  .reply-item .rbody { font-size: 0.9rem; line-height: 1.4; word-break: break-word; margin-top: 0.1em; }
+  .reply-form { display: flex; gap: 0.4rem; margin-top: 0.55rem; }
+  .reply-form .reply-input {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 0.9rem; color: #fff;
+    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px; padding: 0.5em 0.7em; direction: rtl;
+  }
+  .reply-form .reply-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+  .reply-form .reply-send { padding: 0.5em 1em; font-size: 0.85rem; }
 
   /* מקטע יומי — צ'ק-אין, סקר, לוח מובילים */
   .daily { display: flex; flex-direction: column; gap: 1rem; width: min(92vw, 32rem); }
@@ -969,12 +991,14 @@
     var w = document.getElementById("wallList");
     if (w) w.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+  var replyingTo = null;
   function loadWall() {
     return Promise.all([
       api("wall?select=id,name,body,created_at&order=created_at.desc&limit=40").then(function (r) { return r.json(); }),
-      api("reactions?select=msg_id,emoji,name").then(function (r) { return r.json(); }).catch(function () { return []; })
+      api("reactions?select=msg_id,emoji,name").then(function (r) { return r.json(); }).catch(function () { return []; }),
+      api("replies?select=msg_id,name,body,created_at&order=created_at.asc&limit=500").then(function (r) { return r.json(); }).catch(function () { return []; })
     ]).then(function (res) {
-      var rows = res[0], reacts = res[1];
+      var rows = res[0], reacts = res[1], reps = res[2];
       if (!Array.isArray(rows)) return;
       var me = myName();
       var rmap = {};
@@ -983,6 +1007,10 @@
         rmap[x.msg_id][x.emoji] = rmap[x.msg_id][x.emoji] || { count: 0, mine: false };
         rmap[x.msg_id][x.emoji].count++;
         if (me && x.name === me) rmap[x.msg_id][x.emoji].mine = true;
+      });
+      var repMap = {};
+      (Array.isArray(reps) ? reps : []).forEach(function (x) {
+        (repMap[x.msg_id] = repMap[x.msg_id] || []).push(x);
       });
       if (rows.length === 0) {
         wallList.innerHTML = "<div class='wall-empty'>עדיין אין הודעות — תהיו הראשונים 🌊</div>";
@@ -994,9 +1022,16 @@
           return "<button class='react" + (info.mine ? " on" : "") + "' data-msg='" + m.id +
             "' data-emoji='" + e + "'>" + e + " <span>" + (info.count || "") + "</span></button>";
         }).join("");
+        var reps2 = repMap[m.id] || [];
+        var repliesHtml = reps2.length ? "<div class='replies'>" + reps2.map(function (rp) {
+          return "<div class='reply-item'><span class='who'>" + avatarFor(rp.name) + " " + esc(rp.name) +
+            "</span> <span class='when'>· " + timeAgo(rp.created_at) + "</span><div class='rbody'>" + esc(rp.body) + "</div></div>";
+        }).join("") + "</div>" : "";
         return "<div class='wall-item'><div><span class='who'>" + esc(m.name || "אנונימי") +
           "</span> <span class='when'>· " + timeAgo(m.created_at) + "</span></div><div class='what'>" +
-          esc(m.body) + "</div><div class='react-bar'>" + bar + "</div></div>";
+          esc(m.body) + "</div><div class='react-bar'>" + bar +
+          "<button class='reply-btn' data-msg='" + m.id + "'>💬 הגב</button></div>" +
+          repliesHtml + "</div>";
       }).join("");
     }).catch(function () {});
   }
@@ -1007,6 +1042,36 @@
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ p_name: name, p_pin: pin, p_msg: Number(msgId), p_emoji: emoji })
     }).then(function () { loadWall(); loadLeaderboard(); }).catch(function () {});
+  }
+  function closeReplyForm() {
+    var f = wallList.querySelector(".reply-form");
+    if (f && f.parentNode) f.parentNode.removeChild(f);
+    replyingTo = null;
+  }
+  function openReplyForm(msgId, btn) {
+    closeReplyForm();
+    var item = btn.closest(".wall-item");
+    if (!item) return;
+    replyingTo = String(msgId);
+    var f = document.createElement("div");
+    f.className = "reply-form"; f.setAttribute("data-msg", msgId);
+    f.innerHTML = "<input class='reply-input' type='text' maxlength='200' placeholder='כתוב תגובה…' aria-label='תגובה'>" +
+      "<button class='btn reply-send' type='button'>שלח</button>";
+    item.appendChild(f);
+    var inp = f.querySelector(".reply-input");
+    if (inp) { inp.focus(); inp.addEventListener("keydown", function (e) { if (e.key === "Enter") submitReply(msgId, inp.value); }); }
+  }
+  function submitReply(msgId, text) {
+    text = (text || "").trim(); if (!text) return;
+    if (!ensureAuth()) return;
+    var me = myName(), pin = myPin();
+    api("rpc/post_reply", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_name: me, p_pin: pin, p_msg: Number(msgId), p_body: text.slice(0, 200) })
+    }).then(function (r) {
+      if (r.ok) { replyingTo = null; loadWall(); loadLeaderboard(); }
+      else { alert("לא הצלחנו לשלוח את התגובה. נסה שוב."); }
+    }).catch(function () {});
   }
   // יש שם? נחשב מחובר (השדה פתוח). את הקוד מבקשים רק בזמן פעולה, אם הוא חסר.
   function ensureAuth() {
@@ -1364,12 +1429,20 @@
     wallSend.addEventListener("click", sendWall);
     wallText.addEventListener("keydown", function (e) { if (e.key === "Enter") sendWall(); });
     wallList.addEventListener("click", function (e) {
-      var b = e.target.closest(".react");
-      if (b) toggleReaction(b.getAttribute("data-msg"), b.getAttribute("data-emoji"));
+      var rep = e.target.closest(".reply-btn");
+      if (rep) { openReplyForm(rep.getAttribute("data-msg"), rep); return; }
+      var snd = e.target.closest(".reply-send");
+      if (snd) {
+        var form = snd.closest(".reply-form");
+        if (form) { var inp = form.querySelector(".reply-input"); submitReply(form.getAttribute("data-msg"), inp ? inp.value : ""); }
+        return;
+      }
+      var rb = e.target.closest(".react");
+      if (rb) { toggleReaction(rb.getAttribute("data-msg"), rb.getAttribute("data-emoji")); return; }
     });
     updateWallLock();
     loadHype(); loadWall();
-    window.setInterval(function () { loadHype(); loadWall(); }, 6000);
+    window.setInterval(function () { loadHype(); if (!replyingTo) loadWall(); }, 6000);
     startDaily();
   }
 

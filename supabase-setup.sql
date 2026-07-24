@@ -166,17 +166,47 @@ end;
 $$;
 grant execute on function public.toggle_reaction(text, text, bigint, text) to anon, authenticated;
 
+-- ===== תגובות על הודעות בקיר =====
+create table if not exists public.replies (
+  id         bigint generated always as identity primary key,
+  msg_id     bigint not null references public.wall(id) on delete cascade,
+  name       text,
+  body       text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.replies enable row level security;
+drop policy if exists replies_read on public.replies;
+create policy replies_read on public.replies for select using (true);
+
+create or replace function public.post_reply(p_name text, p_pin text, p_msg bigint, p_body text)
+  returns public.replies language plpgsql security definer set search_path = public
+as $$
+declare r public.replies;
+begin
+  if not exists (select 1 from public.members where name = p_name and pin = p_pin) then
+    raise exception 'invalid credentials' using errcode = '28000';
+  end if;
+  if char_length(coalesce(p_body, '')) not between 1 and 200 then
+    raise exception 'invalid body length';
+  end if;
+  insert into public.replies (msg_id, name, body) values (p_msg, p_name, left(p_body, 200)) returning * into r;
+  return r;
+end;
+$$;
+grant execute on function public.post_reply(text, text, bigint, text) to anon, authenticated;
+
 -- ===== לוח מובילים =====
 create or replace function public.leaderboard()
   returns table(name text, points bigint) language sql security definer set search_path = public
 as $$
   select m.name,
-    (coalesce(c.d, 0) * 2 + coalesce(w.p, 0) * 3 + coalesce(v.q, 0) + coalesce(r.k, 0))::bigint as points
+    (coalesce(c.d, 0) * 2 + coalesce(w.p, 0) * 3 + coalesce(v.q, 0) + coalesce(r.k, 0) + coalesce(rp.n, 0) * 2)::bigint as points
   from public.members m
   left join (select name, count(*) d from public.checkins group by name) c on c.name = m.name
   left join (select name, count(*) p from public.wall     group by name) w on w.name = m.name
   left join (select name, count(*) q from public.votes    group by name) v on v.name = m.name
   left join (select name, count(*) k from public.reactions group by name) r on r.name = m.name
+  left join (select name, count(*) n from public.replies  group by name) rp on rp.name = m.name
   order by points desc, m.name;
 $$;
 grant execute on function public.leaderboard() to anon, authenticated;
