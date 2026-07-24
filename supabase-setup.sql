@@ -195,6 +195,47 @@ end;
 $$;
 grant execute on function public.post_reply(text, text, bigint, text) to anon, authenticated;
 
+-- ===== עריכה/מחיקה (רק של עצמך) =====
+create or replace function public.edit_wall(p_name text, p_pin text, p_id bigint, p_body text)
+  returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.members where name = p_name and pin = p_pin) then
+    raise exception 'invalid credentials' using errcode = '28000'; end if;
+  if char_length(coalesce(p_body, '')) not between 1 and 200 then
+    raise exception 'invalid body length'; end if;
+  update public.wall set body = left(p_body, 200) where id = p_id and name = p_name;
+end; $$;
+grant execute on function public.edit_wall(text, text, bigint, text) to anon, authenticated;
+
+create or replace function public.delete_wall(p_name text, p_pin text, p_id bigint)
+  returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.members where name = p_name and pin = p_pin) then
+    raise exception 'invalid credentials' using errcode = '28000'; end if;
+  delete from public.wall where id = p_id and name = p_name;
+end; $$;
+grant execute on function public.delete_wall(text, text, bigint) to anon, authenticated;
+
+create or replace function public.edit_reply(p_name text, p_pin text, p_id bigint, p_body text)
+  returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.members where name = p_name and pin = p_pin) then
+    raise exception 'invalid credentials' using errcode = '28000'; end if;
+  if char_length(coalesce(p_body, '')) not between 1 and 200 then
+    raise exception 'invalid body length'; end if;
+  update public.replies set body = left(p_body, 200) where id = p_id and name = p_name;
+end; $$;
+grant execute on function public.edit_reply(text, text, bigint, text) to anon, authenticated;
+
+create or replace function public.delete_reply(p_name text, p_pin text, p_id bigint)
+  returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.members where name = p_name and pin = p_pin) then
+    raise exception 'invalid credentials' using errcode = '28000'; end if;
+  delete from public.replies where id = p_id and name = p_name;
+end; $$;
+grant execute on function public.delete_reply(text, text, bigint) to anon, authenticated;
+
 -- ===== לוח מובילים =====
 create or replace function public.leaderboard()
   returns table(name text, points bigint) language sql security definer set search_path = public

@@ -269,7 +269,7 @@
   .wall-login { align-self: center; }
   .poke { align-self: center; }
   .poke-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
-  .react-bar { display: flex; gap: 0.35rem; margin-top: 0.5rem; }
+  .react-bar { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; align-items: center; }
   .react {
     font-family: inherit; font-size: 0.8rem; color: #fff; cursor: pointer;
     background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
@@ -300,6 +300,15 @@
   }
   .reply-form .reply-input::placeholder { color: rgba(255, 255, 255, 0.5); }
   .reply-form .reply-send { padding: 0.5em 1em; font-size: 0.85rem; }
+  .edit-save, .edit-cancel { padding: 0.5em 0.9em; font-size: 0.85rem; }
+  .edit-cancel { background: rgba(255, 255, 255, 0.12); }
+  .mini {
+    background: transparent; border: none; cursor: pointer; font-size: 0.9rem;
+    line-height: 1; padding: 0 0.15em; opacity: 0.7; transition: transform 0.1s ease;
+  }
+  .mini:active { transform: scale(0.9); }
+  .reply-item .mini { font-size: 0.8rem; }
+  .count-lbl { font-size: 0.75rem; opacity: 0.7; align-self: center; margin-inline-start: auto; }
 
   /* מקטע יומי — צ'ק-אין, סקר, לוח מובילים */
   .daily { display: flex; flex-direction: column; gap: 1rem; width: min(92vw, 32rem); }
@@ -1001,16 +1010,17 @@
     var w = document.getElementById("wallList");
     if (w) w.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  var replyingTo = null;
+  var replyingTo = null, editingId = null;
+  function wallBusy() { return replyingTo || editingId; }
   function loadWall() {
     return Promise.all([
       api("wall?select=id,name,body,created_at&order=created_at.desc&limit=40").then(function (r) { return r.json(); }),
       api("reactions?select=msg_id,emoji,name").then(function (r) { return r.json(); }).catch(function () { return []; }),
-      api("replies?select=msg_id,name,body,created_at&order=created_at.asc&limit=500").then(function (r) { return r.json(); }).catch(function () { return []; })
+      api("replies?select=id,msg_id,name,body,created_at&order=created_at.asc&limit=500").then(function (r) { return r.json(); }).catch(function () { return []; })
     ]).then(function (res) {
       var rows = res[0], reacts = res[1], reps = res[2];
       if (!Array.isArray(rows)) return;
-      var me = myName();
+      var me = myName(), verified = !!(me && myPin());
       var rmap = {};
       (Array.isArray(reacts) ? reacts : []).forEach(function (x) {
         rmap[x.msg_id] = rmap[x.msg_id] || {};
@@ -1027,20 +1037,31 @@
         return;
       }
       wallList.innerHTML = rows.map(function (m) {
+        var totalReacts = 0;
         var bar = REACTS.map(function (e) {
           var info = (rmap[m.id] && rmap[m.id][e]) || { count: 0, mine: false };
+          totalReacts += info.count;
           return "<button class='react" + (info.mine ? " on" : "") + "' data-msg='" + m.id +
             "' data-emoji='" + e + "'>" + e + " <span>" + (info.count || "") + "</span></button>";
         }).join("");
         var reps2 = repMap[m.id] || [];
         var repliesHtml = reps2.length ? "<div class='replies'>" + reps2.map(function (rp) {
+          var repOwn = (verified && rp.name === me) ?
+            " <button class='mini rep-edit' data-id='" + rp.id + "' title='עריכה'>✏️</button><button class='mini rep-del' data-id='" + rp.id + "' title='מחיקה'>🗑️</button>" : "";
           return "<div class='reply-item'><span class='who'>" + avatarFor(rp.name) + " " + esc(rp.name) +
-            "</span> <span class='when' title='" + esc(timeAgo(rp.created_at)) + "'>· " + esc(formatDT(rp.created_at)) + "</span><div class='rbody'>" + esc(rp.body) + "</div></div>";
+            "</span> <span class='when' title='" + esc(timeAgo(rp.created_at)) + "'>· " + esc(formatDT(rp.created_at)) + "</span>" + repOwn +
+            "<div class='rbody'>" + esc(rp.body) + "</div></div>";
         }).join("") + "</div>" : "";
+        var parts = [];
+        if (reps2.length) parts.push("💬 " + reps2.length + (reps2.length === 1 ? " תגובה" : " תגובות"));
+        if (totalReacts) parts.push("❤️ " + totalReacts);
+        var countLbl = parts.length ? "<span class='count-lbl'>" + parts.join(" · ") + "</span>" : "";
+        var ownBtns = (verified && m.name === me) ?
+          "<button class='mini msg-edit' data-id='" + m.id + "' title='עריכה'>✏️</button><button class='mini msg-del' data-id='" + m.id + "' title='מחיקה'>🗑️</button>" : "";
         return "<div class='wall-item'><div><span class='who'>" + esc(m.name || "אנונימי") +
           "</span> <span class='when' title='" + esc(timeAgo(m.created_at)) + "'>· " + esc(formatDT(m.created_at)) + "</span></div><div class='what'>" +
           esc(m.body) + "</div><div class='react-bar'>" + bar +
-          "<button class='reply-btn' data-msg='" + m.id + "'>💬 הגב</button></div>" +
+          "<button class='reply-btn' data-msg='" + m.id + "'>💬 הגב</button>" + ownBtns + countLbl + "</div>" +
           repliesHtml + "</div>";
       }).join("");
     }).catch(function () {});
@@ -1054,9 +1075,51 @@
     }).then(function () { loadWall(); loadLeaderboard(); }).catch(function () {});
   }
   function closeReplyForm() {
-    var f = wallList.querySelector(".reply-form");
+    var f = wallList.querySelector(".reply-form, .edit-form");
     if (f && f.parentNode) f.parentNode.removeChild(f);
-    replyingTo = null;
+    replyingTo = null; editingId = null;
+  }
+  function openEditForm(id, kind, anchor, currentText) {
+    if (!ensureAuth()) return;
+    closeReplyForm();
+    editingId = kind + ":" + id;
+    var f = document.createElement("div");
+    f.className = "reply-form edit-form";
+    f.setAttribute("data-id", id); f.setAttribute("data-kind", kind);
+    var inp = document.createElement("input");
+    inp.className = "reply-input"; inp.type = "text"; inp.maxLength = 200; inp.value = currentText || "";
+    var save = document.createElement("button");
+    save.className = "btn edit-save"; save.type = "button"; save.textContent = "שמור";
+    var cancel = document.createElement("button");
+    cancel.className = "btn edit-cancel"; cancel.type = "button"; cancel.textContent = "ביטול";
+    f.appendChild(inp); f.appendChild(save); f.appendChild(cancel);
+    anchor.appendChild(f);
+    inp.focus();
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") submitEdit(); });
+  }
+  function submitEdit() {
+    var f = wallList.querySelector(".edit-form"); if (!f) return;
+    var inp = f.querySelector(".reply-input");
+    var text = (inp ? inp.value : "").trim(); if (!text) return;
+    if (!ensureAuth()) return;
+    var me = myName(), pin = myPin();
+    var id = Number(f.getAttribute("data-id")), kind = f.getAttribute("data-kind");
+    api(kind === "reply" ? "rpc/edit_reply" : "rpc/edit_wall", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_name: me, p_pin: pin, p_id: id, p_body: text.slice(0, 200) })
+    }).then(function (r) {
+      if (r.ok) { editingId = null; loadWall(); }
+      else { alert("לא הצלחנו לשמור את העריכה."); }
+    }).catch(function () {});
+  }
+  function deleteItem(id, kind) {
+    if (!ensureAuth()) return;
+    if (!window.confirm(kind === "reply" ? "למחוק את התגובה?" : "למחוק את ההודעה? (כולל התגובות והריאקשנים עליה)")) return;
+    var me = myName(), pin = myPin();
+    api(kind === "reply" ? "rpc/delete_reply" : "rpc/delete_wall", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ p_name: me, p_pin: pin, p_id: Number(id) })
+    }).then(function (r) { if (r.ok) { loadWall(); loadLeaderboard(); } }).catch(function () {});
   }
   function openReplyForm(msgId, btn) {
     if (!ensureAuth()) return;
@@ -1440,20 +1503,32 @@
     wallSend.addEventListener("click", sendWall);
     wallText.addEventListener("keydown", function (e) { if (e.key === "Enter") sendWall(); });
     wallList.addEventListener("click", function (e) {
-      var rep = e.target.closest(".reply-btn");
-      if (rep) { openReplyForm(rep.getAttribute("data-msg"), rep); return; }
+      var me2 = e.target.closest(".msg-edit");
+      if (me2) { var wi = me2.closest(".wall-item"); var wb = wi ? wi.querySelector(".what") : null; openEditForm(me2.getAttribute("data-id"), "wall", wi, wb ? wb.textContent : ""); return; }
+      var md = e.target.closest(".msg-del");
+      if (md) { deleteItem(md.getAttribute("data-id"), "wall"); return; }
+      var re2 = e.target.closest(".rep-edit");
+      if (re2) { var ri = re2.closest(".reply-item"); var rbo = ri ? ri.querySelector(".rbody") : null; openEditForm(re2.getAttribute("data-id"), "reply", ri, rbo ? rbo.textContent : ""); return; }
+      var rd = e.target.closest(".rep-del");
+      if (rd) { deleteItem(rd.getAttribute("data-id"), "reply"); return; }
+      var es = e.target.closest(".edit-save");
+      if (es) { submitEdit(); return; }
+      var ec = e.target.closest(".edit-cancel");
+      if (ec) { closeReplyForm(); loadWall(); return; }
       var snd = e.target.closest(".reply-send");
       if (snd) {
         var form = snd.closest(".reply-form");
         if (form) { var inp = form.querySelector(".reply-input"); submitReply(form.getAttribute("data-msg"), inp ? inp.value : ""); }
         return;
       }
+      var rep = e.target.closest(".reply-btn");
+      if (rep) { openReplyForm(rep.getAttribute("data-msg"), rep); return; }
       var rb = e.target.closest(".react");
       if (rb) { toggleReaction(rb.getAttribute("data-msg"), rb.getAttribute("data-emoji")); return; }
     });
     updateWallLock();
     loadHype(); loadWall();
-    window.setInterval(function () { loadHype(); if (!replyingTo) loadWall(); }, 6000);
+    window.setInterval(function () { loadHype(); if (!wallBusy()) loadWall(); }, 6000);
     startDaily();
   }
 
