@@ -372,7 +372,7 @@
 
   <section class="daily" id="daily" hidden>
     <div class="checkin-row">
-      <div class="checkin-head">👋 מי כאן היום</div>
+      <div class="checkin-head">👋 מי התחבר היום</div>
       <div class="checkin-names" id="checkinNames">—</div>
       <div class="streak" id="streak" hidden></div>
     </div>
@@ -1031,7 +1031,7 @@
     api("checkins?select=name&day=eq." + utcToday()).then(function (r) { return r.json(); })
       .then(function (rows) {
         if (!Array.isArray(rows)) return;
-        if (rows.length === 0) { checkinNames.innerHTML = "<span class='checkin-empty'>אף אחד עדיין… תהיו הראשונים</span>"; }
+        if (rows.length === 0) { checkinNames.innerHTML = "<span class='checkin-empty'>אף אחד עדיין לא התחבר היום… היו הראשונים</span>"; }
         else {
           checkinNames.innerHTML = rows.map(function (x) {
             return "<span class='chip-name'>" + esc(x.name) + "</span>";
