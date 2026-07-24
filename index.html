@@ -268,6 +268,7 @@
   .wall-empty { text-align: center; opacity: 0.6; font-size: 0.9rem; padding: 0.5rem; }
   .wall-login { align-self: center; }
   .poke { align-self: center; }
+  .poke-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
   .react-bar { display: flex; gap: 0.35rem; margin-top: 0.5rem; }
   .react {
     font-family: inherit; font-size: 0.8rem; color: #fff; cursor: pointer;
@@ -378,7 +379,8 @@
       <div class="checkin-names" id="checkinNames">—</div>
       <div class="streak" id="streak" hidden></div>
     </div>
-    <button class="btn poke" id="pokeBtn" type="button">👉 דחוף את אלון</button>
+    <button class="btn poke" id="pokeBtn" type="button">👉 דחוף מישהו</button>
+    <div class="poke-grid" id="pokeGrid" hidden></div>
     <div class="poll" id="pollCard">
       <div class="poll-q" id="pollQ">…</div>
       <div class="poll-opts" id="pollOpts"></div>
@@ -1041,22 +1043,56 @@
   var pollHint = document.getElementById("pollHint");
   var lbList = document.getElementById("lbList");
   var pokeBtn = document.getElementById("pokeBtn");
+  var pokeGrid = document.getElementById("pokeGrid");
 
-  var POKES = [
-    "👉 דחפתי את אלון. אלון, תתחיל לארוז — הספינה לא מחכה לאף אחד!",
-    "👉 אלון נדחף! תזכורת ידידותית: אתה כבר מאחר למשהו כרגע.",
-    "👉 דחיפה לאלון: איפה הדרכון? תתחיל לחפש עכשיו, לא בבוקר הטיסה.",
-    "👉 אלון, זו דחיפה רשמית. קום מהמיטה, אנחנו טסים בקרוב.",
-    "👉 דחפתי את אלון. 'עוד חמש דקות' שלך זה כבר שעה. זוז."
-  ];
-  function pokeAlon() {
+  var POKES = {
+    "טל": ["👉 דחיפה לטל: עזוב את הלו״ז שנייה, הכול יהיה בסדר. רוית תסדר.",
+           "👉 טל, נדחפת. תוריד גרסה מהאקסל ותנשום קצת.",
+           "👉 דחפתי את טל. הזמנים בשליטה — עכשיו תשלוט גם בעצמך."],
+    "רוית": ["👉 דחיפה לרוית: את הבוסית, אבל גם לבוסית מגיע להתלהב. יאללה!",
+             "👉 רוית, נדחפת. תני לטל להרגיש שהוא מחליט משהו היום.",
+             "👉 דחפתי את רוית. שומרים על הראש, דוחפים בעדינות."],
+    "ערן": ["👉 דחיפה לערן: עזוב את הקלפים רגע, יש קרוז שלם לחכות לו.",
+            "👉 ערן, נדחפת. פוקר פייס לא יעזור פה — תתלהב כבר.",
+            "👉 דחפתי את ערן. שמור צ'יפים, נשארו לך עוד ימים לנקות אותנו."],
+    "אלכס": ["👉 דחיפה לאלכס: תתכופף, תתלהב, ורק אל תיגע לרוית בראש.",
+             "👉 אלכס, נדחפת. גבוה או לא — גם אתה מתרגש, תודה.",
+             "👉 דחפתי את אלכס. ידיים בכיסים, חיוך על הפנים."],
+    "ירון": ["👉 דחיפה לירון: תשמור סיפור מפלורנטין לקרוז, יש עוד המון ערבים.",
+             "👉 ירון, נדחפת. תתחיל לארוז סיפורים, בגדים אחר כך.",
+             "👉 דחפתי את ירון. הקרוז לא מוכן אליך, אבל מי כן."],
+    "אלון": ["👉 דחפתי את אלון. 'עוד חמש דקות' שלך זה כבר שעה. זוז.",
+             "👉 אלון, נדחפת. איפה הדרכון? תתחיל לחפש עכשיו.",
+             "👉 דחיפה לאלון: הספינה לא מחכה. אתה כבר מאחר, כרגיל."],
+    "ליאל": ["👉 דחיפה לליאל: ידיים לעצמך (בינתיים). תתחיל לארוז במקום.",
+             "👉 ליאל, נדחפת. טל וערן מבקשים ממך יום חופש אחד.",
+             "👉 דחפתי את ליאל. תחזיק את ההתלהבות (ואת הידיים)."],
+    "רפאלה": ["👉 דחיפה לרפאלה: נשמי עמוק, עוד קצת ואת בים. לרגע גם בלי ליאל.",
+              "👉 רפאלה, נדחפת. את גיבורה — עכשיו תתלהבי גם קצת.",
+              "👉 דחפתי את רפאלה. הסבלנות תחזיק, אנחנו מאמינים בך."],
+    "איריס": ["👉 דחיפה לאיריס: ברוכה הבאה לכאוס, תתחילי לארוז.",
+              "👉 איריס, נדחפת. נכנסת ברגע האחרון — אל תאחרי גם עכשיו.",
+              "👉 דחפתי את איריס. עוד לא הבנת לאן נכנסת? בקרוז תביני."]
+  };
+  function pokeSomeone(who) {
     if (!ensureAuth()) return;
-    var name = myName(), pin = myPin();
-    var body = POKES[Math.floor(Math.random() * POKES.length)];
+    var me = myName(), pin = myPin();
+    var arr = POKES[who] || ["👉 דחפתי את " + who + ". תתחיל להתכונן, הקרוז מתקרב!"];
+    var body = arr[Math.floor(Math.random() * arr.length)];
     api("rpc/post_to_wall", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ p_name: name, p_pin: pin, p_body: body })
-    }).then(function (r) { if (r.ok) { loadWall(); celebrate(1000); } }).catch(function () {});
+      body: JSON.stringify({ p_name: me, p_pin: pin, p_body: body })
+    }).then(function (r) { if (r.ok) { pokeGrid.hidden = true; loadWall(); celebrate(1000); } }).catch(function () {});
+  }
+  function buildPokeGrid() {
+    if (!pokeGrid || pokeGrid.childNodes.length) return;
+    CAST.forEach(function (n) {
+      var b = document.createElement("button");
+      b.className = "name-btn"; b.type = "button";
+      b.textContent = avatarFor(n) + " " + n;
+      b.addEventListener("click", function () { pokeSomeone(n); });
+      pokeGrid.appendChild(b);
+    });
   }
 
   function utcToday() { return new Date().toISOString().slice(0, 10); }
@@ -1176,7 +1212,8 @@
     pollOpts.addEventListener("click", function (e) {
       var b = e.target.closest(".poll-opt"); if (b) vote(b.getAttribute("data-choice"));
     });
-    if (pokeBtn) pokeBtn.addEventListener("click", pokeAlon);
+    buildPokeGrid();
+    if (pokeBtn) pokeBtn.addEventListener("click", function () { pokeGrid.hidden = !pokeGrid.hidden; });
     doCheckin();
     loadCheckins(); renderPoll(); loadLeaderboard();
     window.setInterval(function () { loadCheckins(); renderPoll(); loadLeaderboard(); }, 12000);

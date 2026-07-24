@@ -1,7 +1,7 @@
 "use strict";
 // Service worker — מאפשר "הוסף למסך הבית" ועבודה גם בלי אינטרנט.
 // אסטרטגיה: network-first (כדי שעדכוני תוכן יגיעו), עם נפילה למטמון.
-var CACHE = "cruise-v3";
+var CACHE = "cruise-v4";
 var ASSETS = [
   "./",
   "./index.html",
