@@ -265,6 +265,7 @@
   .wall-item .when { font-weight: 500; color: rgba(255, 255, 255, 0.55); font-size: 0.72rem; }
   .wall-item .what { font-size: 0.98rem; line-height: 1.4; margin-top: 0.15em; word-break: break-word; }
   .wall-empty { text-align: center; opacity: 0.6; font-size: 0.9rem; padding: 0.5rem; }
+  .wall-login { align-self: center; }
 
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -330,10 +331,11 @@
     </button>
     <div class="wall">
       <div class="wall-head">📌 קיר החבורה</div>
-      <div class="wall-input">
+      <div class="wall-input" id="wallInput">
         <input id="wallText" type="text" maxlength="200" placeholder="כתוב משהו לחבורה…" aria-label="הודעה לקיר">
         <button class="btn" id="wallSend" type="button">פרסם</button>
       </div>
+      <button class="btn wall-login" id="wallLogin" type="button" hidden>🔑 התחבר/י כדי להגיב</button>
       <div class="wall-list" id="wallList"></div>
     </div>
   </section>
@@ -625,7 +627,8 @@
       greetBtn.hidden = false;
       greetBtn.innerHTML = "היי " + name + " 👋 <span class='edit'>(החלף)</span>";
     } else {
-      greetBtn.hidden = true;
+      greetBtn.hidden = false;
+      greetBtn.innerHTML = "🔑 התחבר/י";
     }
   }
   function showNameStep() { stepPin.hidden = true; stepName.hidden = false; }
@@ -778,6 +781,8 @@
   var wallList = document.getElementById("wallList");
   var wallText = document.getElementById("wallText");
   var wallSend = document.getElementById("wallSend");
+  var wallInputRow = document.getElementById("wallInput");
+  var wallLoginBtn = document.getElementById("wallLogin");
   var hypeBase = 0, hypePending = 0, flushTimer = null;
 
   function renderHype() { hypeCountEl.textContent = (hypeBase + hypePending).toLocaleString("he-IL"); }
@@ -831,7 +836,8 @@
     var ok = !!(myName() && myPin());
     wallText.disabled = !ok;
     wallSend.disabled = !ok;
-    wallText.placeholder = ok ? "כתוב משהו לחבורה…" : "בחר/י את שמך למעלה כדי לכתוב";
+    if (wallInputRow) wallInputRow.hidden = !ok;
+    if (wallLoginBtn) wallLoginBtn.hidden = ok;
   }
   function sendWall() {
     var t = wallText.value.trim(); if (!t) return;
@@ -852,6 +858,7 @@
   if (hypeBtn) {
     document.getElementById("social").hidden = false;
     hypeBtn.addEventListener("click", tapHype);
+    if (wallLoginBtn) wallLoginBtn.addEventListener("click", openSheet);
     wallSend.addEventListener("click", sendWall);
     wallText.addEventListener("keydown", function (e) { if (e.key === "Enter") sendWall(); });
     updateWallLock();
