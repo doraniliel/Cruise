@@ -986,6 +986,16 @@
     var h = Math.floor(m / 60); if (h < 24) return "לפני " + h + " ש'";
     return "לפני " + Math.floor(h / 24) + " י'";
   }
+  var HEB_MONTHS = ["בינואר", "בפברואר", "במרץ", "באפריל", "במאי", "ביוני",
+    "ביולי", "באוגוסט", "בספטמבר", "באוקטובר", "בנובמבר", "בדצמבר"];
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+  // תאריך + שעה מלאים, בעברית: "24 ביולי 2026, 14:37"
+  function formatDT(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return d.getDate() + " " + HEB_MONTHS[d.getMonth()] + " " + d.getFullYear() +
+      ", " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
   var REACTS = ["❤️", "😂", "🔥"];
   function scrollToWall() {
     var w = document.getElementById("wallList");
@@ -1025,10 +1035,10 @@
         var reps2 = repMap[m.id] || [];
         var repliesHtml = reps2.length ? "<div class='replies'>" + reps2.map(function (rp) {
           return "<div class='reply-item'><span class='who'>" + avatarFor(rp.name) + " " + esc(rp.name) +
-            "</span> <span class='when'>· " + timeAgo(rp.created_at) + "</span><div class='rbody'>" + esc(rp.body) + "</div></div>";
+            "</span> <span class='when' title='" + esc(timeAgo(rp.created_at)) + "'>· " + esc(formatDT(rp.created_at)) + "</span><div class='rbody'>" + esc(rp.body) + "</div></div>";
         }).join("") + "</div>" : "";
         return "<div class='wall-item'><div><span class='who'>" + esc(m.name || "אנונימי") +
-          "</span> <span class='when'>· " + timeAgo(m.created_at) + "</span></div><div class='what'>" +
+          "</span> <span class='when' title='" + esc(timeAgo(m.created_at)) + "'>· " + esc(formatDT(m.created_at)) + "</span></div><div class='what'>" +
           esc(m.body) + "</div><div class='react-bar'>" + bar +
           "<button class='reply-btn' data-msg='" + m.id + "'>💬 הגב</button></div>" +
           repliesHtml + "</div>";
