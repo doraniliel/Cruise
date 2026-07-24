@@ -704,6 +704,7 @@
     window.setTimeout(function () { pinInput.focus(); }, 50);
   }
   function openSheet() { showNameStep(); sheet.classList.add("open"); }
+  function openSheetAtPin(name) { showPinStep(name); sheet.classList.add("open"); }
   function closeSheet() { sheet.classList.remove("open"); }
 
   function finishIdentify(name, pin) {
@@ -916,16 +917,23 @@
     }).catch(function () {});
   }
   function toggleReaction(msgId, emoji) {
+    if (!ensureAuth()) return;
     var name = myName(), pin = myPin();
-    if (!name || !pin) { openSheet(); return; }
     api("rpc/toggle_reaction", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ p_name: name, p_pin: pin, p_msg: Number(msgId), p_emoji: emoji })
     }).then(function () { loadWall(); loadLeaderboard(); }).catch(function () {});
   }
+  // יש שם? נחשב מחובר (השדה פתוח). את הקוד מבקשים רק בזמן פעולה, אם הוא חסר.
+  function ensureAuth() {
+    var name = myName();
+    if (name && myPin()) return true;
+    if (name) openSheetAtPin(name); else openSheet();
+    return false;
+  }
   function updateWallLock() {
     if (!wallText || !wallSend) return;
-    var ok = !!(myName() && myPin());
+    var ok = !!myName();
     wallText.disabled = !ok;
     wallSend.disabled = !ok;
     if (wallInputRow) wallInputRow.hidden = !ok;
@@ -933,8 +941,8 @@
   }
   function sendWall() {
     var t = wallText.value.trim(); if (!t) return;
+    if (!ensureAuth()) return;
     var name = myName(), pin = myPin();
-    if (!name || !pin) { updateWallLock(); return; }
     wallSend.disabled = true;
     api("rpc/post_to_wall", {
       method: "POST",
@@ -1039,8 +1047,8 @@
       }).catch(function () {});
   }
   function vote(choice) {
+    if (!ensureAuth()) return;
     var name = myName(), pin = myPin();
-    if (!name || !pin) { openSheet(); return; }
     var p = currentPoll();
     api("rpc/cast_vote", {
       method: "POST", headers: { "Content-Type": "application/json" },
