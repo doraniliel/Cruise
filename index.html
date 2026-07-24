@@ -92,6 +92,31 @@
 
   .confetti { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
 
+  .bell {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); inset-inline-start: 12px; z-index: 30;
+    width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(8, 16, 26, 0.6); color: #fff; font-size: 1.35rem; cursor: pointer;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bell-badge {
+    position: absolute; top: -2px; inset-inline-end: -2px; min-width: 18px; height: 18px; padding: 0 4px;
+    border-radius: 999px; background: #ff4d4f; color: #fff; font-size: 0.68rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  .notif-panel {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 62px); inset-inline-start: 12px; z-index: 30;
+    width: min(88vw, 22rem); max-height: 60vh; overflow-y: auto;
+    background: rgba(12, 24, 38, 0.96); border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px; padding: 0.6rem; box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+    display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .notif-item { text-align: right; background: rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 0.5em 0.7em; cursor: pointer; }
+  .notif-item .who { font-weight: 700; color: var(--accent); font-size: 0.85rem; }
+  .notif-item .when { font-size: 0.68rem; opacity: 0.55; }
+  .notif-item .rbody { font-size: 0.9rem; line-height: 1.35; margin-top: 0.1em; word-break: break-word; }
+  .notif-empty { text-align: center; opacity: 0.6; font-size: 0.9rem; padding: 0.8rem; }
+
   .wrap {
     position: relative; z-index: 2; min-height: 100dvh;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -378,6 +403,9 @@
   </svg>
 </div>
 <canvas class="confetti" aria-hidden="true"></canvas>
+
+<button class="bell" id="bell" type="button" aria-label="התראות" hidden>🔔<span class="bell-badge" id="bellBadge" hidden></span></button>
+<div class="notif-panel" id="notifPanel" hidden></div>
 
 <main class="wrap">
   <button class="greet" id="greet" type="button" hidden></button>
@@ -962,6 +990,35 @@
   var wallSend = document.getElementById("wallSend");
   var wallInputRow = document.getElementById("wallInput");
   var wallLoginBtn = document.getElementById("wallLogin");
+  var bell = document.getElementById("bell");
+  var bellBadge = document.getElementById("bellBadge");
+  var notifPanel = document.getElementById("notifPanel");
+  var repliesToMe = [];
+  var notifSeen = null;
+
+  function updateBell() {
+    if (!bell) return;
+    var verified = !!(myName() && myPin());
+    bell.hidden = !verified;
+    if (!verified) { if (notifPanel) notifPanel.hidden = true; return; }
+    var seen = notifSeen ? new Date(notifSeen).getTime() : 0;
+    var unseen = 0;
+    repliesToMe.forEach(function (rp) { if (new Date(rp.created_at).getTime() > seen) unseen++; });
+    if (unseen > 0) { bellBadge.hidden = false; bellBadge.textContent = unseen > 99 ? "99+" : String(unseen); }
+    else { bellBadge.hidden = true; }
+  }
+  function renderNotifPanel() {
+    if (!notifPanel) return;
+    if (repliesToMe.length === 0) { notifPanel.innerHTML = "<div class='notif-empty'>אין עדיין תגובות אליך 🌊</div>"; return; }
+    notifPanel.innerHTML = repliesToMe.slice(0, 20).map(function (rp) {
+      return "<div class='notif-item'><span class='who'>" + avatarFor(rp.name) + " " + esc(rp.name) +
+        " הגיב/ה לך</span> <span class='when'>· " + esc(formatDT(rp.created_at)) + "</span><div class='rbody'>" + esc(rp.body) + "</div></div>";
+    }).join("");
+  }
+  function markNotifSeen() {
+    try { notifSeen = new Date().toISOString(); localStorage.setItem("cruiseNotifSeen", notifSeen); } catch (e) {}
+    updateBell();
+  }
   var hypeBase = 0, hypePending = 0, flushTimer = null;
 
   function renderHype() { hypeCountEl.textContent = (hypeBase + hypePending).toLocaleString("he-IL"); }
@@ -1032,6 +1089,13 @@
       (Array.isArray(reps) ? reps : []).forEach(function (x) {
         (repMap[x.msg_id] = repMap[x.msg_id] || []).push(x);
       });
+      // התראות: תגובות של אחרים על ההודעות שלי
+      var myMsgIds = {};
+      rows.forEach(function (m) { if (me && m.name === me) myMsgIds[m.id] = true; });
+      repliesToMe = (Array.isArray(reps) ? reps : []).filter(function (rp) {
+        return myMsgIds[rp.msg_id] && rp.name !== me;
+      }).sort(function (a, b) { return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); });
+      updateBell();
       if (rows.length === 0) {
         wallList.innerHTML = "<div class='wall-empty'>עדיין אין הודעות — תהיו הראשונים 🌊</div>";
         return;
@@ -1526,6 +1590,19 @@
       var rb = e.target.closest(".react");
       if (rb) { toggleReaction(rb.getAttribute("data-msg"), rb.getAttribute("data-emoji")); return; }
     });
+    try { notifSeen = localStorage.getItem("cruiseNotifSeen"); } catch (e) {}
+    if (!notifSeen) { try { notifSeen = new Date().toISOString(); localStorage.setItem("cruiseNotifSeen", notifSeen); } catch (e) {} }
+    if (bell) {
+      bell.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (notifPanel.hidden) { renderNotifPanel(); notifPanel.hidden = false; markNotifSeen(); }
+        else { notifPanel.hidden = true; }
+      });
+      notifPanel.addEventListener("click", function () { notifPanel.hidden = true; scrollToWall(); });
+      document.addEventListener("click", function (e) {
+        if (!notifPanel.hidden && !notifPanel.contains(e.target) && e.target !== bell && !bell.contains(e.target)) notifPanel.hidden = true;
+      });
+    }
     updateWallLock();
     loadHype(); loadWall();
     window.setInterval(function () { loadHype(); if (!wallBusy()) loadWall(); }, 6000);
