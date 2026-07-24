@@ -489,6 +489,31 @@
               "איריס, ברוכה הבאה לקרוז. תשמרי על שפיות אחת לפחות על הסיפון."]
   };
 
+  // ---- תגובות שנונות לקוד שגוי, לפי מי שניסית להתחזות אליו ----
+  var WRONG_CODE = {
+    "טל": ["קוד שגוי. רוצה להיות טל? קודם תבדוק את הלו״ז 6 פעמים ותבקש רשות מרוית.",
+           "לא טל. לטל יש קובץ אקסל מסודר גם לקוד — לך אין."],
+    "רוית": ["קוד שגוי. להיות רוית זה שכולם מפחדים לגעת לך בראש. אתה עדיין לא שם.",
+             "לא רוית. הבוסית האמיתית לא טועה בקוד שלה."],
+    "ערן": ["קוד שגוי. ערן היה מזהה בלוף כזה מקילומטר. נסה שוב, חובבן.",
+            "לא ערן. עם קלפים כאלה לא היית שורד סיבוב פוקר אחד."],
+    "אלכס": ["קוד שגוי. גם על קצות האצבעות לא תגיע לגובה של אלכס.",
+             "לא אלכס. ורק שיהיה ברור — אל תיגע לאף אחד בראש."],
+    "ירון": ["קוד שגוי. ירון ראה קודים טובים יותר בפלורנטין ב-3 לפנות בוקר.",
+             "לא ירון. הסיפורים שלו מעניינים יותר מהניסיון הזה."],
+    "אלון": ["קוד שגוי — כמה אלוני מצדך. גם לקוד הנכון היית מאחר.",
+             "לא אלון. אבל אל תדאג, אלון גם לא זוכר את הקוד שלו."],
+    "ליאל": ["קוד שגוי. רוצה להיות ליאל? קודם תוכיח שאתה מוכן לפטמות של טל וערן.",
+             "לא ליאל. החופשה של כולם, הפטמות של ליאל. הקוד — לא שלך."],
+    "רפאלה": ["קוד שגוי. להיות רפאלה זה קורס הישרדות מול ליאל. לא תשרוד.",
+              "לא רפאלה. צריך עצבי ברזל בשביל התפקיד הזה, ולך אין אפילו את הקוד."],
+    "איריס": ["קוד שגוי. איריס הספיקה להצטרף ולקבל קוד — אתה עוד מנחש.",
+              "לא איריס. היא נכנסה ברגע האחרון וגם ככה עקפה אותך."]
+  };
+  var WRONG_DEFAULT = ["קוד שגוי. יפה ניסיון, מרגל. חזור לשם שלך.",
+                       "קוד שגוי. התחזות זה לא קוד, זה כישרון — ואין לך אף אחד מהם."];
+  function wrongCodeQuip(name) { return pick(WRONG_CODE[name] || WRONG_DEFAULT); }
+
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function pick(arr, avoid) {
     if (arr.length === 0) return "";
@@ -624,16 +649,16 @@
   }
   function verifyPin() {
     var name = pendingName, pin = (pinInput.value || "").trim();
-    if (!pin) { pinError.textContent = "צריך להקליד קוד"; pinError.hidden = false; return; }
+    if (!pin) { pinError.textContent = "בלי קוד אין קרוז. הקלד/י משהו."; pinError.hidden = false; return; }
     pinOk.disabled = true;
     api("rpc/verify_member", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ p_name: name, p_pin: pin })
     }).then(function (r) { return r.json(); }).then(function (ok) {
       if (ok === true) { finishIdentify(name, pin); }
-      else { pinError.textContent = "קוד שגוי, נסה/י שוב"; pinError.hidden = false; }
+      else { pinError.textContent = wrongCodeQuip(name); pinError.hidden = false; }
     }).catch(function () {
-      pinError.textContent = "תקלת רשת, נסה/י שוב"; pinError.hidden = false;
+      pinError.textContent = "תקלת רשת, נסה/י שוב (זה לא אתה, זה האינטרנט)."; pinError.hidden = false;
     }).then(function () { pinOk.disabled = false; });
   }
 
