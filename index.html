@@ -219,6 +219,44 @@
   .name-btn:active { transform: scale(0.96); }
   .name-btn.guest { width: 100%; margin-top: 0.3rem; background: transparent; color: rgba(255,255,255,0.7); }
 
+  /* חברתי — מד התלהבות + קיר */
+  .social { display: flex; flex-direction: column; gap: 1rem; width: min(92vw, 32rem); }
+  .hype {
+    display: flex; align-items: center; justify-content: center; gap: 0.6em;
+    font-family: inherit; color: #fff; cursor: pointer;
+    background: rgba(8, 16, 26, 0.5); border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 18px; padding: 0.9em 1.2em;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.12s ease, background 0.2s ease;
+  }
+  .hype:active { transform: scale(0.97); }
+  .hype:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .hype .hype-emoji { font-size: 1.7em; line-height: 1; transition: transform 0.15s ease; }
+  .hype.pop .hype-emoji { transform: scale(1.35) rotate(-8deg); }
+  .hype .hype-count { font-size: 1.7em; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .hype .hype-label { font-size: 0.85em; font-weight: 700; opacity: 0.85; }
+  .wall {
+    display: flex; flex-direction: column; gap: 0.7rem;
+    background: rgba(8, 16, 26, 0.5); border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 18px; padding: 1rem 1.1rem;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .wall-head { font-size: 1.05rem; font-weight: 800; text-align: center; }
+  .wall-input { display: flex; gap: 0.5rem; }
+  .wall-input input {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 0.95rem; color: #fff;
+    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px; padding: 0.65em 0.9em; direction: rtl;
+  }
+  .wall-input input::placeholder { color: rgba(255, 255, 255, 0.5); }
+  .wall-input input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .wall-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 38vh; overflow-y: auto; }
+  .wall-item { text-align: right; background: rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 0.55em 0.8em; }
+  .wall-item .who { font-weight: 700; color: var(--accent); font-size: 0.9rem; }
+  .wall-item .when { font-weight: 500; color: rgba(255, 255, 255, 0.55); font-size: 0.72rem; }
+  .wall-item .what { font-size: 0.98rem; line-height: 1.4; margin-top: 0.15em; word-break: break-word; }
+  .wall-empty { text-align: center; opacity: 0.6; font-size: 0.9rem; padding: 0.5rem; }
+
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
   @keyframes sail { from { transform: translateX(0); } to { transform: translateX(calc(-100vw - 160px)); } }
@@ -274,6 +312,22 @@
     <button class="btn" id="reroll" type="button">🎲 עוד אחת</button>
     <button class="btn share" id="share" type="button">שתפו בוואטסאפ ↗</button>
   </div>
+
+  <section class="social" id="social" hidden>
+    <button class="hype" id="hypeBtn" type="button">
+      <span class="hype-emoji">🔥</span>
+      <span class="hype-count" id="hypeCount">0</span>
+      <span class="hype-label">התלהבות קבוצתית · הקש!</span>
+    </button>
+    <div class="wall">
+      <div class="wall-head">📌 קיר החבורה</div>
+      <div class="wall-input">
+        <input id="wallText" type="text" maxlength="200" placeholder="כתוב משהו לחבורה…" aria-label="הודעה לקיר">
+        <button class="btn" id="wallSend" type="button">פרסם</button>
+      </div>
+      <div class="wall-list" id="wallList"></div>
+    </div>
+  </section>
 </main>
 
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -623,6 +677,90 @@
     }
     window.addEventListener("resize", resize); resize(); requestAnimationFrame(frame);
   })();
+
+  // ---- חברתי (Supabase) ----
+  var SUPA_URL = "https://ivyqeerpmaoylcpatgub.supabase.co";
+  var SUPA_KEY = "sb_publishable_cZmI5v-A3VTRXPjpvYFIRA_z0RfYsBw";
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }, opts.headers || {});
+    return fetch(SUPA_URL + "/rest/v1/" + path, opts);
+  }
+
+  var hypeBtn = document.getElementById("hypeBtn");
+  var hypeCountEl = document.getElementById("hypeCount");
+  var wallList = document.getElementById("wallList");
+  var wallText = document.getElementById("wallText");
+  var wallSend = document.getElementById("wallSend");
+  var hypeBase = 0, hypePending = 0, flushTimer = null;
+
+  function renderHype() { hypeCountEl.textContent = (hypeBase + hypePending).toLocaleString("he-IL"); }
+  function tapHype() {
+    hypePending++; renderHype();
+    hypeBtn.classList.add("pop");
+    window.setTimeout(function () { hypeBtn.classList.remove("pop"); }, 160);
+    if (!flushTimer) flushTimer = window.setTimeout(flushHype, 800);
+  }
+  function flushHype() {
+    flushTimer = null;
+    var n = hypePending; if (n <= 0) return; hypePending = 0;
+    api("rpc/bump_hype", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n: n }) })
+      .then(function (r) { return r.json(); })
+      .then(function (v) { if (typeof v === "number") { hypeBase = v; renderHype(); } })
+      .catch(function () { hypePending += n; renderHype(); });
+  }
+  function loadHype() {
+    api("hype?select=count&id=eq.1").then(function (r) { return r.json(); })
+      .then(function (rows) {
+        if (rows && rows[0] && typeof rows[0].count !== "undefined") { hypeBase = Number(rows[0].count); renderHype(); }
+      }).catch(function () {});
+  }
+
+  function esc(t) { var d = document.createElement("div"); d.textContent = (t == null ? "" : t); return d.innerHTML; }
+  function timeAgo(iso) {
+    var s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (isNaN(s)) return "";
+    if (s < 60) return "עכשיו";
+    var m = Math.floor(s / 60); if (m < 60) return "לפני " + m + " ד'";
+    var h = Math.floor(m / 60); if (h < 24) return "לפני " + h + " ש'";
+    return "לפני " + Math.floor(h / 24) + " י'";
+  }
+  function loadWall() {
+    api("wall?select=name,body,created_at&order=created_at.desc&limit=40").then(function (r) { return r.json(); })
+      .then(function (rows) {
+        if (!Array.isArray(rows)) return;
+        if (rows.length === 0) {
+          wallList.innerHTML = "<div class='wall-empty'>עדיין אין הודעות — תהיו הראשונים 🌊</div>";
+          return;
+        }
+        wallList.innerHTML = rows.map(function (m) {
+          return "<div class='wall-item'><div><span class='who'>" + esc(m.name || "אנונימי") +
+            "</span> <span class='when'>· " + timeAgo(m.created_at) + "</span></div><div class='what'>" +
+            esc(m.body) + "</div></div>";
+        }).join("");
+      }).catch(function () {});
+  }
+  function sendWall() {
+    var t = wallText.value.trim(); if (!t) return;
+    var name = myName() || "אנונימי";
+    wallSend.disabled = true;
+    api("wall", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ name: name.slice(0, 30), body: t.slice(0, 200) })
+    }).then(function (r) { if (r.ok) { wallText.value = ""; loadWall(); celebrate(1200); } })
+      .catch(function () {})
+      .then(function () { wallSend.disabled = false; });
+  }
+
+  if (hypeBtn) {
+    document.getElementById("social").hidden = false;
+    hypeBtn.addEventListener("click", tapHype);
+    wallSend.addEventListener("click", sendWall);
+    wallText.addEventListener("keydown", function (e) { if (e.key === "Enter") sendWall(); });
+    loadHype(); loadWall();
+    window.setInterval(function () { loadHype(); loadWall(); }, 6000);
+  }
 
   // ---- הפעלה ----
   applyPhase();
