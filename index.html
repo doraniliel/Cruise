@@ -789,7 +789,7 @@
 
   function renderGreeting() {
     var name = myName();
-    if (name) {
+    if (name && myPin()) {
       greetBtn.hidden = false;
       greetBtn.innerHTML = "היי " + name + " 👋 <span class='edit'>(החלף)</span>";
     } else {
@@ -1059,6 +1059,7 @@
     replyingTo = null;
   }
   function openReplyForm(msgId, btn) {
+    if (!ensureAuth()) return;
     closeReplyForm();
     var item = btn.closest(".wall-item");
     if (!item) return;
@@ -1092,7 +1093,7 @@
   }
   function updateWallLock() {
     if (!wallText || !wallSend) return;
-    var ok = !!myName();
+    var ok = !!(myName() && myPin());
     wallText.disabled = !ok;
     wallSend.disabled = !ok;
     if (wallInputRow) wallInputRow.hidden = !ok;
