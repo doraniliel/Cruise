@@ -965,8 +965,12 @@
     return "לפני " + Math.floor(h / 24) + " י'";
   }
   var REACTS = ["❤️", "😂", "🔥"];
+  function scrollToWall() {
+    var w = document.getElementById("wallList");
+    if (w) w.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   function loadWall() {
-    Promise.all([
+    return Promise.all([
       api("wall?select=id,name,body,created_at&order=created_at.desc&limit=40").then(function (r) { return r.json(); }),
       api("reactions?select=msg_id,emoji,name").then(function (r) { return r.json(); }).catch(function () { return []; })
     ]).then(function (res) {
@@ -1214,7 +1218,9 @@
     api("rpc/post_to_wall", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ p_name: me, p_pin: pin, p_body: body })
-    }).then(function (r) { if (r.ok) { pokeGrid.hidden = true; loadWall(); celebrate(1000); } }).catch(function () {});
+    }).then(function (r) {
+      if (r.ok) { pokeGrid.hidden = true; celebrate(1000); loadWall().then(scrollToWall); }
+    }).catch(function () {});
   }
   function buildPokeGrid() {
     if (!pokeGrid || pokeGrid.childNodes.length) return;
