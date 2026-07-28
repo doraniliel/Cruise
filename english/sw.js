@@ -1,7 +1,7 @@
 "use strict";
 /* Service worker — התקנה למסך הבית + עבודה מלאה בלי אינטרנט.
    האפליקציה כולה מקומית (בלי שרת), אז cache-first מהיר יותר לילדים. */
-var CACHE = "tuki-v1";
+var CACHE = "tuki-v2";
 var ASSETS = [
   "./",
   "./index.html",
@@ -12,6 +12,11 @@ var ASSETS = [
   "./curriculum.js",
   "./app.js",
   "./manifest.json",
+  "./fonts.css",
+  "./fonts/Nunito-700.woff2",
+  "./fonts/Nunito-800.woff2",
+  "./fonts/Baloo2-700.woff2",
+  "./fonts/Baloo2-800.woff2",
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png"
