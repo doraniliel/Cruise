@@ -362,7 +362,6 @@ function renderLogin() {
         ${loginMode === 'user' ? `
           <label class="field"><span>איך קוראים לך?</span><input type="text" id="lg-name" autocomplete="off"></label>
           <button class="btn-primary btn-big" onclick="userLogin()">כניסה</button>
-          <div class="empty" style="padding:12px 0 0;font-size:.78rem">שחקנים יכולים לצפות במשחק, בטבלה ובהיסטוריה.<br>שינויים — למנהל בלבד.</div>
         ` : `
           <label class="field"><span>שם משתמש</span><input type="text" id="lg-user" autocomplete="off" autocapitalize="off"></label>
           <label class="field"><span>סיסמה</span><input type="password" id="lg-pass"></label>
@@ -700,12 +699,14 @@ function renderNav() {
   const nav = document.getElementById('nav');
   if (view === 'clock') { nav.hidden = true; return; }
   nav.hidden = false;
-  nav.innerHTML = NAV.filter(([v]) => v !== 'settings' || isAdmin()).map(([v, ico, lbl]) =>
+  nav.innerHTML = NAV.filter(([v]) => isAdmin() || v === 'home' || v === 'stats').map(([v, ico, lbl]) =>
     `<button class="${(view === v || (view === 'game' && v === 'home') || (view === 'summary' && v === 'history')) ? 'active' : ''}" onclick="go('${v}')"><span class="ico">${ICONS[ico]}</span>${lbl}</button>`
   ).join('');
 }
+const ADMIN_VIEWS = ['players', 'history', 'settings', 'newgame', 'manual'];
 function render() {
   if (!SESSION) { renderLogin(); return; }
+  if (!isAdmin() && ADMIN_VIEWS.includes(view)) { view = 'home'; viewParam = null; }
   renderNav();
   const app = document.getElementById('app');
   const views = { home, game: gameView, clock: clockView, players: playersView, stats: statsView, history: historyView, settings: settingsView, newgame: newGameView, manual: manualView, summary: summaryView };
@@ -940,7 +941,7 @@ function summaryView() {
   const p = payouts(g);
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="topbar"><h1>סיכום משחק</h1><button class="btn-ghost" onclick="go('history')">→ היסטוריה</button></div>
+    <div class="topbar"><h1>סיכום משחק</h1>${isAdmin() ? `<button class="btn-ghost" onclick="go('history')">→ היסטוריה</button>` : `<button class="btn-ghost" onclick="go('home')">→ חזרה</button>`}</div>
     <div class="card felt">
       <div style="font-weight:700;font-size:1.05rem">${heDate(g.date)}${g.isManual ? ' <span style="font-size:.7rem;color:var(--ink-dim)">(הוזן ידנית)</span>' : ''}</div>
       ${g.startAt && g.endAt ? `<div class="sub" style="color:var(--ink-dim);font-size:.85rem">🕗 <bdi>${hhmm(g.startAt)}–${hhmm(g.endAt)}</bdi></div>` : ''}
