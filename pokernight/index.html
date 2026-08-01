@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="מנהל ערבי פוקר — כניסות, חישוב פרסים, שעון בליינדים וסיכום לוואטסאפ.">
+<meta name="theme-color" content="#0b120e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ערב פוקר">
+<title>ערב פוקר 🃏</title>
+<style>
+  :root {
+    --bg: #0b120e;
+    --felt: #12281c;
+    --felt-hi: #1a3a28;
+    --card: #14201a;
+    --card-hi: #1b2c22;
+    --line: #24382c;
+    --gold: #d4af37;
+    --gold-dim: #a8892b;
+    --ink: #f2efe6;
+    --ink-dim: #9fb0a5;
+    --pos: #4caf7d;
+    --neg: #e05252;
+    --danger: #b03434;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Rubik", "Heebo", "Assistant", "Arial Hebrew", -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    direction: rtl;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  bdi, .num { font-variant-numeric: tabular-nums; }
+
+  #app {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 14px 14px calc(84px + env(safe-area-inset-bottom));
+    min-height: 100dvh;
+  }
+  h1 { font-size: 1.35rem; font-weight: 700; }
+  h2 { font-size: 1.05rem; font-weight: 600; color: var(--ink-dim); margin: 18px 0 8px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .topbar .sub { color: var(--ink-dim); font-size: .85rem; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .card.felt { background: linear-gradient(160deg, var(--felt-hi), var(--felt)); }
+
+  button {
+    font: inherit; color: inherit; background: var(--card-hi);
+    border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 14px; cursor: pointer; touch-action: manipulation;
+  }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .4; }
+  .btn-primary {
+    background: linear-gradient(160deg, #d9b942, var(--gold-dim));
+    color: #17130a; font-weight: 700; border: none;
+  }
+  .btn-big { width: 100%; padding: 16px; font-size: 1.15rem; border-radius: 14px; }
+  .btn-ghost { background: transparent; }
+  .btn-danger { color: #ff9c9c; border-color: #5a2626; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .grow { flex: 1; }
+
+  /* bottom nav */
+  nav {
+    position: fixed; bottom: 0; right: 0; left: 0; z-index: 30;
+    background: rgba(11, 18, 14, .92); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-around;
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav button {
+    background: none; border: none; color: var(--ink-dim);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: .7rem; padding: 4px 8px; min-width: 58px;
+  }
+  nav button .ico { font-size: 1.25rem; }
+  nav button.active { color: var(--gold); }
+
+  /* player rows in active game */
+  .prow {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 10px 12px; margin-bottom: 8px;
+  }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--felt-hi); color: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; overflow: hidden; flex-shrink: 0;
+    border: 1px solid var(--line);
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar.big { width: 84px; height: 84px; font-size: 1.6rem; }
+  .prow .name { flex: 1; min-width: 0; }
+  .prow .name .nick { font-weight: 600; }
+  .prow .name .meta { font-size: .78rem; color: var(--ink-dim); }
+  .cnt { font-size: 1.3rem; font-weight: 700; min-width: 34px; text-align: center; }
+  .btn-plus, .btn-minus {
+    width: 46px; height: 46px; border-radius: 50%; font-size: 1.5rem;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .btn-plus { background: linear-gradient(160deg, #d9b942, var(--gold-dim)); color: #17130a; border: none; font-weight: 700; }
+  .btn-minus { background: transparent; color: var(--ink-dim); width: 38px; height: 38px; font-size: 1.2rem; }
+  .capped { font-size: .68rem; color: var(--neg); }
+
+  /* timer strip */
+  .strip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: linear-gradient(160deg, var(--felt-hi), var(--felt));
+    border: 1px solid var(--line); border-radius: 16px;
+    padding: 12px 14px; margin-bottom: 12px; cursor: pointer;
+  }
+  .strip .t { font-size: 1.7rem; font-weight: 700; }
+  .strip .b { font-size: 1.05rem; font-weight: 600; color: var(--gold); }
+  .strip .lvl { font-size: .75rem; color: var(--ink-dim); }
+
+  /* fullscreen clock */
+  #clock {
+    position: fixed; inset: 0; z-index: 50; background: radial-gradient(120% 120% at 50% 40%, var(--felt-hi), var(--bg) 85%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(4px, 1.5vh, 14px); padding: 20px; user-select: none;
+  }
+  #clock .lvl { color: var(--ink-dim); font-size: clamp(1rem, 3vmin, 1.4rem); letter-spacing: .06em; }
+  #clock .time { font-size: clamp(4rem, 24vmin, 12rem); font-weight: 700; line-height: 1; direction: ltr; }
+  #clock .blinds { font-size: clamp(2rem, 10vmin, 5rem); font-weight: 700; color: var(--gold); direction: ltr; }
+  #clock .next { color: var(--ink-dim); font-size: clamp(.95rem, 3vmin, 1.3rem); }
+  #clock .stats { display: flex; gap: clamp(12px, 4vmin, 34px); margin-top: 1vh; flex-wrap: wrap; justify-content: center; }
+  #clock .stats div { text-align: center; }
+  #clock .stats .v { font-size: clamp(1.1rem, 4vmin, 1.7rem); font-weight: 700; }
+  #clock .stats .k { font-size: .72rem; color: var(--ink-dim); }
+  #clock.break-mode { background: radial-gradient(120% 120% at 50% 40%, #2c2410, var(--bg) 85%); }
+  #clock .ctrls {
+    position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); right: 0; left: 0;
+    display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+    transition: opacity .25s; opacity: 0; pointer-events: none;
+  }
+  #clock.show-ctrls .ctrls { opacity: 1; pointer-events: auto; }
+  #clock .exit { position: absolute; top: calc(14px + env(safe-area-inset-top)); inset-inline-start: 14px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #clock.show-ctrls .exit { opacity: 1; pointer-events: auto; }
+  #clock .paused-tag { color: var(--neg); font-weight: 700; letter-spacing: .1em; }
+  @keyframes pulse { 0% { opacity: .85; } 100% { opacity: 0; } }
+  #clock .flash { position: absolute; inset: 0; background: var(--gold); opacity: 0; pointer-events: none; }
+  #clock .flash.on { animation: pulse 1.1s ease-out; }
+
+  /* stats / tables */
+  .lb { display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+  .lb:last-child { border-bottom: none; }
+  .lb .rank { width: 26px; text-align: center; color: var(--ink-dim); font-weight: 700; }
+  .lb .who { flex: 1; min-width: 0; }
+  .lb .who .meta { font-size: .74rem; color: var(--ink-dim); }
+  .money-pos { color: var(--pos); font-weight: 700; }
+  .money-neg { color: var(--neg); font-weight: 700; }
+  .money-zero { color: var(--ink-dim); font-weight: 700; }
+
+  table.sheet { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  table.sheet th { color: var(--ink-dim); font-weight: 500; font-size: .76rem; text-align: right; padding: 6px 4px; }
+  table.sheet td { padding: 8px 4px; border-top: 1px solid var(--line); }
+  table.sheet td:last-child, table.sheet th:last-child { text-align: left; }
+
+  /* forms */
+  input[type=text], input[type=number], input[type=date], input[type=time], select {
+    font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; width: 100%;
+  }
+  label.field { display: block; margin-bottom: 10px; font-size: .85rem; color: var(--ink-dim); }
+  label.field span { display: block; margin-bottom: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
+    background: var(--card); cursor: pointer; display: flex; align-items: center; gap: 8px;
+  }
+  .chip.on { border-color: var(--gold); color: var(--gold); background: rgba(212, 175, 55, .08); }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button { width: 38px; height: 38px; border-radius: 50%; padding: 0; font-size: 1.2rem; }
+
+  /* overlays */
+  .overlay {
+    position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .6);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .sheet-modal {
+    background: var(--card); border: 1px solid var(--line); border-bottom: none;
+    border-radius: 20px 20px 0 0; width: 100%; max-width: 560px;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 88dvh; overflow-y: auto;
+  }
+  .sheet-modal h3 { margin-bottom: 12px; }
+
+  #toast {
+    position: fixed; bottom: calc(96px + env(safe-area-inset-bottom)); right: 50%;
+    transform: translateX(50%); z-index: 70;
+    background: var(--card-hi); border: 1px solid var(--line);
+    padding: 10px 18px; border-radius: 999px; font-size: .88rem;
+    transition: opacity .3s; opacity: 0; pointer-events: none; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+
+  .pool-bar {
+    position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 20;
+    background: linear-gradient(160deg, var(--felt-hi), var(--felt));
+    border: 1px solid var(--gold-dim); border-radius: 16px;
+    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .5);
+  }
+  .pool-bar .amounts { font-size: .78rem; color: var(--ink-dim); }
+  .pool-bar .pool { font-size: 1.25rem; font-weight: 700; color: var(--gold); }
+  .empty { text-align: center; color: var(--ink-dim); padding: 30px 10px; font-size: .9rem; }
+  .winner-pick .prow { cursor: pointer; }
+  .winner-pick .prow:active { border-color: var(--gold); }
+  a { color: var(--gold); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav id="nav"></nav>
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ================= state ================= */
+const LS_KEY = 'pokernight_v1';
+const CHIPS_PER_ENTRY = 1500;
+const LADDER = [
+  [10, 20], [15, 30], [20, 40], [30, 60], [40, 80],
+  [50, 100], [75, 150], [100, 200], [150, 300], [200, 400],
+  [300, 600], [400, 800], [600, 1200], [800, 1600], [1000, 2000],
+  [1500, 3000], [2000, 4000], [3000, 6000],
+];
+const DEFAULT_SETTINGS = {
+  entryPrice: 30, houseFee: 30,
+  splitFirst: 65, splitSecond: 25, splitHouse: 10,
+  maxRebuys: 12,
+  levelMinutes: 15, breakAfter: 5, breakMinutes: 10,
+  sound: true, voice: true,
+};
+
+let S = loadState();
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings || {});
+      s.players = s.players || [];
+      s.games = s.games || [];
+      return s;
+    }
+  } catch (e) { console.error(e); }
+  return { players: [], games: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
+}
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+function uid() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)); }
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+/* ================= helpers ================= */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const shk = n => `<bdi>₪${Math.abs(n).toLocaleString('he-IL')}</bdi>`;
+function money(n) {
+  if (n > 0) return `<span class="money-pos"><bdi>‎+₪${n.toLocaleString('he-IL')}</bdi></span>`;
+  if (n < 0) return `<span class="money-neg"><bdi>‎−₪${Math.abs(n).toLocaleString('he-IL')}</bdi></span>`;
+  return `<span class="money-zero"><bdi>₪0</bdi></span>`;
+}
+const heDate = iso => new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' }).format(new Date(iso + 'T12:00:00'));
+const heDateShort = iso => new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' }).format(new Date(iso + 'T12:00:00'));
+const hhmm = ts => new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
+const player = pid => S.players.find(p => p.id === pid);
+const pname = pid => { const p = player(pid); return p ? (p.nickname || p.name) : '?'; };
+function avatarHtml(p, cls) {
+  const c = 'avatar' + (cls ? ' ' + cls : '');
+  if (p && p.avatar) return `<div class="${c}"><img src="${p.avatar}" alt=""></div>`;
+  const init = p ? (p.nickname || p.name || '?').trim().charAt(0) : '?';
+  return `<div class="${c}">${esc(init)}</div>`;
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ================= game math ================= */
+const activeGame = () => S.games.find(g => g.status === 'active');
+const entriesOf = (g, pid) => g.entries.filter(e => e.pid === pid).reduce((s, e) => s + e.delta, 0);
+const totalEntries = g => g.entries.reduce((s, e) => s + e.delta, 0);
+const poolOf = g => totalEntries(g) * g.config.entryPrice;
+
+function payouts(g) {
+  const pool = poolOf(g);
+  const second = Math.round(pool * g.config.splitSecond / 100);
+  const house10 = Math.round(pool * g.config.splitHouse / 100);
+  const first = pool - second - house10; // remainder to 1st
+  const houseTotal = house10 + g.playerIds.length * g.config.houseFee;
+  const nets = {};
+  for (const pid of g.playerIds) {
+    let win = 0;
+    if (g.results) {
+      if (g.results.first === pid) win += first;
+      if (g.results.second === pid) win += second;
+    }
+    nets[pid] = win - entriesOf(g, pid) * g.config.entryPrice - g.config.houseFee;
+  }
+  return { pool, first, second, house10, houseTotal, nets };
+}
+
+function buildTimeline(cfg) {
+  const t = [];
+  LADDER.forEach(([sb, bb], i) => {
+    t.push({ type: 'level', n: i + 1, sb, bb, min: cfg.levelMinutes });
+    if (i + 1 === cfg.breakAfter) t.push({ type: 'break', min: cfg.breakMinutes });
+  });
+  return t;
+}
+
+/* ================= timer engine ================= */
+function timerInit(g) {
+  g.timer = { idx: 0, running: true, endAt: Date.now() + buildTimeline(g.config)[0].min * 60000, remainingMs: null };
+}
+function timerRemaining(g) {
+  const t = g.timer;
+  return t.running ? t.endAt - Date.now() : t.remainingMs;
+}
+function timerCatchUp(g, silent) {
+  const t = g.timer, tl = buildTimeline(g.config);
+  let advanced = false;
+  while (t.running && Date.now() >= t.endAt && t.idx < tl.length - 1) {
+    t.idx++;
+    t.endAt += tl[t.idx].min * 60000;
+    advanced = true;
+  }
+  if (advanced) {
+    save();
+    if (!silent) levelChanged(g);
+  }
+  return advanced;
+}
+function timerPause(g) {
+  const t = g.timer;
+  if (!t.running) return;
+  t.remainingMs = Math.max(0, t.endAt - Date.now());
+  t.running = false; save();
+}
+function timerResume(g) {
+  const t = g.timer;
+  if (t.running) return;
+  t.endAt = Date.now() + (t.remainingMs ?? 0);
+  t.running = true; t.remainingMs = null; save();
+}
+function timerAddMinute(g) {
+  const t = g.timer;
+  if (t.running) t.endAt += 60000; else t.remainingMs += 60000;
+  save();
+}
+function timerJump(g, dir) {
+  const t = g.timer, tl = buildTimeline(g.config);
+  const ni = Math.min(tl.length - 1, Math.max(0, t.idx + dir));
+  t.idx = ni;
+  if (t.running) t.endAt = Date.now() + tl[ni].min * 60000;
+  else t.remainingMs = tl[ni].min * 60000;
+  save();
+}
+let warned = {};
+function levelChanged(g) {
+  const tl = buildTimeline(g.config), cur = tl[g.timer.idx];
+  playGong();
+  if (S.settings.voice) {
+    if (cur.type === 'break') speak('הפסקה');
+    else speak(`הבליינדים עולים: ${cur.sb}, ${cur.bb}`);
+  }
+  flashClock();
+}
+
+/* sounds */
+let audioCtx;
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, dur, delay, vol) {
+  const ctx = ac(), o = ctx.createOscillator(), gn = ctx.createGain();
+  o.frequency.value = freq; o.type = 'sine';
+  gn.gain.setValueAtTime(0, ctx.currentTime + delay);
+  gn.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + 0.02);
+  gn.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+  o.connect(gn).connect(ctx.destination);
+  o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + dur + 0.05);
+}
+function playGong() { if (!S.settings.sound) return; try { tone(660, 1.2, 0, .5); tone(880, 1.4, 0.15, .35); tone(440, 1.6, 0.05, .3); } catch (e) {} }
+function playWarn() { if (!S.settings.sound) return; try { tone(880, .18, 0, .35); tone(880, .18, .28, .35); } catch (e) {} }
+function playClick() { if (!S.settings.sound) return; try { tone(1200, .06, 0, .18); } catch (e) {} }
+function speak(text) {
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'he-IL'; u.rate = 0.95;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* wake lock */
+let wakeLock = null;
+async function acquireWake() {
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+}
+function releaseWake() { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && view === 'clock') acquireWake();
+});
+
+/* ================= router / render ================= */
+let view = 'home', viewParam = null;
+function go(v, param) {
+  view = v; viewParam = param ?? null;
+  window.scrollTo(0, 0);
+  render();
+}
+const NAV = [
+  ['home', '🏠', 'בית'],
+  ['players', '👥', 'שחקנים'],
+  ['stats', '🏆', 'טבלה'],
+  ['history', '📜', 'היסטוריה'],
+  ['settings', '⚙️', 'הגדרות'],
+];
+function renderNav() {
+  const nav = document.getElementById('nav');
+  if (view === 'clock') { nav.hidden = true; return; }
+  nav.hidden = false;
+  nav.innerHTML = NAV.map(([v, ico, lbl]) =>
+    `<button class="${(view === v || (view === 'game' && v === 'home') || (view === 'summary' && v === 'history')) ? 'active' : ''}" onclick="go('${v}')"><span class="ico">${ico}</span>${lbl}</button>`
+  ).join('');
+}
+function render() {
+  renderNav();
+  const app = document.getElementById('app');
+  const views = { home, game: gameView, clock: clockView, players: playersView, stats: statsView, history: historyView, settings: settingsView, newgame: newGameView, manual: manualView, summary: summaryView };
+  app.innerHTML = '';
+  (views[view] || home)();
+}
+
+/* ================= views ================= */
+function home() {
+  const g = activeGame();
+  const app = document.getElementById('app');
+  let html = `<div class="topbar"><h1>🃏 ערב פוקר</h1><div class="sub">${new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</div></div>`;
+
+  if (g) {
+    const tl = buildTimeline(g.config), cur = tl[g.timer.idx];
+    html += `<div class="card felt" onclick="go('game')" style="cursor:pointer">
+      <div class="row"><div class="grow">
+        <div style="font-weight:700">משחק פעיל 🔴</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.85rem">${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות · קופה ${shk(poolOf(g))}</div>
+      </div>
+      <div style="text-align:left"><div style="color:var(--gold);font-weight:700;direction:ltr">${cur.type === 'break' ? 'הפסקה' : cur.sb + ' / ' + cur.bb}</div></div></div>
+      <button class="btn-primary btn-big" style="margin-top:12px">חזרה למשחק ←</button>
+    </div>`;
+  } else {
+    html += `<button class="btn-primary btn-big" onclick="go('newgame')" style="margin-bottom:12px">🃏 משחק חדש</button>`;
+  }
+
+  const done = S.games.filter(x => x.status === 'done').sort((a, b) => b.date.localeCompare(a.date));
+  if (done.length) {
+    const lg = done[0], p = payouts(lg);
+    html += `<h2>המשחק האחרון</h2>
+    <div class="card" onclick="go('summary','${lg.id}')" style="cursor:pointer">
+      <div class="row"><div class="grow">
+        <div style="font-weight:600">${heDate(lg.date)}</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.82rem">🥇 ${esc(pname(lg.results.first))} · 🥈 ${esc(pname(lg.results.second))}</div>
+      </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div>
+    </div>`;
+  }
+
+  const lb = leaderboard().slice(0, 3);
+  if (lb.length) {
+    html += `<h2>מובילים</h2><div class="card">` + lb.map((r, i) =>
+      `<div class="lb"><div class="rank">${['🥇', '🥈', '🥉'][i]}</div>${avatarHtml(player(r.pid))}
+       <div class="who"><div>${esc(pname(r.pid))}</div><div class="meta">${r.games} משחקים</div></div>${money(r.net)}</div>`
+    ).join('') + `</div>`;
+  }
+  if (!done.length && !g) html += `<div class="empty">ברוכים הבאים! התחילו משחק חדש,<br>או הוסיפו משחקים ישנים דרך ההיסטוריה 📜</div>`;
+  app.innerHTML = html;
+}
+
+/* ---- new game ---- */
+let ngSel = new Set();
+function newGameView() {
+  const app = document.getElementById('app');
+  const act = S.players.filter(p => p.active !== false);
+  app.innerHTML = `
+    <div class="topbar"><h1>משחק חדש</h1><button class="btn-ghost" onclick="go('home')">ביטול</button></div>
+    <h2>מי משחק הערב? (כל שחקן מתחיל בכניסה אחת)</h2>
+    <div class="chips" id="ng-chips">${act.map(p =>
+      `<div class="chip ${ngSel.has(p.id) ? 'on' : ''}" onclick="ngToggle('${p.id}')">${esc(p.nickname || p.name)}</div>`).join('')}
+      <div class="chip" onclick="quickAddPlayer('ng')">+ שחקן חדש</div>
+    </div>
+    <div style="height:18px"></div>
+    <button class="btn-primary btn-big" ${ngSel.size < 2 ? 'disabled' : ''} onclick="startGame()">התחלת משחק (${ngSel.size} שחקנים)</button>
+    <div class="empty" style="padding-top:14px">בליינדים: 10/20 · ${S.settings.levelMinutes} דק' לרמה · כל כניסה ${shk(S.settings.entryPrice)} (${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים)</div>`;
+}
+function ngToggle(pid) { ngSel.has(pid) ? ngSel.delete(pid) : ngSel.add(pid); render(); }
+function startGame() {
+  if (activeGame()) { toast('יש כבר משחק פעיל'); return; }
+  if (ngSel.size < 2) return;
+  const now = Date.now();
+  const g = {
+    id: uid(), date: new Date().toISOString().slice(0, 10),
+    startAt: now, endAt: null, status: 'active', isManual: false,
+    config: {
+      entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
+      splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
+      maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
+      breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
+    },
+    playerIds: [...ngSel],
+    entries: [...ngSel].map(pid => ({ pid, delta: 1, ts: now })),
+    results: null, timer: null,
+  };
+  timerInit(g);
+  S.games.push(g); save();
+  ngSel = new Set();
+  go('game');
+}
+
+/* ---- active game ---- */
+function gameView() {
+  const g = activeGame();
+  if (!g) { go('home'); return; }
+  timerCatchUp(g, true);
+  const tl = buildTimeline(g.config), cur = tl[g.timer.idx], nxt = tl[g.timer.idx + 1];
+  const p = payouts(g);
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="topbar"><h1>משחק פעיל</h1><div class="sub">התחיל ${hhmm(g.startAt)}</div></div>
+    <div class="strip" onclick="go('clock')">
+      <div><div class="lvl">${cur.type === 'break' ? 'הפסקה ☕' : 'רמה ' + cur.n}${g.timer.running ? '' : ' · מושהה ⏸'}</div>
+      <div class="b" style="direction:ltr;text-align:right">${cur.type === 'break' ? '' : cur.sb + ' / ' + cur.bb}</div></div>
+      <div style="text-align:left"><div class="t num" id="strip-time">--:--</div>
+      <div class="lvl">${nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : ''}</div></div>
+    </div>
+    ${g.playerIds.map(pid => {
+      const pl = player(pid), cnt = entriesOf(g, pid);
+      const maxed = cnt >= g.config.maxRebuys + 1;
+      return `<div class="prow">
+        ${avatarHtml(pl)}
+        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+          <div class="meta">${shk(cnt * g.config.entryPrice)} ${maxed ? '<span class="capped">· בתקרה</span>' : ''}</div></div>
+        <button class="btn-minus" onclick="addEntry('${pid}',-1)" ${cnt <= 0 ? 'disabled' : ''}>−</button>
+        <div class="cnt num">${cnt}</div>
+        <button class="btn-plus" onclick="addEntry('${pid}',1)">+</button>
+      </div>`;
+    }).join('')}
+    <button class="btn-ghost" style="width:100%;margin:4px 0 12px" onclick="openAddPlayerToGame()">+ הוספת שחקן באיחור</button>
+    <div class="pool-bar">
+      <div><div class="pool">קופה: ${shk(p.pool)}</div>
+      <div class="amounts">🥇 ${shk(p.first)} · 🥈 ${shk(p.second)} · 🏠 ${shk(p.houseTotal)}</div></div>
+      <button class="btn-danger" onclick="beginEndGame()">סיום משחק</button>
+    </div>`;
+  startTick();
+}
+function addEntry(pid, delta) {
+  const g = activeGame(); if (!g) return;
+  const cnt = entriesOf(g, pid);
+  if (delta > 0 && cnt >= g.config.maxRebuys + 1) {
+    confirmDlg(`⚠️ ${esc(pname(pid))} הגיע לתקרת הרי-באי (${g.config.maxRebuys}).<br>לחרוג מהתקרה?`, () => {
+      g.entries.push({ pid, delta: 1, ts: Date.now(), override: true }); save(); playClick(); render();
+    });
+    return;
+  }
+  if (delta < 0 && cnt <= 0) return;
+  g.entries.push({ pid, delta, ts: Date.now() }); save(); playClick();
+  if (delta < 0) toast('כניסה בוטלה ↩');
+  render();
+}
+function openAddPlayerToGame() {
+  const g = activeGame(); if (!g) return;
+  const avail = S.players.filter(p => p.active !== false && !g.playerIds.includes(p.id));
+  sheet(`<h3>הוספת שחקן</h3>
+    <div class="chips">${avail.map(p => `<div class="chip" onclick="lateAdd('${p.id}')">${esc(p.nickname || p.name)}</div>`).join('') || '<div class="empty">אין שחקנים פנויים ברשימה</div>'}
+    <div class="chip" onclick="quickAddPlayer('game')">+ שחקן חדש</div></div>`);
+}
+function lateAdd(pid) {
+  const g = activeGame(); if (!g || g.playerIds.includes(pid)) return;
+  g.playerIds.push(pid);
+  g.entries.push({ pid, delta: 1, ts: Date.now() });
+  save(); closeSheet(); render(); toast(`${pname(pid)} הצטרף למשחק 🎉`);
+}
+
+/* ---- end game flow ---- */
+let endPick = null;
+function beginEndGame() {
+  const g = activeGame(); if (!g) return;
+  endPick = { first: null };
+  renderEndPick();
+}
+function renderEndPick() {
+  const g = activeGame();
+  const step = endPick.first === null ? 'first' : 'second';
+  const title = step === 'first' ? '🥇 מי לקח מקום ראשון?' : '🥈 מי לקח מקום שני?';
+  const cands = g.playerIds.filter(pid => pid !== endPick.first);
+  sheet(`<h3>${title}</h3><div class="winner-pick">${cands.map(pid =>
+    `<div class="prow" onclick="pickWinner('${pid}')">${avatarHtml(player(pid))}
+     <div class="name"><div class="nick">${esc(pname(pid))}</div>
+     <div class="meta">${entriesOf(g, pid)} כניסות</div></div></div>`).join('')}</div>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function pickWinner(pid) {
+  const g = activeGame();
+  if (endPick.first === null) { endPick.first = pid; renderEndPick(); return; }
+  const first = endPick.first, second = pid;
+  const p = payouts(Object.assign({}, g, { results: { first, second } }));
+  sheet(`<h3>סיכום ואישור</h3>
+    <table class="sheet">
+      <tr><td>🥇 ${esc(pname(first))}</td><td>${shk(p.first)}</td></tr>
+      <tr><td>🥈 ${esc(pname(second))}</td><td>${shk(p.second)}</td></tr>
+      <tr><td>🏠 הבית (10% + דמי בית)</td><td>${shk(p.houseTotal)}</td></tr>
+      <tr><td>💰 קופה</td><td>${shk(p.pool)}</td></tr>
+    </table>
+    <div style="height:14px"></div>
+    <button class="btn-primary btn-big" onclick="finishGame('${first}','${second}')">אישור וסיום המשחק</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">חזרה</button>`);
+}
+function finishGame(first, second) {
+  const g = activeGame(); if (!g) return;
+  g.results = { first, second };
+  g.status = 'done'; g.endAt = Date.now();
+  save(); closeSheet(); stopTick(); releaseWake();
+  go('summary', g.id);
+  toast('המשחק נשמר 🎉');
+}
+
+/* ---- summary ---- */
+function summaryView() {
+  const g = S.games.find(x => x.id === viewParam);
+  if (!g || g.status !== 'done') { go('history'); return; }
+  const p = payouts(g);
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="topbar"><h1>סיכום משחק</h1><button class="btn-ghost" onclick="go('history')">→ היסטוריה</button></div>
+    <div class="card felt">
+      <div style="font-weight:700;font-size:1.05rem">${heDate(g.date)}${g.isManual ? ' <span style="font-size:.7rem;color:var(--ink-dim)">(הוזן ידנית)</span>' : ''}</div>
+      ${g.startAt && g.endAt ? `<div class="sub" style="color:var(--ink-dim);font-size:.85rem">🕗 <bdi>${hhmm(g.startAt)}–${hhmm(g.endAt)}</bdi></div>` : ''}
+      <div style="margin-top:8px;color:var(--gold);font-weight:700;font-size:1.2rem">💰 קופה: ${shk(p.pool)}</div>
+    </div>
+    <div class="card">
+      <table class="sheet">
+        <tr><th>שחקן</th><th>כניסות</th><th>זכייה</th><th>מאזן</th></tr>
+        ${g.playerIds.map(pid => {
+          const win = (g.results.first === pid ? p.first : 0) + (g.results.second === pid ? p.second : 0);
+          const medal = g.results.first === pid ? '🥇 ' : g.results.second === pid ? '🥈 ' : '';
+          return `<tr><td>${medal}${esc(pname(pid))}</td><td class="num">${entriesOf(g, pid)}</td>
+            <td>${win ? shk(win) : '—'}</td><td>${money(p.nets[pid])}</td></tr>`;
+        }).join('')}
+        <tr><td>🏠 הבית</td><td></td><td>${shk(p.houseTotal)}</td><td></td></tr>
+      </table>
+    </div>
+    <button class="btn-primary btn-big" onclick="shareGame('${g.id}')">📤 שיתוף בוואטסאפ</button>
+    <button class="btn-ghost btn-danger" style="width:100%;margin-top:10px" onclick="deleteGame('${g.id}')">מחיקת המשחק</button>`;
+}
+function deleteGame(id) {
+  confirmDlg('למחוק את המשחק לצמיתות?', () => {
+    S.games = S.games.filter(g => g.id !== id); save(); go('history'); toast('המשחק נמחק');
+  });
+}
+function buildWhatsApp(g) {
+  const p = payouts(g);
+  const L = '‎'; // keep +/− readable in RTL
+  const lines = [
+    `🃏 ערב פוקר — ${heDate(g.date)}`,
+    g.startAt && g.endAt ? `🕗 ${hhmm(g.startAt)}–${hhmm(g.endAt)} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות` : `👥 ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`,
+    `💰 קופה: ₪${p.pool}`,
+    ``,
+    `🥇 ${pname(g.results.first)} — ₪${p.first}`,
+    `🥈 ${pname(g.results.second)} — ₪${p.second}`,
+    `🏠 הבית — ₪${p.houseTotal}`,
+    `➖➖➖➖➖➖`,
+    `מאזן סופי:`,
+    ...g.playerIds.map(pid => {
+      const n = p.nets[pid];
+      const s = n > 0 ? `${L}+₪${n}` : n < 0 ? `${L}-₪${Math.abs(n)}` : `₪0`;
+      return `${pname(pid)}: ${s}`;
+    }),
+  ];
+  return lines.join('\n');
+}
+async function shareGame(id) {
+  const g = S.games.find(x => x.id === id); if (!g) return;
+  const text = buildWhatsApp(g);
+  if (navigator.share) {
+    try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+/* ---- clock ---- */
+function clockView() {
+  const g = activeGame();
+  if (!g) { go('home'); return; }
+  const app = document.getElementById('app');
+  app.innerHTML = `<div id="clock" onclick="toggleCtrls(event)">
+    <div class="flash" id="clock-flash"></div>
+    <button class="exit btn-ghost" onclick="event.stopPropagation();go('game')">→ חזרה</button>
+    <div class="lvl" id="ck-lvl"></div>
+    <div class="time num" id="ck-time">--:--</div>
+    <div class="blinds" id="ck-blinds"></div>
+    <div class="next" id="ck-next"></div>
+    <div class="stats">
+      <div><div class="v num" id="ck-players"></div><div class="k">שחקנים</div></div>
+      <div><div class="v num" id="ck-entries"></div><div class="k">כניסות</div></div>
+      <div><div class="v num" id="ck-pool"></div><div class="k">קופה</div></div>
+      <div><div class="v num" id="ck-chips"></div><div class="k">צ'יפים במשחק</div></div>
+    </div>
+    <div class="ctrls">
+      <button onclick="event.stopPropagation();ckPause()" id="ck-pausebtn">⏸ השהיה</button>
+      <button onclick="event.stopPropagation();ckAddMin()">+1 דק'</button>
+      <button onclick="event.stopPropagation();ckJump(-1)">⏮ רמה קודמת</button>
+      <button onclick="event.stopPropagation();ckJump(1)">רמה הבאה ⏭</button>
+    </div>
+  </div>`;
+  acquireWake();
+  startTick();
+  updateClock();
+}
+function toggleCtrls(e) {
+  const c = document.getElementById('clock');
+  if (c) { c.classList.toggle('show-ctrls'); ac(); }
+}
+function ckPause() {
+  const g = activeGame(); if (!g) return;
+  g.timer.running ? timerPause(g) : timerResume(g);
+  updateClock();
+}
+function ckAddMin() { const g = activeGame(); if (g) { timerAddMinute(g); updateClock(); } }
+function ckJump(d) { const g = activeGame(); if (g) { timerJump(g, d); warned = {}; updateClock(); } }
+function flashClock() {
+  const f = document.getElementById('clock-flash');
+  if (f) { f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+}
+function updateClock() {
+  const g = activeGame(); if (!g || view !== 'clock') return;
+  timerCatchUp(g);
+  const tl = buildTimeline(g.config), t = g.timer, cur = tl[t.idx], nxt = tl[t.idx + 1];
+  const rem = Math.max(0, timerRemaining(g));
+  const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
+  const el = id => document.getElementById(id);
+  if (!el('ck-time')) return;
+  el('ck-time').textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+  const c = document.getElementById('clock');
+  c.classList.toggle('break-mode', cur.type === 'break');
+  el('ck-lvl').innerHTML = (cur.type === 'break' ? '☕ הפסקה' : `רמה ${cur.n}`) + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
+  el('ck-blinds').textContent = cur.type === 'break' ? '☕' : `${cur.sb} / ${cur.bb}`;
+  el('ck-next').textContent = nxt ? (nxt.type === 'break' ? 'בהמשך: הפסקה' : `הבליינדים הבאים: ${nxt.sb} / ${nxt.bb}`) : 'רמה אחרונה';
+  el('ck-players').textContent = g.playerIds.length;
+  el('ck-entries').textContent = totalEntries(g);
+  el('ck-pool').textContent = '₪' + poolOf(g).toLocaleString('he-IL');
+  el('ck-chips').textContent = (totalEntries(g) * CHIPS_PER_ENTRY).toLocaleString('he-IL');
+  el('ck-pausebtn').textContent = t.running ? '⏸ השהיה' : '▶️ המשך';
+  // one-minute warning
+  if (t.running && rem <= 60000 && rem > 0 && !warned[t.idx]) { warned[t.idx] = true; playWarn(); }
+}
+
+/* tick loop */
+let tickId = null;
+function startTick() {
+  if (tickId) return;
+  tickId = setInterval(() => {
+    const g = activeGame();
+    if (!g) { stopTick(); return; }
+    if (view === 'clock') updateClock();
+    else if (view === 'game') {
+      const adv = timerCatchUp(g);
+      if (adv) { render(); return; }
+      const rem = Math.max(0, timerRemaining(g));
+      const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
+      const elx = document.getElementById('strip-time');
+      if (elx) elx.textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+      if (g.timer.running && rem <= 60000 && rem > 0 && !warned[g.timer.idx]) { warned[g.timer.idx] = true; playWarn(); }
+    } else if (view !== 'home') return;
+    else timerCatchUp(g);
+  }, 250);
+}
+function stopTick() { clearInterval(tickId); tickId = null; }
+
+/* ---- players ---- */
+function playersView() {
+  const app = document.getElementById('app');
+  const act = S.players.filter(p => p.active !== false);
+  const inact = S.players.filter(p => p.active === false);
+  const st = allStats();
+  app.innerHTML = `
+    <div class="topbar"><h1>שחקנים</h1><button class="btn-primary" onclick="quickAddPlayer()">+ שחקן</button></div>
+    ${act.length ? `<div class="card">` + act.map(p => {
+      const s = st[p.id];
+      return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p)}
+      <div class="who"><div>${esc(p.nickname || p.name)}</div>
+      <div class="meta">${p.nickname && p.nickname !== p.name ? esc(p.name) + ' · ' : ''}${s ? s.games + ' משחקים' : 'עוד לא שיחק'}</div></div>
+      ${s ? money(s.net) : ''}</div>`;
+    }).join('') + `</div>` : `<div class="empty">אין שחקנים עדיין — הוסיפו את החברים 👥</div>`}
+    ${inact.length ? `<h2>לא פעילים</h2><div class="card">` + inact.map(p =>
+      `<div class="lb" style="cursor:pointer;opacity:.55" onclick="openProfile('${p.id}')">${avatarHtml(p)}<div class="who">${esc(p.nickname || p.name)}</div></div>`).join('') + `</div>` : ''}`;
+}
+function quickAddPlayer(ctx) {
+  sheet(`<h3>שחקן חדש</h3>
+    <label class="field"><span>שם</span><input type="text" id="np-name" autocomplete="off"></label>
+    <label class="field"><span>כינוי (לא חובה)</span><input type="text" id="np-nick" autocomplete="off"></label>
+    <button class="btn-primary btn-big" onclick="saveNewPlayer('${ctx || ''}')">שמירה</button>`);
+  setTimeout(() => document.getElementById('np-name')?.focus(), 60);
+}
+function saveNewPlayer(ctx) {
+  const name = document.getElementById('np-name').value.trim();
+  const nick = document.getElementById('np-nick').value.trim();
+  if (!name) { toast('צריך שם 🙂'); return; }
+  const p = { id: uid(), name, nickname: nick || null, avatar: null, active: true, createdAt: Date.now() };
+  S.players.push(p); save(); closeSheet();
+  if (ctx === 'ng') { ngSel.add(p.id); render(); }
+  else if (ctx === 'game') { lateAdd(p.id); }
+  else if (ctx === 'manual') { manualState.players[p.id] = 1; render(); }
+  else render();
+  toast(`${nick || name} נוסף ✔`);
+}
+function openProfile(pid) {
+  const p = player(pid); if (!p) return;
+  const s = allStats()[pid];
+  sheet(`<h3>פרופיל שחקן</h3>
+    <div class="row" style="margin-bottom:14px">
+      <div onclick="pickAvatar('${pid}')" style="cursor:pointer;position:relative">${avatarHtml(p, 'big')}
+        <div style="position:absolute;bottom:-2px;inset-inline-start:-2px;background:var(--gold);color:#17130a;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:.8rem">📷</div></div>
+      <div class="grow">
+        <label class="field"><span>שם</span><input type="text" id="pf-name" value="${esc(p.name)}"></label>
+        <label class="field" style="margin-bottom:0"><span>כינוי</span><input type="text" id="pf-nick" value="${esc(p.nickname || '')}"></label>
+      </div>
+    </div>
+    ${s ? `<div class="card" style="margin-bottom:14px"><table class="sheet">
+      <tr><td>משחקים</td><td class="num">${s.games}</td></tr>
+      <tr><td>כניסות (ממוצע)</td><td class="num">${s.entries} (${(s.entries / s.games).toFixed(1)})</td></tr>
+      <tr><td>🥇 / 🥈</td><td class="num">${s.firsts} / ${s.seconds}</td></tr>
+      <tr><td>מאזן כולל</td><td>${money(s.net)}</td></tr>
+    </table></div>` : '<div class="empty">עוד לא שיחק</div>'}
+    <button class="btn-primary btn-big" onclick="saveProfile('${pid}')">שמירה</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="togglePlayerActive('${pid}')">${p.active !== false ? 'העברה ללא פעילים' : 'החזרה לפעילים'}</button>
+    ${!s ? `<button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deletePlayer('${pid}')">מחיקת השחקן</button>` : ''}`);
+}
+function saveProfile(pid) {
+  const p = player(pid); if (!p) return;
+  p.name = document.getElementById('pf-name').value.trim() || p.name;
+  p.nickname = document.getElementById('pf-nick').value.trim() || null;
+  save(); closeSheet(); render(); toast('נשמר ✔');
+}
+function togglePlayerActive(pid) {
+  const p = player(pid); if (!p) return;
+  p.active = p.active === false; save(); closeSheet(); render();
+}
+function deletePlayer(pid) {
+  if (S.games.some(g => g.playerIds.includes(pid))) { toast('אי אפשר למחוק שחקן עם משחקים'); return; }
+  confirmDlg('למחוק את השחקן?', () => {
+    S.players = S.players.filter(p => p.id !== pid); save(); closeSheet(); render();
+  });
+}
+function pickAvatar(pid) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const ctx = c.getContext('2d');
+      const s = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256);
+      const p = player(pid);
+      p.avatar = c.toDataURL('image/jpeg', 0.82);
+      save(); openProfile(pid); render();
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(f);
+  };
+  inp.click();
+}
+
+/* ---- stats ---- */
+function allStats() {
+  const st = {};
+  for (const g of S.games) {
+    if (g.status !== 'done') continue;
+    const p = payouts(g);
+    for (const pid of g.playerIds) {
+      const s = st[pid] || (st[pid] = { pid, games: 0, entries: 0, firsts: 0, seconds: 0, net: 0, best: -Infinity });
+      s.games++; s.entries += entriesOf(g, pid);
+      if (g.results.first === pid) s.firsts++;
+      if (g.results.second === pid) s.seconds++;
+      s.net += p.nets[pid];
+      s.best = Math.max(s.best, p.nets[pid]);
+    }
+  }
+  return st;
+}
+function leaderboard() { return Object.values(allStats()).sort((a, b) => b.net - a.net); }
+function statsView() {
+  const app = document.getElementById('app');
+  const lb = leaderboard();
+  const gamesCount = S.games.filter(g => g.status === 'done').length;
+  app.innerHTML = `
+    <div class="topbar"><h1>🏆 טבלת כל הזמנים</h1><div class="sub">${gamesCount} משחקים</div></div>
+    ${lb.length ? `<div class="card">` + lb.map((r, i) =>
+      `<div class="lb" style="cursor:pointer" onclick="openProfile('${r.pid}')">
+        <div class="rank">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</div>
+        ${avatarHtml(player(r.pid))}
+        <div class="who"><div>${esc(pname(r.pid))}</div>
+        <div class="meta">${r.games} משחקים · ${r.firsts}🥇 ${r.seconds}🥈 · שיא ${money(r.best === -Infinity ? 0 : r.best)}</div></div>
+        ${money(r.net)}</div>`).join('') + `</div>`
+      : `<div class="empty">אין עדיין נתונים.<br>שחקו משחק או הוסיפו משחקים ישנים בהיסטוריה 📜</div>`}`;
+}
+
+/* ---- history + manual ---- */
+function historyView() {
+  const app = document.getElementById('app');
+  const done = S.games.filter(g => g.status === 'done').sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  app.innerHTML = `
+    <div class="topbar"><h1>📜 היסטוריה</h1><button class="btn-primary" onclick="startManual()">+ משחק ישן</button></div>
+    ${done.length ? done.map(g => {
+      const p = payouts(g);
+      return `<div class="card" style="cursor:pointer" onclick="go('summary','${g.id}')">
+        <div class="row"><div class="grow">
+          <div style="font-weight:600">${heDateShort(g.date)}${g.isManual ? ' <span style="font-size:.68rem;color:var(--ink-dim)">ידני</span>' : ''}</div>
+          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">🥇 ${esc(pname(g.results.first))} · 🥈 ${esc(pname(g.results.second))} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות</div>
+        </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div></div>`;
+    }).join('') : `<div class="empty">אין משחקים שמורים.<br>הוסיפו משחקים ישנים כדי למלא את הסטטיסטיקות 🏆</div>`}`;
+}
+let manualState = null;
+function startManual() {
+  manualState = { date: new Date().toISOString().slice(0, 10), players: {}, first: null, second: null };
+  go('manual');
+}
+function manualView() {
+  if (!manualState) { go('history'); return; }
+  const m = manualState;
+  const app = document.getElementById('app');
+  const act = S.players.filter(p => p.active !== false);
+  const chosen = Object.keys(m.players);
+  app.innerHTML = `
+    <div class="topbar"><h1>משחק ישן</h1><button class="btn-ghost" onclick="manualState=null;go('history')">ביטול</button></div>
+    <label class="field"><span>תאריך</span><input type="date" value="${m.date}" onchange="manualState.date=this.value"></label>
+    <h2>שחקנים וכניסות</h2>
+    <div class="chips" style="margin-bottom:12px">${act.filter(p => !m.players[p.id]).map(p =>
+      `<div class="chip" onclick="manualState.players['${p.id}']=1;render()">${esc(p.nickname || p.name)}</div>`).join('')}
+      <div class="chip" onclick="quickAddPlayer('manual')">+ שחקן חדש</div></div>
+    ${chosen.map(pid => `
+      <div class="prow">${avatarHtml(player(pid))}
+        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+          <div class="meta">
+            <span class="chip ${m.first === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('first','${pid}')">🥇</span>
+            <span class="chip ${m.second === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('second','${pid}')">🥈</span>
+          </div></div>
+        <div class="stepper">
+          <button onclick="mStep('${pid}',-1)">−</button>
+          <div class="cnt num">${m.players[pid]}</div>
+          <button onclick="mStep('${pid}',1)">+</button>
+        </div></div>`).join('')}
+    ${chosen.length ? `<div class="card" style="margin-top:6px;color:var(--ink-dim);font-size:.85rem">
+      קופה: <b style="color:var(--gold)">₪${(Object.values(m.players).reduce((a, b) => a + b, 0) * S.settings.entryPrice).toLocaleString('he-IL')}</b>
+      · ${Object.values(m.players).reduce((a, b) => a + b, 0)} כניסות</div>` : ''}
+    <div style="height:10px"></div>
+    <button class="btn-primary btn-big" ${chosen.length < 2 || !m.first || !m.second ? 'disabled' : ''} onclick="saveManual()">שמירת המשחק</button>
+    ${chosen.length >= 2 && (!m.first || !m.second) ? '<div class="empty" style="padding:10px">סמנו 🥇 ו-🥈 ליד השחקנים</div>' : ''}`;
+}
+function mStep(pid, d) {
+  const m = manualState;
+  const v = (m.players[pid] || 1) + d;
+  if (v <= 0) { delete m.players[pid]; if (m.first === pid) m.first = null; if (m.second === pid) m.second = null; }
+  else m.players[pid] = Math.min(v, S.settings.maxRebuys + 1);
+  render();
+}
+function mSetPlace(place, pid) {
+  const m = manualState;
+  const other = place === 'first' ? 'second' : 'first';
+  if (m[other] === pid) m[other] = null;
+  m[place] = m[place] === pid ? null : pid;
+  render();
+}
+function saveManual() {
+  const m = manualState;
+  const pids = Object.keys(m.players);
+  if (pids.length < 2 || !m.first || !m.second) return;
+  const g = {
+    id: uid(), date: m.date, startAt: null, endAt: null, status: 'done', isManual: true,
+    config: {
+      entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
+      splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
+      maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
+      breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
+    },
+    playerIds: pids,
+    entries: pids.map(pid => ({ pid, delta: m.players[pid], ts: Date.now() })),
+    results: { first: m.first, second: m.second }, timer: null,
+  };
+  S.games.push(g); save(); manualState = null;
+  go('summary', g.id); toast('המשחק נוסף להיסטוריה ✔');
+}
+
+/* ---- settings ---- */
+function settingsView() {
+  const s = S.settings;
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="topbar"><h1>⚙️ הגדרות</h1></div>
+    <h2>כסף</h2>
+    <div class="card">
+      <label class="field"><span>מחיר כניסה (₪)</span><input type="number" inputmode="numeric" id="st-entry" value="${s.entryPrice}"></label>
+      <label class="field"><span>דמי בית לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-fee" value="${s.houseFee}"></label>
+      <div class="row">
+        <label class="field grow"><span>מקום 1 (%)</span><input type="number" inputmode="numeric" id="st-s1" value="${s.splitFirst}"></label>
+        <label class="field grow"><span>מקום 2 (%)</span><input type="number" inputmode="numeric" id="st-s2" value="${s.splitSecond}"></label>
+        <label class="field grow"><span>בית (%)</span><input type="number" inputmode="numeric" id="st-sh" value="${s.splitHouse}"></label>
+      </div>
+      <label class="field"><span>תקרת רי-באי לשחקן</span><input type="number" inputmode="numeric" id="st-cap" value="${s.maxRebuys}"></label>
+    </div>
+    <h2>שעון</h2>
+    <div class="card">
+      <label class="field"><span>אורך רמה</span>
+        <select id="st-lvlmin">
+          ${[10, 12, 15, 20].map(v => `<option value="${v}" ${s.levelMinutes === v ? 'selected' : ''}>${v} דקות ${v === 10 ? '(טורבו)' : v === 15 ? '(רגיל)' : v === 20 ? '(רגוע)' : ''}</option>`).join('')}
+        </select></label>
+      <div class="row">
+        <label class="field grow"><span>הפסקה אחרי רמה</span><input type="number" inputmode="numeric" id="st-brkafter" value="${s.breakAfter}"></label>
+        <label class="field grow"><span>אורך הפסקה (דק')</span><input type="number" inputmode="numeric" id="st-brkmin" value="${s.breakMinutes}"></label>
+      </div>
+      <div class="row" style="margin-top:4px">
+        <div class="chip ${s.sound ? 'on' : ''}" onclick="S.settings.sound=!S.settings.sound;save();render()">🔔 צלילים</div>
+        <div class="chip ${s.voice ? 'on' : ''}" onclick="S.settings.voice=!S.settings.voice;save();render()">🗣 הכרזה קולית</div>
+      </div>
+      <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
+        סולם בליינדים: 10/20 ← 15/30 ← 20/40 ← 30/60 ← 40/80 ← הפסקה ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← ... כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.
+      </div>
+    </div>
+    <button class="btn-primary btn-big" onclick="saveSettings()">שמירת הגדרות</button>
+    <h2>גיבוי</h2>
+    <div class="card">
+      <div class="row">
+        <button class="grow" onclick="exportBackup()">⬇️ ייצוא גיבוי</button>
+        <button class="grow" onclick="importBackup()">⬆️ שחזור מגיבוי</button>
+      </div>
+      <div class="empty" style="padding:10px 0 0;font-size:.78rem">הנתונים נשמרים במכשיר הזה. מומלץ לייצא גיבוי מדי פעם.</div>
+    </div>
+    <div class="card">
+      <button class="btn-ghost btn-danger" style="width:100%" onclick="wipeAll()">🗑 מחיקת כל הנתונים</button>
+    </div>`;
+}
+function saveSettings() {
+  const v = id => parseInt(document.getElementById(id).value, 10);
+  const s1 = v('st-s1'), s2 = v('st-s2'), sh = v('st-sh');
+  if (s1 + s2 + sh !== 100) { toast(`האחוזים חייבים להסתכם ב-100 (עכשיו ${s1 + s2 + sh})`); return; }
+  Object.assign(S.settings, {
+    entryPrice: Math.max(1, v('st-entry')), houseFee: Math.max(0, v('st-fee')),
+    splitFirst: s1, splitSecond: s2, splitHouse: sh,
+    maxRebuys: Math.max(0, v('st-cap')),
+    levelMinutes: parseInt(document.getElementById('st-lvlmin').value, 10),
+    breakAfter: Math.max(0, v('st-brkafter')), breakMinutes: Math.max(1, v('st-brkmin')),
+  });
+  save(); toast('ההגדרות נשמרו ✔ (יחולו ממשחק חדש)');
+}
+function exportBackup() {
+  const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `pokernight-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('הגיבוי ירד ✔');
+}
+function importBackup() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (!Array.isArray(data.players) || !Array.isArray(data.games)) throw new Error('bad');
+        confirmDlg('השחזור יחליף את כל הנתונים הקיימים. להמשיך?', () => {
+          S = data; S.settings = Object.assign({}, DEFAULT_SETTINGS, S.settings || {});
+          save(); render(); toast('שוחזר בהצלחה ✔');
+        });
+      } catch (e) { toast('קובץ גיבוי לא תקין'); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+function wipeAll() {
+  confirmDlg('למחוק את <b>כל</b> הנתונים לצמיתות?<br>שחקנים, משחקים וסטטיסטיקות.', () => {
+    confirmDlg('בטוחים לגמרי? אין דרך חזרה.', () => {
+      S = { players: [], games: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
+      save(); go('home'); toast('הכול נמחק');
+    });
+  });
+}
+
+/* ================= sheet / dialogs ================= */
+function sheet(html) {
+  closeSheet();
+  const ov = document.createElement('div');
+  ov.className = 'overlay'; ov.id = 'sheet-ov';
+  ov.onclick = e => { if (e.target === ov) closeSheet(); };
+  ov.innerHTML = `<div class="sheet-modal">${html}</div>`;
+  document.body.appendChild(ov);
+}
+function closeSheet() { document.getElementById('sheet-ov')?.remove(); }
+function confirmDlg(msg, onYes) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.style.alignItems = 'center';
+  ov.innerHTML = `<div class="sheet-modal" style="border-radius:20px;max-width:340px;margin:0 16px">
+    <div style="margin-bottom:16px;line-height:1.5">${msg}</div>
+    <div class="row"><button class="grow" id="cd-no">ביטול</button>
+    <button class="grow btn-primary" id="cd-yes">אישור</button></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#cd-no').onclick = () => ov.remove();
+  ov.querySelector('#cd-yes').onclick = () => { ov.remove(); onYes(); };
+}
+
+/* ================= boot ================= */
+window.addEventListener('load', () => {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+});
+const _g = activeGame();
+if (_g) { timerCatchUp(_g, true); view = 'game'; }
+render();
+if (_g) startTick();
+</script>
+</body>
+</html>
