@@ -1,5 +1,5 @@
-const CACHE = 'pokernight-v8';
-const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'bg.jpg',
+const CACHE = 'pokernight-v9';
+const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'bg.jpg', 'login.mp3',
   'fonts/rubik-var-hebrew.woff2', 'fonts/rubik-var-latin.woff2',
   'fonts/frank-ruhl-libre-700-hebrew.woff2', 'fonts/frank-ruhl-libre-700-latin.woff2'];
 

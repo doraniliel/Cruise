@@ -616,8 +616,17 @@ function tone(freq, dur, delay, vol) {
 function playGong() { if (!S.settings.sound) return; try { tone(660, 1.2, 0, .5); tone(880, 1.4, 0.15, .35); tone(440, 1.6, 0.05, .3); } catch (e) {} }
 function playWarn() { if (!S.settings.sound) return; try { tone(880, .18, 0, .35); tone(880, .18, .28, .35); } catch (e) {} }
 function playClick() { if (!S.settings.sound) return; try { tone(1200, .06, 0, .18); } catch (e) {} }
+const loginAudio = new Audio('login.mp3');
+loginAudio.preload = 'auto';
 function playLoginChime() {
-  // poker chips riffle: rapid sharp filtered clicks, then a chip-stack clack
+  try {
+    loginAudio.currentTime = 0;
+    const p = loginAudio.play();
+    if (p && p.catch) p.catch(() => playChipSynth());
+  } catch (e) { playChipSynth(); }
+}
+function playChipSynth() {
+  // fallback: synthesized chip riffle
   try {
     const ctx = ac();
     for (let i = 0; i < 7; i++) {
@@ -854,8 +863,10 @@ let endPick = null;
 function beginEndGame() {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g) return;
-  endPick = { first: null };
-  renderEndPick();
+  confirmDlg('לסיים את המשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">בשלב הבא בוחרים את הזוכים במקום הראשון והשני.</span>', () => {
+    endPick = { first: null };
+    renderEndPick();
+  });
 }
 function renderEndPick() {
   const g = activeGame();
