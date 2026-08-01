@@ -17,8 +17,8 @@
     --bg: #0b120e;
     --felt: #12281c;
     --felt-hi: #1a3a28;
-    --card: #14201a;
-    --card-hi: #1b2c22;
+    --card: rgba(17, 27, 21, .93);
+    --card-hi: rgba(24, 38, 30, .95);
     --line: #24382c;
     --gold: #d4af37;
     --gold-dim: #a8892b;
@@ -41,6 +41,15 @@
     overscroll-behavior-y: none;
   }
   bdi, .num { font-variant-numeric: tabular-nums; }
+
+  #bgimg {
+    position: fixed; inset: 0; z-index: -1;
+    background: url(bg.jpg) center / cover no-repeat var(--bg);
+  }
+  #bgimg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(rgba(7, 12, 9, .68), rgba(7, 12, 9, .84));
+  }
 
   #app {
     max-width: 560px;
@@ -233,6 +242,7 @@
 </style>
 </head>
 <body>
+<div id="bgimg"></div>
 <div id="app"></div>
 <nav id="nav"></nav>
 <div id="toast"></div>
@@ -568,7 +578,27 @@ function tone(freq, dur, delay, vol) {
 function playGong() { if (!S.settings.sound) return; try { tone(660, 1.2, 0, .5); tone(880, 1.4, 0.15, .35); tone(440, 1.6, 0.05, .3); } catch (e) {} }
 function playWarn() { if (!S.settings.sound) return; try { tone(880, .18, 0, .35); tone(880, .18, .28, .35); } catch (e) {} }
 function playClick() { if (!S.settings.sound) return; try { tone(1200, .06, 0, .18); } catch (e) {} }
-function playLoginChime() { try { tone(523.25, .18, 0, .3); tone(659.25, .18, .10, .3); tone(783.99, .38, .20, .35); } catch (e) {} }
+function playLoginChime() {
+  // poker chips riffle: rapid sharp filtered clicks, then a chip-stack clack
+  try {
+    const ctx = ac();
+    for (let i = 0; i < 7; i++) {
+      const t = ctx.currentTime + i * 0.055 + Math.random() * 0.012;
+      const dur = 0.035;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / d.length, 2);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+      bp.frequency.value = 2200 + Math.random() * 1800; bp.Q.value = 6;
+      const gn = ctx.createGain(); gn.gain.value = 0.45 + Math.random() * 0.25;
+      src.connect(bp); bp.connect(gn); gn.connect(ctx.destination);
+      src.start(t);
+    }
+    tone(1050, .05, 0.46, .28);
+    tone(680, .10, 0.52, .32);
+  } catch (e) {}
+}
 function speak(text) {
   try {
     const u = new SpeechSynthesisUtterance(text);
