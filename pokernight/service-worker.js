@@ -1,4 +1,4 @@
-const CACHE = 'pokernight-v5';
+const CACHE = 'pokernight-v6';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'bg.jpg'];
 
 self.addEventListener('install', e => {
