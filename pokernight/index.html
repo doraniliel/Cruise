@@ -178,10 +178,11 @@
   table.sheet td:last-child, table.sheet th:last-child { text-align: left; }
 
   /* forms */
-  input[type=text], input[type=number], input[type=date], input[type=time], select {
-    font: inherit; color: var(--ink); background: var(--bg);
+  input[type=text], input[type=number], input[type=date], input[type=time], input[type=password], select {
+    font: inherit; font-size: 16px; color: var(--ink); background: var(--bg);
     border: 1px solid var(--line); border-radius: 10px;
     padding: 10px 12px; width: 100%;
+    -webkit-appearance: none; appearance: none;
   }
   label.field { display: block; margin-bottom: 10px; font-size: .85rem; color: var(--ink-dim); }
   label.field span { display: block; margin-bottom: 4px; }
@@ -325,6 +326,7 @@ function userLogin() {
   const name = document.getElementById('lg-name').value.trim();
   if (!name) { toast('צריך שם 🙂'); return; }
   setSession({ role: 'user', name, ts: Date.now() });
+  playLoginChime();
   render();
   pullState(true);
 }
@@ -333,6 +335,7 @@ async function adminLogin() {
   const p = document.getElementById('lg-pass').value;
   if (u === ADMIN_USER && await sha256hex(`pn|${u}|${p}`) === ADMIN_HASH) {
     setSession({ role: 'admin', name: 'מנהל', key: p, ts: Date.now() });
+    playLoginChime();
     toast('ברוך הבא, מנהל 🔑');
     render();
     pullState();
@@ -565,6 +568,7 @@ function tone(freq, dur, delay, vol) {
 function playGong() { if (!S.settings.sound) return; try { tone(660, 1.2, 0, .5); tone(880, 1.4, 0.15, .35); tone(440, 1.6, 0.05, .3); } catch (e) {} }
 function playWarn() { if (!S.settings.sound) return; try { tone(880, .18, 0, .35); tone(880, .18, .28, .35); } catch (e) {} }
 function playClick() { if (!S.settings.sound) return; try { tone(1200, .06, 0, .18); } catch (e) {} }
+function playLoginChime() { try { tone(523.25, .18, 0, .3); tone(659.25, .18, .10, .3); tone(783.99, .38, .20, .35); } catch (e) {} }
 function speak(text) {
   try {
     const u = new SpeechSynthesisUtterance(text);
@@ -601,7 +605,7 @@ function renderNav() {
   const nav = document.getElementById('nav');
   if (view === 'clock') { nav.hidden = true; return; }
   nav.hidden = false;
-  nav.innerHTML = NAV.map(([v, ico, lbl]) =>
+  nav.innerHTML = NAV.filter(([v]) => v !== 'settings' || isAdmin()).map(([v, ico, lbl]) =>
     `<button class="${(view === v || (view === 'game' && v === 'home') || (view === 'summary' && v === 'history')) ? 'active' : ''}" onclick="go('${v}')"><span class="ico">${ico}</span>${lbl}</button>`
   ).join('');
 }
@@ -618,7 +622,7 @@ function render() {
 function home() {
   const g = activeGame();
   const app = document.getElementById('app');
-  let html = `<div class="topbar"><h1>🃏 ערב פוקר</h1><div class="sub" style="text-align:left">${isAdmin() ? '🔑 מנהל' : '👤 ' + esc(SESSION.name)}<br><span id="sync-badge" style="font-size:.7rem">${syncBadgeText()}</span></div></div>`;
+  let html = `<div class="topbar"><h1>🃏 ערב פוקר</h1><div class="sub" style="text-align:left">${isAdmin() ? '🔑 מנהל' : '👤 ' + esc(SESSION.name) + ' <button class="btn-ghost" style="font-size:.68rem;padding:2px 8px;margin-inline-start:4px" onclick="logout()">יציאה</button>'}<br><span id="sync-badge" style="font-size:.7rem">${syncBadgeText()}</span></div></div>`;
 
   if (g) {
     const tl = buildTimeline(g.config), cur = tl[g.timer.idx];
