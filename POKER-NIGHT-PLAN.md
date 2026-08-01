@@ -2,21 +2,22 @@
 
 A home-game manager for a weekly Texas Hold'em tournament group: entry tracking,
 automatic payouts, WhatsApp summaries, and a full-screen blinds clock.
-Replaces the weekly Google Sheet.
+Replaces the weekly Google Sheet. **UI is Hebrew-only, RTL throughout.**
 
 ---
 
-## 1. The game as it works today (requirements)
+## 1. Confirmed rules (locked with owner)
 
 - Weekly Texas Hold'em tournament with re-entries ("entries").
 - **Entry price: ₪30** — every entry (first buy-in and each re-entry) adds ₪30 to the pool.
-- **House fee: ₪30 per player, once per night** (separate from the pool).
-- At the end of the night, entries per player are totaled.
-- **Payout split of the pool: 1st place 65%, 2nd place 25%, house 10%.**
-  (65 + 25 + 10 = 100% — the pool splits exactly.)
-- Summary is posted to the group's WhatsApp.
-- Wanted: date, start time, end time per game night, and a blinds timer with a
-  preset structure that can be put up on a screen.
+- **House fee: ₪30 per player, once per night** — on top of the pool, house income.
+- **Payout split of the entry pool: 1st 65%, 2nd 25%, house 10%** (sums to exactly 100%).
+- **Rebuy cap: a player may not rebuy more than 12 times** (i.e. max 13 entries
+  including the first; cap is configurable — the app blocks the `+` past the limit
+  with an override for the host).
+- **Each entry = 1,500 tournament chips. Blinds start at 10/20** (75 BB deep).
+- **Language: Hebrew only.** Full RTL layout, Hebrew dates, Hebrew copy everywhere.
+- Summary posted to the group's WhatsApp.
 
 ### Worked example
 7 players, 12 total entries:
@@ -31,9 +32,9 @@ Replaces the weekly Google Sheet.
 Per-player net = winnings − (entries × 30 + 30 fee). A player with 2 entries who
 took 1st: +₪234 − ₪90 = **+₪144**.
 
-**Config, not constants:** entry price, fee, and split percentages live in a
-settings screen with these as defaults, so a rule change never needs a code change.
-Rounding rule: payouts round to whole shekels; remainder goes to 1st (configurable).
+Entry price, fee, split percentages, and rebuy cap all live in a settings screen
+with these as defaults. Rounding: payouts round to whole shekels; remainder to 1st
+(configurable).
 
 ---
 
@@ -41,174 +42,162 @@ Rounding rule: payouts round to whole shekels; remainder goes to 1st (configurab
 
 ### MVP (v1)
 1. **Game night lifecycle** — create game (date + start time auto-stamped), pick
-   players from a saved roster, end game (end time auto-stamped), pick 1st/2nd.
-2. **Entry tracking** — one big `+` per player, running total per player and for
-   the pool, undo, entry log (who/when) for dispute-proofing.
+   players from the roster, end game (end time auto-stamped), pick 1st/2nd.
+2. **Entry tracking** — one big `+` per player, running totals, undo, entry log
+   (who/when), rebuy cap enforced at 12 with host override.
 3. **Payout calculator** — automatic settlement sheet: what each player pays or
-   receives, house total, rounded to whole shekels.
-4. **WhatsApp share** — one tap builds a formatted summary message and opens
-   WhatsApp via `wa.me` / Web Share API (no API keys, no bot needed).
-5. **Blinds clock** — full-screen TV mode; presets; pause/resume; next-level
-   preview; sound + optional voice announcement on level change; wake-lock so
-   the screen never sleeps; fully offline.
-6. **Game history** — every night saved; browsable list replacing the sheet pile.
+   receives, house total, whole-shekel rounding.
+4. **WhatsApp share** — one tap builds a Hebrew summary message and opens
+   WhatsApp via Web Share API / `wa.me` (no API keys, no bot).
+5. **Blinds clock** — full-screen TV mode; presets built on the 1,500-chip /
+   10-20 structure; pause/resume; next-level preview; gong + optional Hebrew
+   voice announcement on level change; wake-lock; fully offline.
+6. **Player profiles** — nickname + uploaded profile picture (Supabase Storage,
+   client-side resize/crop before upload). Avatars appear in the roster, the
+   in-game list, the leaderboard, and the clock's side rail.
+7. **Manual history entry** — backfill past games: date, players, entries per
+   player, 1st/2nd. Marked "הוזן ידנית" (no timer data), feeds all statistics
+   identically to live games.
+8. **Statistics & leaderboard** — career net ₪ per player, 1st/2nd counts,
+   games played, average entries, biggest night. Promoted into v1 because
+   backfilled history is the point of manual entry.
 
 ### v2
-- **Leaderboard & stats** — career net ₪ per player, 1st/2nd counts, average
-  entries, biggest night, attendance streaks. The killer feature for a weekly group.
-- **Phone-drives-TV** — timer displayed on TV, controlled from the host's phone
-  (Supabase Realtime channel; the clock itself still runs locally on the display).
-- **Custom structure editor** — edit levels, durations, breaks; save named presets.
-- **Rebuy window rules** — optional "rebuys close at first break" mode + add-on.
+- **Phone-drives-TV** — timer on the TV, controlled from the host's phone
+  (Supabase Realtime; clock still runs locally on the display device).
+- **Custom structure editor** — edit levels/durations/breaks, save named presets.
 - **Bit / PayBox deep links** on the settlement sheet.
+- Attendance streaks, head-to-head stats, trends over time.
 
 ### v3 / later
-- Big-blind ante support on the clock, bounties, multiple groups, photos,
+- Big-blind ante on the clock, bounties, multiple groups, photos,
   "hand of the night" notes.
 
 ---
 
-## 3. Blinds research → defaults
+## 3. Blind structure — built for 1,500 stacks, 10/20 start
 
-Consensus from tournament-structure guides and home-game hosting resources
-(BetMGM Poker, Poker Foundry, Poker Chip Forum, PokerCoaching, Blinds Are Up,
-The Poker Timer):
+Research consensus (BetMGM Poker, Poker Foundry, Poker Chip Forum,
+PokerCoaching, Blinds Are Up, The Poker Timer): start 75–150 BB deep,
+15–20 minute levels for a 3–4 hour night, blinds growing ~50% per level and
+never more than doubling. 1,500 at 10/20 = 75 BB — solid for a rebuy game.
 
-- **Starting stack: 100–150 big blinds** (e.g. T5,000 at 25/50). Below ~50 BB the
-  early game is a shove-fest; above ~200 BB the night drags.
-- **Level length: 15–20 min** targets a 3–4 hour night. 10–12 min = turbo.
-- **Blind growth: ~50% per level**, smoother early, roughly doubling later.
-  Never more than double per level.
-- **Rebuy period:** classic structure allows rebuys for the first 4–8 levels /
-  first hour, closing at a break (often with an add-on). Unlimited all-night
-  re-entry is also common in home games — both supported, all-night is our default.
-- By the mid-game the average stack should sit around 15–25 BB to create real
-  push-fold pressure and finish the tournament on time.
-
-### Default structure — "Standard" (15-min levels, T5,000 start ≈ 100 BB)
+### Default "Standard" preset (15-min levels)
 
 | Level | Blinds | | Level | Blinds |
 |---|---|---|---|---|
-| 1 | 25 / 50 | | 8 | 400 / 800 |
-| 2 | 50 / 100 | | 9 | 600 / 1,200 |
-| 3 | 75 / 150 | | 10 | 800 / 1,600 |
-| 4 | 100 / 200 | | 11 | 1,000 / 2,000 |
-| 5 | 150 / 300 | | 12 | 1,500 / 3,000 |
-| — | **Break 10 min** | | 13 | 2,000 / 4,000 |
-| 6 | 200 / 400 | | 14 | 3,000 / 6,000 |
-| 7 | 300 / 600 | | | |
+| 1 | 10 / 20 | | 8 | 100 / 200 |
+| 2 | 15 / 30 | | 9 | 150 / 300 |
+| 3 | 20 / 40 | | 10 | 200 / 400 |
+| 4 | 30 / 60 | | 11 | 300 / 600 |
+| 5 | 40 / 80 | | 12 | 400 / 800 |
+| — | **Break 10 min** | | 13 | 600 / 1,200 |
+| 6 | 50 / 100 | | 14 | 800 / 1,600 |
+| 7 | 75 / 150 | | 15 | 1,000 / 2,000 |
 
-With 6–8 players and typical rebuys this lands at ~3.5–4 hours including the break.
+Sizing check: 7 players averaging 2 entries ≈ 21,000 chips in play; the game
+naturally ends when the big blind reaches ~5–10% of total chips (levels 13–15)
+→ **~3.5–4 hours including the break**. More rebuys push chips up and the game
+one level deeper — self-balancing.
 
-**Presets shipped:** Relaxed (20-min levels), Standard (15), Turbo (10) — same
-ladder, different clock. Plus a deep-stack variant (T10,000 start) if the group
-ever wants a longer night. Chip denominations in the ladder assume a standard
-25/100/500/1000 home set; the structure editor lets us match whatever chipset
-the group actually owns.
+**Presets shipped:** רגוע (20-min levels) · רגיל (15) · טורבו (10) — same ladder.
+Levels 2 and 7 (15/30, 75/150) assume 5-value chips exist; if the physical set
+is 25s-based, the editor swaps to a 10/20 → 20/40 → 40/80 ladder. Worth a quick
+look at the actual chipset before locking the preset.
 
 ---
 
 ## 4. Technical foundations
 
 **Stack: same recipe as Cruise** — single-file PWA (`index.html`) + Supabase,
-installable to the home screen, no app store. Proven in this repo already
-(auth by name+code, realtime, service worker). New repo or a subdirectory —
-owner's call.
+installable to the home screen, no app store.
 
-Key technical decisions:
-
-- **Local-first timer.** The clock runs entirely client-side
-  (`requestAnimationFrame` + timestamps, not `setInterval` drift); Wake Lock API
-  keeps the screen on; works with zero network. Nothing about running the
-  actual game night may depend on connectivity.
-- **Entries as an event log** (`+1`/`−1` rows with timestamps), not a mutable
-  counter — gives undo, audit trail, and safe offline sync (append-only merges
-  cleanly when the connection returns).
+- **Hebrew/RTL as the foundation, not a layer:** `<html lang="he" dir="rtl">`,
+  all copy in Hebrew, Hebrew typeface with proper numerals (Rubik or Heebo),
+  dates as «יום חמישי 30.7», numbers/times embedded LTR inside RTL text
+  (`unicode-bidi` handled once, globally). The clock's digits are locale-neutral.
+- **Local-first timer.** Clock runs client-side off timestamps (no
+  `setInterval` drift); Wake Lock API keeps the screen on; zero network needed
+  during play.
+- **Entries as an append-only event log** (`+1`/`−1` rows with timestamps) —
+  undo, audit trail, and clean offline sync.
 - **Supabase schema:**
-  - `players` (id, name, active)
-  - `games` (id, date, start_at, end_at, status, config_json, structure_json)
+  - `players` (id, name, nickname, avatar_url, active)
+  - `games` (id, date, start_at, end_at, status, is_manual, config_json, structure_json)
   - `entry_events` (game_id, player_id, delta, created_at)
   - `results` (game_id, player_id, place)
-  - derived: payouts computed, never stored as source of truth.
-- **WhatsApp:** message built client-side, shared via Web Share API with
-  `https://wa.me/?text=` fallback. User picks the group in WhatsApp itself —
-  zero integration risk.
-- **Hebrew/RTL-ready:** ₪ formatting, `dir="rtl"` support, day names in Hebrew.
-  UI copy can be Hebrew, English, or both — owner's call.
-- **PWA:** manifest + service worker precache so the app opens instantly at the
-  table even with bad reception.
+  - Storage bucket `avatars` (client-side crop/resize to ~256px before upload).
+  - Manual games write straight to `games` + aggregate entries + `results`;
+    stats queries don't distinguish live from manual.
+- **WhatsApp:** Hebrew message built client-side, shared via Web Share API with
+  `wa.me` fallback; user picks the group in WhatsApp.
+- **PWA:** manifest + service worker precache; opens instantly at the table.
 
 ---
 
 ## 5. UX / UI direction
 
 **Theme: "midnight felt."** Near-black background, deep felt green surfaces,
-gold/amber accent for money, suit glyphs as subtle texture. Huge tabular-figure
-numerals. Dark-only — this app lives in a dim room at 11pm.
+gold accent for money, huge numerals. Dark-only — this app lives in a dim room.
+Everything mirrored for RTL: navigation flows right-to-left, the `+` buttons
+sit on the left end of each player row (thumb side for a right-handed grip).
 
 **Two faces, one app:**
 
-1. **Host mode (phone, portrait)** — the operational screen during play:
-   - Compact timer strip pinned on top (level, blinds, countdown) — always visible.
-   - Player list: avatar/initials, entry count, one thumb-sized `+` per row,
-     long-press to undo. Running pool total and live 1st/2nd prize amounts at
-     the bottom — watching the pot grow is half the fun.
-   - Everything reachable one-handed; destructive actions confirm; every
-     mutation has undo.
+1. **מצב מנהל (host mode, phone, portrait)** — timer strip pinned on top;
+   player rows with avatar, nickname, entry count, one thumb-sized `+`
+   (long-press to undo, disabled state at the 12-rebuy cap with «הגיע לתקרה»);
+   live pool and prize amounts at the bottom. One-handed, undoable, confirm on
+   destructive actions.
 
-2. **Table mode (TV / tablet, landscape, full-screen)** — the poker clock:
-   - Giant countdown in the center (readable from 4 meters).
-   - Current blinds huge, **next blinds** small beneath — the single most
-     requested clock feature.
-   - Side rail: level number, elapsed time, players, total entries, prize pool,
-     average stack.
-   - Level-change moment: full-screen color pulse + gong + optional voice
-     ("Blinds are now two hundred, four hundred"). Break levels get their own
-     calm screen with a countdown to resume.
-   - Controls (pause, ±1 min, skip/back level) hidden behind a tap, so nobody
-     fat-fingers the clock while pointing at it.
+2. **מצב שולחן (table mode, TV/tablet, landscape)** — giant centered countdown;
+   current blinds huge with **next blinds** previewed beneath; side rail with
+   level, elapsed time, players, entries, pool, average stack; gong + optional
+   Hebrew voice («הבליינדים עולים: מאה–מאתיים») on level change; calm dedicated
+   break screen; controls hidden behind a tap.
 
 **Key flows:**
 
-- **Start night:** open app → "New Game" (one giant button) → roster pre-checked
-  from last week → "Deal us in" → clock starts, start time stamped.
-- **Mid-game:** bust → tap `+` on the player → chip-clink sound → pool ticks up.
-- **End night:** "End Game" → tap 1st, tap 2nd → settlement sheet slides up →
-  review → **"Share to WhatsApp"** as the primary CTA → done, night archived.
-- **WhatsApp message format (draft):**
+- **Start night:** «משחק חדש» → roster pre-checked from last week → clock starts.
+- **Mid-game:** bust → `+` on the player → chip-clink → pool ticks up.
+- **End night:** «סיום משחק» → tap 1st, tap 2nd → settlement sheet →
+  **«שיתוף בוואטסאפ»** as primary CTA → night archived.
+- **Backfill:** «הוספת משחק ישן» → date picker → players → entries per player
+  (steppers) → 1st/2nd → saved into stats.
+- **Profiles:** tap a player anywhere → sheet with photo (camera/gallery, square
+  crop), nickname, career stat line.
 
-  ```
-  🃏 Poker Night — Thu 30.7
-  🕗 20:30 → 00:45  ·  7 players, 12 entries
-  💰 Pool: ₪360
-  🥇 Danny — ₪234
-  🥈 Yossi — ₪90
-  🏠 House — ₪246
-  ───────────
-  Danny +₪144 · Yossi ±₪0 · Tal −₪90 ...
-  ```
+**WhatsApp message (draft):**
 
-**Design details that matter:** optimistic UI with instant feedback on every
-tap; numbers animate when they change; empty states teach the flow the first
-week; the whole app usable with beer in one hand.
+```
+🃏 ערב פוקר — יום חמישי 30.7
+🕗 20:30 → 00:45 · 7 שחקנים · 12 כניסות
+💰 קופה: ₪360
+🥇 דני — ₪234
+🥈 יוסי — ₪90
+🏠 הבית — ₪246
+───────────
+דני ‎+144 · יוסי ‎0 · טל ‎−90 ...
+```
+
+**Statistics screen:** leaderboard cards sorted by career net ₪ — avatar,
+nickname, games, 1st/2nd trophy counts, net in green/red. Tapping a player
+opens their history. This is the screen the group argues about on WhatsApp.
 
 ---
 
-## 6. Open questions
+## 6. Remaining small decisions
 
-1. **"Profits" definition** — plan assumes 65/25/10 splits the entry pool and the
-   ₪30/player fee is extra house income on top. Confirm.
-2. **Rebuy rules** — re-entries allowed all night, or should they close at a
-   certain level/break? (Default: all night.)
-3. **Chipset** — which denominations and how many chips per starting stack, so
-   presets match the physical chips.
-4. **Language** — Hebrew, English, or bilingual UI?
-5. **Home** — new repo, or built alongside Cruise in this one?
+1. **Chipset denominations** — confirms whether the ladder keeps 15/30 and
+   75/150 levels (needs 5-chips) or shifts to a 25s-friendly ladder.
+2. **Rebuy cap semantics** — implemented as 12 *rebuys* (13 total entries).
+   If the intent was 12 total entries, it's a one-number config change.
+3. **Home** — new repo, or built alongside Cruise in this one?
 
 ## 7. Suggested build order
 
-1. Skeleton PWA + Supabase schema + roster and game creation
-2. Entry tracking + payout math + settlement sheet (the Google Sheet replacement — immediate value)
-3. WhatsApp share
-4. Blinds clock: host strip → full-screen table mode → sounds/wake-lock
-5. History list → then v2 stats/leaderboard
+1. Skeleton Hebrew-RTL PWA + Supabase schema + roster, profiles (nickname/avatar)
+2. Entry tracking + payout math + settlement sheet (immediate Google-Sheet replacement)
+3. Manual history entry + statistics/leaderboard
+4. WhatsApp share
+5. Blinds clock: host strip → full-screen table mode → sounds/wake-lock
