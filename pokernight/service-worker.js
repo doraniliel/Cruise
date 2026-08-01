@@ -1,5 +1,7 @@
-const CACHE = 'pokernight-v6';
-const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'bg.jpg'];
+const CACHE = 'pokernight-v7';
+const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'bg.jpg',
+  'fonts/rubik-var-hebrew.woff2', 'fonts/rubik-var-latin.woff2',
+  'fonts/frank-ruhl-libre-700-hebrew.woff2', 'fonts/frank-ruhl-libre-700-latin.woff2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

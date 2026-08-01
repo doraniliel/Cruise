@@ -13,6 +13,11 @@
 <meta name="apple-mobile-web-app-title" content="ערב פוקר">
 <title>ערב פוקר 🃏</title>
 <style>
+  @font-face { font-family: 'Rubik'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/rubik-var-hebrew.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: 'Rubik'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/rubik-var-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: 'Frank Ruhl Libre'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/frank-ruhl-libre-700-hebrew.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: 'Frank Ruhl Libre'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/frank-ruhl-libre-700-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
   :root {
     --bg: #0b120e;
     --felt: #12281c;
@@ -57,8 +62,8 @@
     padding: 14px 14px calc(84px + env(safe-area-inset-bottom));
     min-height: 100dvh;
   }
-  h1 { font-size: 1.35rem; font-weight: 700; }
-  h2 { font-size: 1.05rem; font-weight: 600; color: var(--ink-dim); margin: 18px 0 8px; }
+  h1 { font-size: 1.35rem; font-weight: 700; font-family: 'Frank Ruhl Libre', 'Rubik', serif; letter-spacing: .01em; }
+  h2 { font-size: .82rem; font-weight: 600; color: var(--gold-dim); margin: 18px 0 8px; letter-spacing: .14em; text-transform: uppercase; }
 
   .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .topbar .sub { color: var(--ink-dim); font-size: .85rem; }
@@ -151,8 +156,8 @@
     gap: clamp(4px, 1.5vh, 14px); padding: 20px; user-select: none;
   }
   #clock .lvl { color: var(--ink-dim); font-size: clamp(1rem, 3vmin, 1.4rem); letter-spacing: .06em; }
-  #clock .time { font-size: clamp(4rem, 24vmin, 12rem); font-weight: 700; line-height: 1; direction: ltr; }
-  #clock .blinds { font-size: clamp(2rem, 10vmin, 5rem); font-weight: 700; color: var(--gold); direction: ltr; }
+  #clock .time { font-size: clamp(4rem, 24vmin, 12rem); font-weight: 700; line-height: 1; direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; }
+  #clock .blinds { font-size: clamp(2rem, 10vmin, 5rem); font-weight: 700; color: var(--gold); direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; text-shadow: 0 0 24px rgba(212, 175, 55, .25); }
   #clock .next { color: var(--ink-dim); font-size: clamp(.95rem, 3vmin, 1.3rem); }
   #clock .stats { display: flex; gap: clamp(12px, 4vmin, 34px); margin-top: 1vh; flex-wrap: wrap; justify-content: center; }
   #clock .stats div { text-align: center; }
@@ -309,7 +314,7 @@ function renderLogin() {
     <div style="min-height:88dvh;display:flex;flex-direction:column;justify-content:center">
       <div style="text-align:center;margin-bottom:26px">
         <img src="icon-192.png" alt="" style="width:84px;height:84px;border-radius:20px">
-        <h1 style="margin-top:12px;font-size:1.6rem">ערב פוקר</h1>
+        <h1 style="margin-top:12px;font-size:1.9rem;background:linear-gradient(160deg,#e8cd6a,#a8892b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">ערב פוקר</h1>
       </div>
       <div class="card felt">
         <div class="chips" style="justify-content:center;margin-bottom:16px">
