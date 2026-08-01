@@ -1,4 +1,4 @@
-const CACHE = 'pokernight-v2';
+const CACHE = 'pokernight-v3';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -13,9 +13,12 @@ self.addEventListener('activate', e => {
   );
 });
 
-// network-first for the app shell (so updates land), cache fallback for offline
+// network-first for the app shell (so updates land), cache fallback for offline.
+// API calls are never cached — sync logic handles offline itself.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/.netlify/')) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
