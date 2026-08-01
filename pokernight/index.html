@@ -271,6 +271,12 @@
   .live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #e05252; animation: livePulse 1.6s infinite; margin-inline-end: 2px; }
   @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(224, 82, 82, .45); } 70% { box-shadow: 0 0 0 8px rgba(224, 82, 82, 0); } 100% { box-shadow: 0 0 0 0 rgba(224, 82, 82, 0); } }
   .empty-lg::before { content: '\2660'; display: block; font-size: 1.7rem; color: var(--gold-dim); opacity: .55; margin-bottom: 4px; }
+  .avatar.huge { width: 112px; height: 112px; font-size: 2.4rem; border-width: 3px; }
+  .balloon { display: inline-block; font-size: 1.7rem; animation: floaty 2.6s ease-in-out infinite; }
+  .balloon.b2 { animation-delay: 1.3s; }
+  @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  .bubble-card { text-align: center; }
+  .bubble-card .who { display: flex; align-items: center; justify-content: center; gap: 12px; }
   .pool-bar .amounts { font-size: .78rem; color: var(--ink-dim); }
   .pool-bar .pool { font-size: 1.25rem; font-weight: 700; color: var(--gold); }
   .empty { text-align: center; color: var(--ink-dim); padding: 30px 10px; font-size: .9rem; }
@@ -728,6 +734,16 @@ function home() {
   }
 
   const done = S.games.filter(x => x.status === 'done').sort((a, b) => b.date.localeCompare(a.date));
+  const bgame = done.find(x => x.results && x.results.bubble);
+  if (bgame) {
+    const bp = player(bgame.results.bubble);
+    html += `<h2>הבאבל בוי של השבוע</h2>
+    <div class="card felt bubble-card">
+      <div class="who"><span class="balloon">🎈</span>${avatarHtml(bp, 'huge')}<span class="balloon b2">🎈</span></div>
+      <div style="font-weight:700;font-size:1.2rem;margin-top:8px;font-family:'Frank Ruhl Libre',serif">${esc(pname(bgame.results.bubble))}</div>
+      <div style="color:var(--ink-dim);font-size:.8rem;margin-top:2px">יצא שלישי, על סף הכסף · ${heDateShort(bgame.date)}</div>
+    </div>`;
+  }
   if (done.length) {
     const lg = done[0], p = payouts(lg);
     html += `<h2>המשחק האחרון</h2>
@@ -864,41 +880,53 @@ function beginEndGame() {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g) return;
   confirmDlg('לסיים את המשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">בשלב הבא בוחרים את הזוכים במקום הראשון והשני.</span>', () => {
-    endPick = { first: null };
+    endPick = { first: null, second: null, bubble: null };
     renderEndPick();
   });
 }
 function renderEndPick() {
   const g = activeGame();
-  const step = endPick.first === null ? 'first' : 'second';
-  const title = step === 'first' ? '🥇 מי לקח מקום ראשון?' : '🥈 מי לקח מקום שני?';
-  const cands = g.playerIds.filter(pid => pid !== endPick.first);
+  const step = endPick.first === null ? 'first' : endPick.second === null ? 'second' : 'bubble';
+  const title = step === 'first' ? '🥇 מי לקח מקום ראשון?' : step === 'second' ? '🥈 מי לקח מקום שני?' : '🎈 מי היה הבאבל בוי? (יצא שלישי)';
+  const cands = g.playerIds.filter(pid => pid !== endPick.first && pid !== endPick.second);
   sheet(`<h3>${title}</h3><div class="winner-pick">${cands.map(pid =>
     `<div class="prow" onclick="pickWinner('${pid}')">${avatarHtml(player(pid))}
      <div class="name"><div class="nick">${esc(pname(pid))}</div>
      <div class="meta">${entriesOf(g, pid)} כניסות</div></div></div>`).join('')}</div>
+    ${step === 'bubble' ? `<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="endPick.bubble=null;showEndConfirm()">בלי באבל בוי</button>` : ''}
     <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
 }
 function pickWinner(pid) {
   const g = activeGame();
   if (endPick.first === null) { endPick.first = pid; renderEndPick(); return; }
-  const first = endPick.first, second = pid;
-  const p = payouts(Object.assign({}, g, { results: { first, second } }));
+  if (endPick.second === null) {
+    endPick.second = pid;
+    const rest = g.playerIds.filter(x => x !== endPick.first && x !== endPick.second);
+    if (rest.length === 1) { endPick.bubble = rest[0]; showEndConfirm(); return; }
+    if (rest.length === 0) { endPick.bubble = null; showEndConfirm(); return; }
+    renderEndPick(); return;
+  }
+  endPick.bubble = pid; showEndConfirm();
+}
+function showEndConfirm() {
+  const g = activeGame();
+  const p = payouts(Object.assign({}, g, { results: { first: endPick.first, second: endPick.second } }));
   sheet(`<h3>סיכום ואישור</h3>
     <table class="sheet">
-      <tr><td>🥇 ${esc(pname(first))}</td><td>${shk(p.first)}</td></tr>
-      <tr><td>🥈 ${esc(pname(second))}</td><td>${shk(p.second)}</td></tr>
+      <tr><td>🥇 ${esc(pname(endPick.first))}</td><td>${shk(p.first)}</td></tr>
+      <tr><td>🥈 ${esc(pname(endPick.second))}</td><td>${shk(p.second)}</td></tr>
+      ${endPick.bubble ? `<tr><td>🎈 ${esc(pname(endPick.bubble))} — באבל בוי</td><td>—</td></tr>` : ''}
       <tr><td>🏠 הבית (10% + דמי בית)</td><td>${shk(p.houseTotal)}</td></tr>
       <tr><td>💰 קופה</td><td>${shk(p.pool)}</td></tr>
     </table>
     <div style="height:14px"></div>
-    <button class="btn-primary btn-big" onclick="finishGame('${first}','${second}')">אישור וסיום המשחק</button>
+    <button class="btn-primary btn-big" onclick="finishGame()">אישור וסיום המשחק</button>
     <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">חזרה</button>`);
 }
-function finishGame(first, second) {
+function finishGame() {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g) return;
-  g.results = { first, second };
+  g.results = { first: endPick.first, second: endPick.second, bubble: endPick.bubble || null };
   g.status = 'done'; g.endAt = Date.now();
   save(); closeSheet(); stopTick(); releaseWake();
   go('summary', g.id);
@@ -923,7 +951,7 @@ function summaryView() {
         <tr><th>שחקן</th><th>כניסות</th><th>זכייה</th><th>מאזן</th></tr>
         ${g.playerIds.map(pid => {
           const win = (g.results.first === pid ? p.first : 0) + (g.results.second === pid ? p.second : 0);
-          const medal = g.results.first === pid ? '🥇 ' : g.results.second === pid ? '🥈 ' : '';
+          const medal = g.results.first === pid ? '🥇 ' : g.results.second === pid ? '🥈 ' : g.results.bubble === pid ? '🎈 ' : '';
           return `<tr><td>${medal}${esc(pname(pid))}</td><td class="num">${entriesOf(g, pid)}</td>
             <td>${win ? shk(win) : '—'}</td><td>${money(p.nets[pid])}</td></tr>`;
         }).join('')}
@@ -949,6 +977,7 @@ function buildWhatsApp(g) {
     ``,
     `🥇 ${pname(g.results.first)} — ₪${p.first}`,
     `🥈 ${pname(g.results.second)} — ₪${p.second}`,
+    ...(g.results.bubble ? [`🎈 ${pname(g.results.bubble)} — הבאבל בוי`] : []),
     `🏠 הבית — ₪${p.houseTotal}`,
     `➖➖➖➖➖➖`,
     `מאזן סופי:`,
@@ -1106,7 +1135,7 @@ function openProfile(pid) {
   const statsHtml = s ? `<div class="card" style="margin-bottom:14px"><table class="sheet">
       <tr><td>משחקים</td><td class="num">${s.games}</td></tr>
       <tr><td>כניסות (ממוצע)</td><td class="num">${s.entries} (${(s.entries / s.games).toFixed(1)})</td></tr>
-      <tr><td>🥇 / 🥈</td><td class="num">${s.firsts} / ${s.seconds}</td></tr>
+      <tr><td>🥇 / 🥈 / 🎈</td><td class="num">${s.firsts} / ${s.seconds} / ${s.bubbles || 0}</td></tr>
       <tr><td>מאזן כולל</td><td>${money(s.net)}</td></tr>
     </table></div>` : '<div class="empty">עוד לא שיחק</div>';
   if (!isAdmin()) {
@@ -1179,10 +1208,11 @@ function allStats() {
     if (g.status !== 'done') continue;
     const p = payouts(g);
     for (const pid of g.playerIds) {
-      const s = st[pid] || (st[pid] = { pid, games: 0, entries: 0, firsts: 0, seconds: 0, net: 0, best: -Infinity });
+      const s = st[pid] || (st[pid] = { pid, games: 0, entries: 0, firsts: 0, seconds: 0, bubbles: 0, net: 0, best: -Infinity });
       s.games++; s.entries += entriesOf(g, pid);
       if (g.results.first === pid) s.firsts++;
       if (g.results.second === pid) s.seconds++;
+      if (g.results.bubble === pid) s.bubbles++;
       s.net += p.nets[pid];
       s.best = Math.max(s.best, p.nets[pid]);
     }
@@ -1201,7 +1231,7 @@ function statsView() {
         <div class="rank">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</div>
         ${avatarHtml(player(r.pid))}
         <div class="who"><div>${esc(pname(r.pid))}</div>
-        <div class="meta">${r.games} משחקים · ${r.firsts}🥇 ${r.seconds}🥈 · שיא ${money(r.best === -Infinity ? 0 : r.best)}</div></div>
+        <div class="meta">${r.games} משחקים · ${r.firsts}🥇 ${r.seconds}🥈${r.bubbles ? ' ' + r.bubbles + '🎈' : ''} · שיא ${money(r.best === -Infinity ? 0 : r.best)}</div></div>
         ${money(r.net)}</div>`).join('') + `</div>`
       : `<div class="empty empty-lg">אין עדיין נתונים.<br>שחקו משחק או הוסיפו משחקים ישנים בהיסטוריה 📜</div>`}`;
 }
@@ -1217,14 +1247,14 @@ function historyView() {
       return `<div class="card" style="cursor:pointer" onclick="go('summary','${g.id}')">
         <div class="row"><div class="grow">
           <div style="font-weight:600">${heDateShort(g.date)}${g.isManual ? ' <span style="font-size:.68rem;color:var(--ink-dim)">ידני</span>' : ''}</div>
-          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">🥇 ${esc(pname(g.results.first))} · 🥈 ${esc(pname(g.results.second))} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות</div>
+          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">🥇 ${esc(pname(g.results.first))} · 🥈 ${esc(pname(g.results.second))}${g.results.bubble ? ' · 🎈 ' + esc(pname(g.results.bubble)) : ''} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות</div>
         </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div></div>`;
     }).join('') : `<div class="empty empty-lg">אין משחקים שמורים.<br>הוסיפו משחקים ישנים כדי למלא את הסטטיסטיקות 🏆</div>`}`;
 }
 let manualState = null;
 function startManual() {
   if (!requireAdmin()) return;
-  manualState = { date: new Date().toISOString().slice(0, 10), players: {}, first: null, second: null };
+  manualState = { date: new Date().toISOString().slice(0, 10), players: {}, first: null, second: null, bubble: null };
   go('manual');
 }
 function manualView() {
@@ -1246,6 +1276,7 @@ function manualView() {
           <div class="meta">
             <span class="chip ${m.first === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('first','${pid}')">🥇</span>
             <span class="chip ${m.second === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('second','${pid}')">🥈</span>
+            <span class="chip ${m.bubble === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('bubble','${pid}')">🎈</span>
           </div></div>
         <div class="stepper">
           <button onclick="mStep('${pid}',-1)">−</button>
@@ -1262,14 +1293,13 @@ function manualView() {
 function mStep(pid, d) {
   const m = manualState;
   const v = (m.players[pid] || 1) + d;
-  if (v <= 0) { delete m.players[pid]; if (m.first === pid) m.first = null; if (m.second === pid) m.second = null; }
+  if (v <= 0) { delete m.players[pid]; for (const k of ['first', 'second', 'bubble']) if (m[k] === pid) m[k] = null; }
   else m.players[pid] = Math.min(v, S.settings.maxRebuys + 1);
   render();
 }
 function mSetPlace(place, pid) {
   const m = manualState;
-  const other = place === 'first' ? 'second' : 'first';
-  if (m[other] === pid) m[other] = null;
+  for (const k of ['first', 'second', 'bubble']) if (k !== place && m[k] === pid) m[k] = null;
   m[place] = m[place] === pid ? null : pid;
   render();
 }
@@ -1288,7 +1318,7 @@ function saveManual() {
     },
     playerIds: pids,
     entries: pids.map(pid => ({ pid, delta: m.players[pid], ts: Date.now() })),
-    results: { first: m.first, second: m.second }, timer: null,
+    results: { first: m.first, second: m.second, bubble: m.bubble || null }, timer: null,
   };
   S.games.push(g); save(); manualState = null;
   go('summary', g.id); toast('המשחק נוסף להיסטוריה ✔');
