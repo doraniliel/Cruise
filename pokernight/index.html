@@ -292,7 +292,7 @@
   }
   .break-col { display: flex; flex-direction: column; gap: 6px; }
   .break-btn {
-    width: 58px; height: 100%; min-height: 34px; padding: 4px 0; border-radius: 14px;
+    width: 58px; height: 100%; min-height: 30px; padding: 3px 0; border-radius: 12px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
     font-size: 1rem; line-height: 1; background: var(--card-hi);
   }
@@ -957,12 +957,13 @@ function gameView() {
     <div class="topbar"><h1>משחק פעיל</h1><div class="sub">התחיל ${hhmm(g.startAt)}</div></div>
     <div class="row" style="align-items:stretch;gap:8px;margin-bottom:12px">
       <div class="strip grow" style="margin:0" onclick="go('clock')">
-        <div><div class="lvl">${mode === 'break' ? (g.timer.breakMin === 5 ? 'הפסקת סיגריה 🚬' : 'הפסקת אוכל ☕') : mode === 'awaiting' ? 'ההפסקה הסתיימה' : 'רמה ' + cur.n}</div>
+        <div><div class="lvl">${mode === 'break' ? (g.timer.breakMin === 5 ? 'הפסקת סיגריה 🚬' : 'הפסקת אוכל ☕') : mode === 'awaiting' ? 'ההפסקה הסתיימה' : 'רמה ' + cur.n + (g.timer.running ? '' : ' · מושהה ⏸')}</div>
         <div class="b" style="direction:ltr;text-align:right">${cur.type === 'break' ? '' : cur.sb + ' / ' + cur.bb}</div></div>
         <div style="text-align:left"><div class="t num" id="strip-time">--:--</div>
         <div class="lvl">${mode === 'awaiting' ? 'ממתין לאישור' : mode === 'break' ? `נחזור לרמה ${cur.n}` : (nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : '')}</div></div>
       </div>
       ${isAdmin() ? (mode === 'level' ? `<div class="break-col">
+        <button class="break-btn" onclick="ckPause()" title="${g.timer.running ? 'השהיית השעון' : 'המשך השעון'}">${g.timer.running ? '⏸' : '▶️'}<b>${g.timer.running ? 'השהיה' : 'המשך'}</b></button>
         <button class="break-btn" onclick="breakUI(15)" title="הפסקת אוכל">☕<b>15</b></button>
         <button class="break-btn" onclick="breakUI(5)" title="הפסקת סיגריה">🚬<b>5</b></button>
       </div>` : `<div class="break-col">
@@ -1204,11 +1205,21 @@ function ckCtrlsHtml(g) {
     return `<button class="btn-primary" onclick="event.stopPropagation();resumeUI()">▶️ המשך משחק</button>`;
   }
   return `
+    <button onclick="event.stopPropagation();ckPause()" id="ck-pausebtn">${g.timer.running ? '⏸ השהיה' : '▶️ המשך'}</button>
     <button onclick="event.stopPropagation();breakUI(15)">☕ הפסקה 15 דק'</button>
     <button onclick="event.stopPropagation();breakUI(5)">🚬 הפסקה 5 דק'</button>
     <button onclick="event.stopPropagation();ckAddMin()">+1 דק'</button>
     <button onclick="event.stopPropagation();ckJump(-1)">⏮ רמה קודמת</button>
     <button onclick="event.stopPropagation();ckJump(1)">רמה הבאה ⏭</button>`;
+}
+function ckPause() {
+  if (!requireAdmin()) return;
+  const g = activeGame(); if (!g) return;
+  if (timerMode(g) !== 'level') return;
+  g.timer.running ? timerPause(g) : timerResume(g);
+  const ctrls = document.getElementById('ck-ctrls');
+  if (ctrls) ctrls.innerHTML = ckCtrlsHtml(g);
+  if (view === 'clock') updateClock(); else render();
 }
 function breakUI(min) {
   if (!requireAdmin()) return;
