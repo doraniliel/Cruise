@@ -290,6 +290,27 @@
     filter: saturate(1.08) contrast(1.04);
     pointer-events: none;
   }
+  .break-col { display: flex; flex-direction: column; gap: 6px; }
+  .break-btn {
+    width: 58px; height: 100%; min-height: 34px; padding: 4px 0; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    font-size: 1rem; line-height: 1; background: var(--card-hi);
+  }
+  .break-btn b { font-size: .62rem; font-weight: 600; color: var(--ink-dim); }
+  .break-btn.resume { background: linear-gradient(165deg, #efd77c, #d4af37 45%, #a8892b); color: #17130a; border: none; }
+  .break-btn.resume b { color: #17130a; }
+  .guest-tag {
+    font-size: .6rem; color: var(--gold-dim); border: 1px solid rgba(212,175,55,.35);
+    border-radius: 999px; padding: 1px 6px; vertical-align: 2px;
+  }
+  .wall-item { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .wall-item:last-child { border-bottom: none; }
+  .wall-item .who { font-size: .78rem; color: var(--gold-dim); font-weight: 600; }
+  .wall-item .txt { font-size: .92rem; margin-top: 2px; word-break: break-word; }
+  .wall-item .when { font-size: .68rem; color: var(--ink-dim); }
+  .wall-del { float: left; background: none; border: none; color: var(--ink-dim); padding: 0 4px; font-size: .9rem; }
+  .hist-row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .hist-row:last-child { border-bottom: none; }
   .bubble-card { text-align: center; }
   .bubble-card .who { display: flex; align-items: center; justify-content: center; gap: 12px; }
   .pool-bar .amounts { font-size: .78rem; color: var(--ink-dim); }
@@ -418,6 +439,59 @@ function logout() {
   render();
 }
 
+/* ================= wall comments ================= */
+const COMMENTS_API = '/api/comments';
+let COMMENTS = {};
+try { COMMENTS = JSON.parse(localStorage.getItem('pokernight_comments')) || {}; } catch (e) {}
+async function pullComments(rerender) {
+  try {
+    const r = await fetch(COMMENTS_API, { cache: 'no-store' });
+    if (!r.ok) return;
+    COMMENTS = await r.json();
+    localStorage.setItem('pokernight_comments', JSON.stringify(COMMENTS));
+    if (rerender && document.getElementById('wall-list')) renderWall(rerender);
+  } catch (e) {}
+}
+function wallOf(pid) { return (COMMENTS[pid] || []).slice().sort((a, b) => b.ts - a.ts); }
+async function postComment(pid) {
+  const inp = document.getElementById('wall-input');
+  const text = (inp.value || '').trim();
+  if (!text) return;
+  const author = isAdmin() ? 'מנהל' : SESSION.name;
+  inp.value = '';
+  (COMMENTS[pid] = COMMENTS[pid] || []).push({ id: 'tmp' + Date.now(), author, text, ts: Date.now() });
+  renderWall(pid);
+  try {
+    await fetch(COMMENTS_API, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ playerId: pid, author, text }),
+    });
+  } catch (e) { toast('הפרסום יסונכרן כשתהיה רשת'); }
+  pullComments(pid);
+}
+async function deleteComment(pid, id) {
+  if (!requireAdmin()) return;
+  COMMENTS[pid] = (COMMENTS[pid] || []).filter(c => c.id !== id);
+  renderWall(pid);
+  try {
+    await fetch(COMMENTS_API, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': SESSION.key },
+      body: JSON.stringify({ playerId: pid, id, action: 'delete' }),
+    });
+  } catch (e) {}
+  pullComments(pid);
+}
+function renderWall(pid) {
+  const box = document.getElementById('wall-list');
+  if (!box) return;
+  const list = wallOf(pid);
+  box.innerHTML = list.length ? list.map(c => `<div class="wall-item">
+      ${isAdmin() ? `<button class="wall-del" onclick="deleteComment('${pid}','${c.id}')">✕</button>` : ''}
+      <div class="who">${esc(c.author)} <span class="when">· ${heDateShort(new Date(c.ts).toISOString().slice(0, 10))}</span></div>
+      <div class="txt">${esc(c.text)}</div>
+    </div>`).join('') : '<div class="empty" style="padding:12px">אין עדיין הודעות — תהיו הראשונים 💬</div>';
+}
+
 /* ================= cloud sync (Netlify Functions + Blobs) ================= */
 const API = '/api/state';
 const SYNCMETA_KEY = 'pokernight_syncmeta';
@@ -452,6 +526,7 @@ async function pullState(force) {
       schedulePush(); // seed the cloud from this device
     }
     SYNC.status = 'ok';
+    pullComments();
   } catch (e) { SYNC.status = 'offline'; }
   updateSyncBadge();
 }
@@ -566,12 +641,44 @@ function buildTimeline(cfg) {
 function timerInit(g) {
   g.timer = { idx: 0, running: true, endAt: Date.now() + buildTimeline(g.config)[0].min * 60000, remainingMs: null };
 }
+const timerMode = g => g.timer.mode || 'level';
 function timerRemaining(g) {
   const t = g.timer;
+  if (timerMode(g) === 'break') return Math.max(0, t.breakEndAt - Date.now());
+  if (timerMode(g) === 'awaiting') return 0;
   return t.running ? t.endAt - Date.now() : t.remainingMs;
+}
+function startBreak(g, min) {
+  const t = g.timer;
+  t.resumeIdx = t.idx;
+  t.resumeRemainingMs = Math.max(0, t.running ? t.endAt - Date.now() : (t.remainingMs ?? 0));
+  t.mode = 'break'; t.breakMin = min; t.breakEndAt = Date.now() + min * 60000;
+  t.running = false; t.remainingMs = null;
+  warned = {}; save();
+}
+// break countdown finished: hold at 0:00 until the manager approves
+function breakFinished(g) {
+  g.timer.mode = 'awaiting'; save();
+  playGong();
+  if (S.settings.voice) speak('ההפסקה הסתיימה');
+  flashClock();
+}
+function resumeFromBreak(g) {
+  const t = g.timer;
+  if (t.resumeIdx != null) t.idx = t.resumeIdx;
+  const tl = buildTimeline(g.config);
+  t.endAt = Date.now() + (t.resumeRemainingMs ?? tl[t.idx].min * 60000);
+  t.running = true; t.remainingMs = null; t.mode = 'level';
+  delete t.breakEndAt; delete t.breakMin; delete t.resumeIdx; delete t.resumeRemainingMs;
+  warned = {}; save();
 }
 function timerCatchUp(g, silent) {
   const t = g.timer, tl = buildTimeline(g.config);
+  if (timerMode(g) === 'awaiting') return false;
+  if (timerMode(g) === 'break') {
+    if (Date.now() >= t.breakEndAt) { if (silent) { t.mode = 'awaiting'; save(); } else breakFinished(g); return true; }
+    return false;
+  }
   let advanced = false;
   while (t.running && Date.now() >= t.endAt && t.idx < tl.length - 1) {
     t.idx++;
@@ -717,11 +824,11 @@ function renderNav() {
   const nav = document.getElementById('nav');
   if (view === 'clock') { nav.hidden = true; return; }
   nav.hidden = false;
-  nav.innerHTML = NAV.filter(([v]) => isAdmin() || v === 'home' || v === 'stats').map(([v, ico, lbl]) =>
+  nav.innerHTML = NAV.filter(([v]) => isAdmin() || v === 'home' || v === 'stats' || v === 'players').map(([v, ico, lbl]) =>
     `<button class="${(view === v || (view === 'game' && v === 'home') || (view === 'summary' && v === 'history')) ? 'active' : ''}" onclick="go('${v}')"><span class="ico">${ICONS[ico]}</span>${lbl}</button>`
   ).join('');
 }
-const ADMIN_VIEWS = ['players', 'history', 'settings', 'newgame', 'manual'];
+const ADMIN_VIEWS = ['history', 'settings', 'newgame', 'manual'];
 const TABLE_BG_VIEWS = ['home', 'newgame'];
 function setBackdrop(v) {
   const el = document.getElementById('bgimg');
@@ -795,6 +902,7 @@ function home() {
 
 /* ---- new game ---- */
 let ngSel = new Set();
+let npGuest = false;
 function newGameView() {
   const app = document.getElementById('app');
   const act = S.players.filter(p => p.active !== false);
@@ -839,23 +947,34 @@ function gameView() {
   const g = activeGame();
   if (!g) { go('home'); return; }
   timerCatchUp(g, true);
-  const tl = buildTimeline(g.config), cur = tl[g.timer.idx], nxt = tl[g.timer.idx + 1];
+  const mode = timerMode(g);
+  const tl = buildTimeline(g.config);
+  const lvlIdx = mode === 'level' ? g.timer.idx : (g.timer.resumeIdx ?? g.timer.idx);
+  const cur = tl[lvlIdx], nxt = tl[lvlIdx + 1];
   const p = payouts(g);
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="topbar"><h1>משחק פעיל</h1><div class="sub">התחיל ${hhmm(g.startAt)}</div></div>
-    <div class="strip" onclick="go('clock')">
-      <div><div class="lvl">${cur.type === 'break' ? 'הפסקה ☕' : 'רמה ' + cur.n}${g.timer.running ? '' : ' · מושהה ⏸'}</div>
-      <div class="b" style="direction:ltr;text-align:right">${cur.type === 'break' ? '' : cur.sb + ' / ' + cur.bb}</div></div>
-      <div style="text-align:left"><div class="t num" id="strip-time">--:--</div>
-      <div class="lvl">${nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : ''}</div></div>
+    <div class="row" style="align-items:stretch;gap:8px;margin-bottom:12px">
+      <div class="strip grow" style="margin:0" onclick="go('clock')">
+        <div><div class="lvl">${mode === 'break' ? (g.timer.breakMin === 5 ? 'הפסקת סיגריה 🚬' : 'הפסקת אוכל ☕') : mode === 'awaiting' ? 'ההפסקה הסתיימה' : 'רמה ' + cur.n}</div>
+        <div class="b" style="direction:ltr;text-align:right">${cur.type === 'break' ? '' : cur.sb + ' / ' + cur.bb}</div></div>
+        <div style="text-align:left"><div class="t num" id="strip-time">--:--</div>
+        <div class="lvl">${mode === 'awaiting' ? 'ממתין לאישור' : mode === 'break' ? `נחזור לרמה ${cur.n}` : (nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : '')}</div></div>
+      </div>
+      ${isAdmin() ? (mode === 'level' ? `<div class="break-col">
+        <button class="break-btn" onclick="breakUI(15)" title="הפסקת אוכל">☕<b>15</b></button>
+        <button class="break-btn" onclick="breakUI(5)" title="הפסקת סיגריה">🚬<b>5</b></button>
+      </div>` : `<div class="break-col">
+        <button class="break-btn resume" onclick="resumeUI()">▶️<b>המשך</b></button>
+      </div>`) : ''}
     </div>
     ${g.playerIds.map(pid => {
       const pl = player(pid), cnt = entriesOf(g, pid);
       const maxed = cnt >= g.config.maxRebuys + 1;
       return `<div class="prow">
         ${avatarHtml(pl)}
-        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+        <div class="name" style="cursor:pointer" onclick="openGamePlayer('${pid}')"><div class="nick">${esc(pname(pid))}${pl && pl.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
           ${nickLine(pid)}
           <div class="meta">${shk(cnt * g.config.entryPrice)} ${maxed ? '<span class="capped">· בתקרה</span>' : ''}</div></div>
         ${isAdmin() ? `<button class="btn-minus" onclick="addEntry('${pid}',-1)" ${cnt <= 0 ? 'disabled' : ''}>−</button>` : ''}
@@ -885,6 +1004,29 @@ function addEntry(pid, delta) {
   g.entries.push({ pid, delta, ts: Date.now() }); save(); playClick();
   if (delta < 0) toast('כניסה בוטלה ↩');
   render();
+}
+function openGamePlayer(pid) {
+  const g = activeGame(); if (!g) return;
+  if (!isAdmin()) { openProfile(pid); return; }
+  const p = player(pid);
+  sheet(`<h3>${esc(pname(pid))}${p && p.guest ? ' <span class="guest-tag">אורח</span>' : ''}</h3>
+    <button class="btn-ghost btn-big" onclick="closeSheet();openProfile('${pid}')">צפייה בפרופיל</button>
+    <button class="btn-ghost btn-danger btn-big" style="margin-top:8px" onclick="removeFromGame('${pid}')">הסרה מהמשחק</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function removeFromGame(pid) {
+  if (!requireAdmin()) return;
+  const g = activeGame(); if (!g) return;
+  if (g.playerIds.length <= 2) { toast('צריך לפחות 2 שחקנים במשחק'); return; }
+  confirmDlg(`להסיר את ${esc(pname(pid))} מהמשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">כל הכניסות שלו במשחק הזה יימחקו.</span>`, () => {
+    const p = player(pid);
+    g.playerIds = g.playerIds.filter(x => x !== pid);
+    g.entries = g.entries.filter(e => e.pid !== pid);
+    if (g.results) for (const k of ['first', 'second', 'bubble']) if (g.results[k] === pid) g.results[k] = null;
+    // a guest added by mistake, who never played anywhere else, leaves no trace
+    if (p && p.guest && !S.games.some(x => x.playerIds.includes(pid))) S.players = S.players.filter(x => x.id !== pid);
+    save(); closeSheet(); render(); toast('השחקן הוסר מהמשחק');
+  });
 }
 function openAddPlayerToGame() {
   if (!requireAdmin()) return;
@@ -1045,12 +1187,7 @@ function clockView() {
       <div><div class="v num" id="ck-pool"></div><div class="k">קופה</div></div>
       <div><div class="v num" id="ck-chips"></div><div class="k">צ'יפים במשחק</div></div>
     </div>
-    <div class="ctrls">${isAdmin() ? `
-      <button onclick="event.stopPropagation();ckPause()" id="ck-pausebtn">⏸ השהיה</button>
-      <button onclick="event.stopPropagation();ckAddMin()">+1 דק'</button>
-      <button onclick="event.stopPropagation();ckJump(-1)">⏮ רמה קודמת</button>
-      <button onclick="event.stopPropagation();ckJump(1)">רמה הבאה ⏭</button>` : ''}
-    </div>
+    <div class="ctrls" id="ck-ctrls"></div>
   </div>`;
   acquireWake();
   startTick();
@@ -1060,11 +1197,33 @@ function toggleCtrls(e) {
   const c = document.getElementById('clock');
   if (c) { c.classList.toggle('show-ctrls'); ac(); }
 }
-function ckPause() {
+function ckCtrlsHtml(g) {
+  if (!isAdmin()) return '';
+  const m = timerMode(g);
+  if (m === 'break' || m === 'awaiting') {
+    return `<button class="btn-primary" onclick="event.stopPropagation();resumeUI()">▶️ המשך משחק</button>`;
+  }
+  return `
+    <button onclick="event.stopPropagation();breakUI(15)">☕ הפסקה 15 דק'</button>
+    <button onclick="event.stopPropagation();breakUI(5)">🚬 הפסקה 5 דק'</button>
+    <button onclick="event.stopPropagation();ckAddMin()">+1 דק'</button>
+    <button onclick="event.stopPropagation();ckJump(-1)">⏮ רמה קודמת</button>
+    <button onclick="event.stopPropagation();ckJump(1)">רמה הבאה ⏭</button>`;
+}
+function breakUI(min) {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g) return;
-  g.timer.running ? timerPause(g) : timerResume(g);
-  updateClock();
+  startBreak(g, min);
+  toast(min === 15 ? 'הפסקת אוכל — 15 דקות ☕' : 'הפסקת סיגריה — 5 דקות 🚬');
+  render();
+}
+function resumeUI() {
+  if (!requireAdmin()) return;
+  const g = activeGame(); if (!g) return;
+  const tl = buildTimeline(g.config), lvl = tl[g.timer.resumeIdx ?? g.timer.idx];
+  resumeFromBreak(g);
+  toast(lvl && lvl.type === 'level' ? `חוזרים לרמה ${lvl.n} · ${lvl.sb}/${lvl.bb}` : 'המשחק ממשיך');
+  render();
 }
 function ckAddMin() {
   if (!requireAdmin()) return; const g = activeGame(); if (g) { timerAddMinute(g); updateClock(); } }
@@ -1077,24 +1236,37 @@ function flashClock() {
 function updateClock() {
   const g = activeGame(); if (!g || view !== 'clock') return;
   timerCatchUp(g);
-  const tl = buildTimeline(g.config), t = g.timer, cur = tl[t.idx], nxt = tl[t.idx + 1];
+  const tl = buildTimeline(g.config), t = g.timer, mode = timerMode(g);
+  const lvlIdx = (mode === 'level') ? t.idx : (t.resumeIdx ?? t.idx);
+  const cur = tl[lvlIdx], nxt = tl[lvlIdx + 1];
   const rem = Math.max(0, timerRemaining(g));
   const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
   const el = id => document.getElementById(id);
   if (!el('ck-time')) return;
   el('ck-time').textContent = `${mm}:${String(ss).padStart(2, '0')}`;
   const c = document.getElementById('clock');
-  c.classList.toggle('break-mode', cur.type === 'break');
-  el('ck-lvl').innerHTML = (cur.type === 'break' ? '☕ הפסקה' : `רמה ${cur.n}`) + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
-  el('ck-blinds').textContent = cur.type === 'break' ? '☕' : `${cur.sb} / ${cur.bb}`;
-  el('ck-next').textContent = nxt ? (nxt.type === 'break' ? 'בהמשך: הפסקה' : `הבליינדים הבאים: ${nxt.sb} / ${nxt.bb}`) : 'רמה אחרונה';
+  c.classList.toggle('break-mode', mode !== 'level' || cur.type === 'break');
+  const ctrls = el('ck-ctrls');
+  if (ctrls && ctrls.dataset.mode !== mode) { ctrls.dataset.mode = mode; ctrls.innerHTML = ckCtrlsHtml(g); }
+  if (mode === 'break') {
+    el('ck-lvl').innerHTML = t.breakMin === 5 ? '🚬 הפסקת סיגריה' : '☕ הפסקת אוכל';
+    el('ck-blinds').textContent = cur.type === 'level' ? `${cur.sb} / ${cur.bb}` : '☕';
+    el('ck-next').textContent = cur.type === 'level' ? `נחזור לרמה ${cur.n}` : 'הפסקה';
+  } else if (mode === 'awaiting') {
+    el('ck-lvl').innerHTML = '<span class="paused-tag">ההפסקה הסתיימה</span>';
+    el('ck-blinds').textContent = cur.type === 'level' ? `${cur.sb} / ${cur.bb}` : '☕';
+    el('ck-next').textContent = isAdmin() ? 'ממתין לאישור המנהל — הקישו על המסך' : 'ממתין לאישור המנהל';
+  } else {
+    el('ck-lvl').innerHTML = (cur.type === 'break' ? '☕ הפסקה' : `רמה ${cur.n}`) + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
+    el('ck-blinds').textContent = cur.type === 'break' ? '☕' : `${cur.sb} / ${cur.bb}`;
+    el('ck-next').textContent = nxt ? (nxt.type === 'break' ? 'בהמשך: הפסקה' : `הבליינדים הבאים: ${nxt.sb} / ${nxt.bb}`) : 'רמה אחרונה';
+  }
   el('ck-players').textContent = g.playerIds.length;
   el('ck-entries').textContent = totalEntries(g);
   el('ck-pool').textContent = '₪' + poolOf(g).toLocaleString('he-IL');
   el('ck-chips').textContent = (totalEntries(g) * CHIPS_PER_ENTRY).toLocaleString('he-IL');
-  const pb = el('ck-pausebtn'); if (pb) pb.textContent = t.running ? '⏸ השהיה' : '▶️ המשך';
   // one-minute warning
-  if (t.running && rem <= 60000 && rem > 0 && !warned[t.idx]) { warned[t.idx] = true; playWarn(); }
+  if (mode === 'level' && t.running && rem <= 60000 && rem > 0 && !warned[t.idx]) { warned[t.idx] = true; playWarn(); }
 }
 
 /* tick loop */
@@ -1104,15 +1276,18 @@ function startTick() {
   tickId = setInterval(() => {
     const g = activeGame();
     if (!g) { stopTick(); return; }
-    if (view === 'clock') updateClock();
-    else if (view === 'game') {
+    if (view === 'clock') {
+      const wasMode = timerMode(g);
+      updateClock();
+      if (timerMode(g) !== wasMode) render();
+    } else if (view === 'game') {
       const adv = timerCatchUp(g);
       if (adv) { render(); return; }
       const rem = Math.max(0, timerRemaining(g));
       const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
       const elx = document.getElementById('strip-time');
       if (elx) elx.textContent = `${mm}:${String(ss).padStart(2, '0')}`;
-      if (g.timer.running && rem <= 60000 && rem > 0 && !warned[g.timer.idx]) { warned[g.timer.idx] = true; playWarn(); }
+      if (timerMode(g) === 'level' && g.timer.running && rem <= 60000 && rem > 0 && !warned[g.timer.idx]) { warned[g.timer.idx] = true; playWarn(); }
     } else if (view !== 'home') return;
     else timerCatchUp(g);
   }, 250);
@@ -1122,8 +1297,9 @@ function stopTick() { clearInterval(tickId); tickId = null; }
 /* ---- players ---- */
 function playersView() {
   const app = document.getElementById('app');
-  const act = S.players.filter(p => p.active !== false);
-  const inact = S.players.filter(p => p.active === false);
+  const act = S.players.filter(p => p.active !== false && !p.guest);
+  const guests = S.players.filter(p => p.guest);
+  const inact = S.players.filter(p => p.active === false && !p.guest);
   const st = allStats();
   app.innerHTML = `
     <div class="topbar"><h1>שחקנים</h1>${isAdmin() ? `<button class="btn-primary" onclick="quickAddPlayer()">+ שחקן</button>` : ''}</div>
@@ -1135,23 +1311,44 @@ function playersView() {
       <div class="meta">${s ? s.games + ' משחקים' : 'עוד לא שיחק'}</div></div>
       ${s ? money(s.net) : ''}</div>`;
     }).join('') + `</div>` : `<div class="empty empty-lg">אין שחקנים עדיין — הוסיפו את החברים</div>`}
+    ${guests.length ? `<h2>אורחים</h2><div class="card">` + guests.map(p => {
+      const s = st[p.id];
+      return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p)}
+      <div class="who"><div>${esc(p.name)} <span class="guest-tag">אורח</span></div>
+      ${nickLine(p.id)}
+      <div class="meta">${s ? s.games + ' משחקים' : 'עוד לא שיחק'}</div></div>
+      ${s ? money(s.net) : ''}</div>`;
+    }).join('') + `</div>` : ''}
     ${inact.length ? `<h2>לא פעילים</h2><div class="card">` + inact.map(p =>
       `<div class="lb" style="cursor:pointer;opacity:.55" onclick="openProfile('${p.id}')">${avatarHtml(p)}<div class="who"><div>${esc(p.name)}</div>${nickLine(p.id)}</div></div>`).join('') + `</div>` : ''}`;
 }
 function quickAddPlayer(ctx) {
   if (!requireAdmin()) return;
+  npGuest = false;
   sheet(`<h3>שחקן חדש</h3>
     <label class="field"><span>שם</span><input type="text" id="np-name" autocomplete="off"></label>
     <label class="field"><span>כינוי (לא חובה)</span><input type="text" id="np-nick" autocomplete="off"></label>
+    <label class="field"><span>סוג שחקן</span></label>
+    <div class="chips" id="np-kind" style="margin-bottom:14px">
+      <div class="chip on" onclick="setNpGuest(false)">שחקן קבוע</div>
+      <div class="chip" onclick="setNpGuest(true)">אורח לערב הזה</div>
+    </div>
+    <div class="empty" style="padding:0 0 12px;font-size:.75rem">אורח משתתף במשחק ובסטטיסטיקות, אבל לא נכנס לרשימת השחקנים הקבועים.</div>
     <button class="btn-primary btn-big" onclick="saveNewPlayer('${ctx || ''}')">שמירה</button>`);
   setTimeout(() => document.getElementById('np-name')?.focus(), 60);
+}
+function setNpGuest(v) {
+  npGuest = v;
+  const chips = document.querySelectorAll('#np-kind .chip');
+  chips[0].classList.toggle('on', !v);
+  chips[1].classList.toggle('on', v);
 }
 function saveNewPlayer(ctx) {
   if (!requireAdmin()) return;
   const name = document.getElementById('np-name').value.trim();
   const nick = document.getElementById('np-nick').value.trim();
   if (!name) { toast('צריך שם 🙂'); return; }
-  const p = { id: uid(), name, nickname: nick || null, avatar: null, active: true, createdAt: Date.now() };
+  const p = { id: uid(), name, nickname: nick || null, avatar: null, active: true, guest: npGuest || false, createdAt: Date.now() };
   S.players.push(p); save(); closeSheet();
   if (ctx === 'ng') { ngSel.add(p.id); render(); }
   else if (ctx === 'game') { lateAdd(p.id); }
@@ -1159,21 +1356,50 @@ function saveNewPlayer(ctx) {
   else render();
   toast(`${nick || name} נוסף ✔`);
 }
+function playerGames(pid) {
+  return S.games.filter(g => g.status === 'done' && g.playerIds.includes(pid))
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id))
+    .map(g => {
+      const medal = g.results.first === pid ? '🥇' : g.results.second === pid ? '🥈' : g.results.bubble === pid ? '🎈' : '';
+      return { date: g.date, net: payouts(g).nets[pid], entries: entriesOf(g, pid), medal };
+    });
+}
 function openProfile(pid) {
   const p = player(pid); if (!p) return;
   const s = allStats()[pid];
+  const hist = playerGames(pid);
   const statsHtml = s ? `<div class="card" style="margin-bottom:14px"><table class="sheet">
       <tr><td>משחקים</td><td class="num">${s.games}</td></tr>
-      <tr><td>כניסות (ממוצע)</td><td class="num">${s.entries} (${(s.entries / s.games).toFixed(1)})</td></tr>
-      <tr><td>🥇 / 🥈 / 🎈</td><td class="num">${s.firsts} / ${s.seconds} / ${s.bubbles || 0}</td></tr>
-      <tr><td>מאזן כולל</td><td>${money(s.net)}</td></tr>
+      <tr><td>ניצחונות 🥇</td><td class="num">${s.firsts}</td></tr>
+      <tr><td>מקום שני 🥈 / באבל בוי 🎈</td><td class="num">${s.seconds} / ${s.bubbles || 0}</td></tr>
+      <tr><td>כניסות (ממוצע למשחק)</td><td class="num">${s.entries} (${(s.entries / s.games).toFixed(1)})</td></tr>
+      <tr><td>הערב הטוב ביותר</td><td>${money(s.best === -Infinity ? 0 : s.best)}</td></tr>
+      <tr><td><b>רווח / הפסד כולל</b></td><td>${money(s.net)}</td></tr>
     </table></div>` : '<div class="empty">עוד לא שיחק</div>';
+  const histHtml = hist.length ? `<h2>רווח והפסד לפי משחק</h2>
+    <div class="card" style="margin-bottom:14px;max-height:210px;overflow-y:auto">
+      ${hist.map(h => `<div class="hist-row">
+        <span>${h.medal} ${heDateShort(h.date)} <span style="color:var(--ink-dim);font-size:.78rem">· ${h.entries} כניסות</span></span>
+        <span>${money(h.net)}</span></div>`).join('')}
+    </div>` : '';
+  const wallHtml = `<h2>קיר ההודעות</h2>
+    <div class="card" style="margin-bottom:10px">
+      <div id="wall-list" style="max-height:190px;overflow-y:auto"></div>
+    </div>
+    <div class="row" style="margin-bottom:14px">
+      <input type="text" id="wall-input" class="grow" maxlength="300" placeholder="כתבו משהו לקיר של ${esc(pname(pid))}…">
+      <button class="btn-primary" onclick="postComment('${pid}')">שליחה</button>
+    </div>`;
+
   if (!isAdmin()) {
     sheet(`<h3>פרופיל שחקן</h3>
       <div class="row" style="margin-bottom:14px">${avatarHtml(p, 'big')}
-        <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(p.name)}</div>
+        <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(p.name)}${p.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
         ${nickLine(p.id)}</div></div>
-      ${statsHtml}`);
+      ${statsHtml}
+      ${histHtml}
+      ${wallHtml}`);
+    renderWall(pid); pullComments(pid);
     return;
   }
   sheet(`<h3>פרופיל שחקן</h3>
@@ -1185,10 +1411,22 @@ function openProfile(pid) {
         <label class="field" style="margin-bottom:0"><span>כינוי</span><input type="text" id="pf-nick" value="${esc(p.nickname || '')}"></label>
       </div>
     </div>
+    <div class="chips" style="margin-bottom:14px">
+      <div class="chip ${!p.guest ? 'on' : ''}" onclick="setPlayerGuest('${pid}',false)">שחקן קבוע</div>
+      <div class="chip ${p.guest ? 'on' : ''}" onclick="setPlayerGuest('${pid}',true)">אורח</div>
+    </div>
     ${statsHtml}
+    ${histHtml}
+    ${wallHtml}
     <button class="btn-primary btn-big" onclick="saveProfile('${pid}')">שמירה</button>
     <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="togglePlayerActive('${pid}')">${p.active !== false ? 'העברה ללא פעילים' : 'החזרה לפעילים'}</button>
     ${!s ? `<button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deletePlayer('${pid}')">מחיקת השחקן</button>` : ''}`);
+  renderWall(pid); pullComments(pid);
+}
+function setPlayerGuest(pid, v) {
+  if (!requireAdmin()) return;
+  const p = player(pid); if (!p) return;
+  p.guest = v; save(); openProfile(pid); render();
 }
 function saveProfile(pid) {
   if (!requireAdmin()) return;
