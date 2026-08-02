@@ -282,6 +282,14 @@
   .balloon { display: inline-block; font-size: 1.7rem; animation: floaty 2.6s ease-in-out infinite; }
   .balloon.b2 { animation-delay: 1.3s; }
   @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  .neon-hero {
+    display: block; width: 100%; max-width: 300px; margin: -4px auto 10px;
+    mix-blend-mode: screen;
+    -webkit-mask-image: radial-gradient(115% 92% at 50% 46%, #000 52%, rgba(0,0,0,.55) 76%, transparent 100%);
+    mask-image: radial-gradient(115% 92% at 50% 46%, #000 52%, rgba(0,0,0,.55) 76%, transparent 100%);
+    filter: saturate(1.08) contrast(1.04);
+    pointer-events: none;
+  }
   .bubble-card { text-align: center; }
   .bubble-card .who { display: flex; align-items: center; justify-content: center; gap: 12px; }
   .pool-bar .amounts { font-size: .78rem; color: var(--ink-dim); }
@@ -734,7 +742,8 @@ function render() {
 function home() {
   const g = activeGame();
   const app = document.getElementById('app');
-  let html = `<div class="topbar"><h1><img src="icon-192.png" alt="" style="width:28px;height:28px;border-radius:7px;vertical-align:-6px"> ערב פוקר</h1><div class="sub" style="text-align:left">${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name) + ' <button class="btn-ghost" style="font-size:.68rem;padding:2px 8px;margin-inline-start:4px" onclick="logout()">יציאה</button>'}<br><span id="sync-badge" style="font-size:.7rem">${syncBadgeText()}</span></div></div>`;
+  let html = `<div class="topbar" style="margin-bottom:4px"><div class="sub" style="text-align:left;margin-inline-start:auto">${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name) + ' <button class="btn-ghost" style="font-size:.68rem;padding:2px 8px;margin-inline-start:4px" onclick="logout()">יציאה</button>'}<br><span id="sync-badge" style="font-size:.7rem">${syncBadgeText()}</span></div></div>
+  <img src="neon.jpg" class="neon-hero" alt="ערב פוקר">`;
 
   if (g) {
     const tl = buildTimeline(g.config), cur = tl[g.timer.idx];
