@@ -282,11 +282,11 @@
   .balloon { display: inline-block; font-size: 1.7rem; animation: floaty 2.6s ease-in-out infinite; }
   .balloon.b2 { animation-delay: 1.3s; }
   @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  /* edges are faded to true black inside the file itself, so `screen` leaves
+     no rectangle on any browser (iOS Safari ignored the CSS mask) */
   .neon-hero {
-    display: block; width: 100%; max-width: 300px; margin: -4px auto 10px;
+    display: block; width: 100%; max-width: 335px; margin: -10px auto 2px;
     mix-blend-mode: screen;
-    -webkit-mask-image: radial-gradient(115% 92% at 50% 46%, #000 52%, rgba(0,0,0,.55) 76%, transparent 100%);
-    mask-image: radial-gradient(115% 92% at 50% 46%, #000 52%, rgba(0,0,0,.55) 76%, transparent 100%);
     filter: saturate(1.08) contrast(1.04);
     pointer-events: none;
   }
