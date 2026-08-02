@@ -50,10 +50,15 @@
   #bgimg {
     position: fixed; inset: 0; z-index: -1;
     background: url(bg.jpg) center / cover no-repeat var(--bg);
+    transition: background-image .3s ease;
   }
+  #bgimg.table { background-image: url(table.jpg); background-position: center top; }
   #bgimg::after {
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(rgba(7, 12, 9, .68), rgba(7, 12, 9, .84));
+  }
+  #bgimg.table::after {
+    background: linear-gradient(rgba(7, 12, 9, .55) 0%, rgba(7, 12, 9, .74) 45%, rgba(7, 12, 9, .88) 100%);
   }
 
   #app {
@@ -709,9 +714,15 @@ function renderNav() {
   ).join('');
 }
 const ADMIN_VIEWS = ['players', 'history', 'settings', 'newgame', 'manual'];
+const TABLE_BG_VIEWS = ['home', 'newgame'];
+function setBackdrop(v) {
+  const el = document.getElementById('bgimg');
+  if (el) el.classList.toggle('table', TABLE_BG_VIEWS.includes(v));
+}
 function render() {
-  if (!SESSION) { renderLogin(); return; }
+  if (!SESSION) { setBackdrop('login'); renderLogin(); return; }
   if (!isAdmin() && ADMIN_VIEWS.includes(view)) { view = 'home'; viewParam = null; }
+  setBackdrop(view);
   renderNav();
   const app = document.getElementById('app');
   const views = { home, game: gameView, clock: clockView, players: playersView, stats: statsView, history: historyView, settings: settingsView, newgame: newGameView, manual: manualView, summary: summaryView };
