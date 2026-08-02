@@ -290,6 +290,19 @@
     filter: saturate(1.08) contrast(1.04);
     pointer-events: none;
   }
+  .avatar-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+  .crown {
+    position: absolute; top: -11px; left: 50%; z-index: 2;
+    transform: translateX(-50%) rotate(-14deg); font-size: .95rem; line-height: 1;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .7));
+  }
+  .avatar-wrap.big .crown { font-size: 1.45rem; top: -15px; }
+  .avatar-wrap.huge .crown { font-size: 1.95rem; top: -20px; }
+  .mvp-badge {
+    font-size: .58rem; font-weight: 700; letter-spacing: .07em; color: #17130a;
+    background: linear-gradient(160deg, #efd77c, #d4af37); border-radius: 999px;
+    padding: 1px 6px; vertical-align: 2px; white-space: nowrap;
+  }
   .break-col { display: flex; flex-direction: column; gap: 6px; }
   .break-btn {
     width: 58px; height: 100%; min-height: 30px; padding: 3px 0; border-radius: 12px;
@@ -343,7 +356,7 @@ const DEFAULT_SETTINGS = {
   entryPrice: 30, houseFee: 30,
   splitFirst: 65, splitSecond: 25, splitHouse: 10,
   maxRebuys: 12,
-  levelMinutes: 15, breakAfter: 5, breakMinutes: 10,
+  levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
   sound: true, voice: true,
 };
 
@@ -356,12 +369,13 @@ function loadState() {
       s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings || {});
       s.players = s.players || [];
       s.games = s.games || [];
+      dropScheduledBreak(s);
       return s;
     }
   } catch (e) { console.error(e); }
   return { players: [], games: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
 }
-function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); schedulePush(); }
+function save() { mvpDirty = true; localStorage.setItem(LS_KEY, JSON.stringify(S)); schedulePush(); }
 function uid() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)); }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 
@@ -506,6 +520,8 @@ function applyRemote(remote) {
     games: remote.data.games || [],
     settings: Object.assign({}, DEFAULT_SETTINGS, remote.data.settings || {}),
   };
+  dropScheduledBreak(S);
+  mvpDirty = true;
   localStorage.setItem(LS_KEY, JSON.stringify(S));
   SYNC.version = remote.version;
   SYNC.dirty = false;
@@ -592,9 +608,10 @@ const nickLine = pid => pnick(pid) ? `<div class="nickname">\u05f4${esc(pnick(pi
 const chipLabel = p => `${esc(p.name)}${p.nickname && p.nickname !== p.name ? ` <span class="nickname">\u05f4${esc(p.nickname)}\u05f4</span>` : ''}`;
 function avatarHtml(p, cls) {
   const c = 'avatar' + (cls ? ' ' + cls : '');
-  if (p && p.avatar) return `<div class="${c}"><img src="${p.avatar}" alt=""></div>`;
-  const init = p ? (p.name || p.nickname || '?').trim().charAt(0) : '?';
-  return `<div class="${c}">${esc(init)}</div>`;
+  const inner = (p && p.avatar) ? `<img src="${p.avatar}" alt="">`
+    : esc(p ? (p.name || p.nickname || '?').trim().charAt(0) : '?');
+  const crown = (p && isMvp(p.id)) ? '<span class="crown" title="MVP החודש">👑</span>' : '';
+  return `<div class="avatar-wrap${cls ? ' ' + cls : ''}">${crown}<div class="${c}">${inner}</div></div>`;
 }
 let toastTimer;
 function toast(msg) {
@@ -603,6 +620,44 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
+
+/* ================= MVP of the month ================= */
+let mvpDirty = true, mvpCache = null;
+const monthOf = iso => String(iso || '').slice(0, 7);
+const heMonth = ym => new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' })
+  .format(new Date(ym + '-15T12:00:00'));
+function mvpByMonth() {
+  if (!mvpDirty && mvpCache) return mvpCache;
+  const totals = {};
+  for (const g of S.games) {
+    if (g.status !== 'done' || !g.results) continue;
+    const m = monthOf(g.date), p = payouts(g);
+    const acc = totals[m] || (totals[m] = {});
+    for (const pid of g.playerIds) acc[pid] = (acc[pid] || 0) + p.nets[pid];
+  }
+  const out = {};
+  for (const [m, tot] of Object.entries(totals)) {
+    let best = null, bv = -Infinity;
+    for (const [pid, v] of Object.entries(tot)) if (v > bv) { bv = v; best = pid; }
+    if (best) out[m] = { pid: best, net: bv };
+  }
+  mvpCache = out; mvpDirty = false;
+  return out;
+}
+// the crown belongs to the winner of the last *finished* month
+function currentMvp() {
+  const all = mvpByMonth();
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const done = Object.keys(all).filter(m => m < thisMonth).sort();
+  const last = done[done.length - 1];
+  return last ? Object.assign({ month: last }, all[last]) : null;
+}
+function mvpTitles(pid) {
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  return Object.entries(mvpByMonth()).filter(([m, v]) => m < thisMonth && v.pid === pid).length;
+}
+const isMvp = pid => { const m = currentMvp(); return !!m && m.pid === pid; };
+const mvpBadge = pid => isMvp(pid) ? ' <span class="mvp-badge">MVP</span>' : '';
 
 /* ================= game math ================= */
 const activeGame = () => S.games.find(g => g.status === 'active');
@@ -632,9 +687,31 @@ function buildTimeline(cfg) {
   const t = [];
   LADDER.forEach(([sb, bb], i) => {
     t.push({ type: 'level', n: i + 1, sb, bb, min: cfg.levelMinutes });
-    if (i + 1 === cfg.breakAfter) t.push({ type: 'break', min: cfg.breakMinutes });
+    if (cfg.breakAfter && i + 1 === cfg.breakAfter) t.push({ type: 'break', min: cfg.breakMinutes });
   });
   return t;
+}
+// the scheduled break after 40/80 is gone — breaks are called manually now
+function dropScheduledBreak(s) {
+  if (s.settings) s.settings.breakAfter = 0;
+  for (const g of s.games || []) {
+    if (!g.config || !g.config.breakAfter) continue;
+    if (g.status === 'active' && g.timer) {
+      const oldTl = buildTimeline(g.config);
+      const remap = i => {
+        const cur = oldTl[i];
+        if (!cur) return i;
+        const n = cur.type === 'level' ? cur.n : (oldTl[i + 1] && oldTl[i + 1].n) || 1;
+        g.config.breakAfter = 0;
+        const ni = buildTimeline(g.config).findIndex(x => x.type === 'level' && x.n === n);
+        return ni >= 0 ? ni : i;
+      };
+      const oldBreakAfter = g.config.breakAfter;
+      g.timer.idx = remap(g.timer.idx);
+      if (g.timer.resumeIdx != null) { g.config.breakAfter = oldBreakAfter; g.timer.resumeIdx = remap(g.timer.resumeIdx); }
+    }
+    g.config.breakAfter = 0;
+  }
 }
 
 /* ================= timer engine ================= */
@@ -703,9 +780,10 @@ function timerResume(g) {
   t.endAt = Date.now() + (t.remainingMs ?? 0);
   t.running = true; t.remainingMs = null; save();
 }
-function timerAddMinute(g) {
-  const t = g.timer;
-  if (t.running) t.endAt += 60000; else t.remainingMs += 60000;
+function timerAddMinute(g, delta) {
+  const t = g.timer, d = (delta || 1) * 60000, MIN = 10000;
+  if (t.running) t.endAt = Math.max(Date.now() + MIN, t.endAt + d);
+  else t.remainingMs = Math.max(MIN, (t.remainingMs || 0) + d);
   save();
 }
 function timerJump(g, dir) {
@@ -893,7 +971,7 @@ function home() {
   if (lb.length) {
     html += `<h2>מובילים</h2><div class="card">` + lb.map((r, i) =>
       `<div class="lb"><div class="rank">${['🥇', '🥈', '🥉'][i]}</div>${avatarHtml(player(r.pid))}
-       <div class="who"><div>${esc(pname(r.pid))}</div>${nickLine(r.pid)}<div class="meta">${r.games} משחקים</div></div>${money(r.net)}</div>`
+       <div class="who"><div>${esc(pname(r.pid))}${mvpBadge(r.pid)}</div>${nickLine(r.pid)}<div class="meta">${r.games} משחקים</div></div>${money(r.net)}</div>`
     ).join('') + `</div>`;
   }
   if (!done.length && !g) html += `<div class="empty empty-lg">ברוכים הבאים! התחילו משחק חדש,<br>או הוסיפו משחקים ישנים דרך ההיסטוריה 📜</div>`;
@@ -975,7 +1053,7 @@ function gameView() {
       const maxed = cnt >= g.config.maxRebuys + 1;
       return `<div class="prow">
         ${avatarHtml(pl)}
-        <div class="name" style="cursor:pointer" onclick="openGamePlayer('${pid}')"><div class="nick">${esc(pname(pid))}${pl && pl.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
+        <div class="name" style="cursor:pointer" onclick="openGamePlayer('${pid}')"><div class="nick">${esc(pname(pid))}${mvpBadge(pid)}${pl && pl.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
           ${nickLine(pid)}
           <div class="meta">${shk(cnt * g.config.entryPrice)} ${maxed ? '<span class="capped">· בתקרה</span>' : ''}</div></div>
         ${isAdmin() ? `<button class="btn-minus" onclick="addEntry('${pid}',-1)" ${cnt <= 0 ? 'disabled' : ''}>−</button>` : ''}
@@ -1208,7 +1286,8 @@ function ckCtrlsHtml(g) {
     <button onclick="event.stopPropagation();ckPause()" id="ck-pausebtn">${g.timer.running ? '⏸ השהיה' : '▶️ המשך'}</button>
     <button onclick="event.stopPropagation();breakUI(15)">☕ הפסקה 15 דק'</button>
     <button onclick="event.stopPropagation();breakUI(5)">🚬 הפסקה 5 דק'</button>
-    <button onclick="event.stopPropagation();ckAddMin()">+1 דק'</button>
+    <button onclick="event.stopPropagation();ckAddMin(1)">+1 דק'</button>
+    <button onclick="event.stopPropagation();ckAddMin(-1)">−1 דק'</button>
     <button onclick="event.stopPropagation();ckJump(-1)">⏮ רמה קודמת</button>
     <button onclick="event.stopPropagation();ckJump(1)">רמה הבאה ⏭</button>`;
 }
@@ -1236,8 +1315,8 @@ function resumeUI() {
   toast(lvl && lvl.type === 'level' ? `חוזרים לרמה ${lvl.n} · ${lvl.sb}/${lvl.bb}` : 'המשחק ממשיך');
   render();
 }
-function ckAddMin() {
-  if (!requireAdmin()) return; const g = activeGame(); if (g) { timerAddMinute(g); updateClock(); } }
+function ckAddMin(delta) {
+  if (!requireAdmin()) return; const g = activeGame(); if (g) { timerAddMinute(g, delta); warned = {}; updateClock(); } }
 function ckJump(d) {
   if (!requireAdmin()) return; const g = activeGame(); if (g) { timerJump(g, d); warned = {}; updateClock(); } }
 function flashClock() {
@@ -1317,7 +1396,7 @@ function playersView() {
     ${act.length ? `<div class="card">` + act.map(p => {
       const s = st[p.id];
       return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p)}
-      <div class="who"><div>${esc(p.name)}</div>
+      <div class="who"><div>${esc(p.name)}${mvpBadge(p.id)}</div>
       ${nickLine(p.id)}
       <div class="meta">${s ? s.games + ' משחקים' : 'עוד לא שיחק'}</div></div>
       ${s ? money(s.net) : ''}</div>`;
@@ -1386,7 +1465,15 @@ function openProfile(pid) {
       <tr><td>כניסות (ממוצע למשחק)</td><td class="num">${s.entries} (${(s.entries / s.games).toFixed(1)})</td></tr>
       <tr><td>הערב הטוב ביותר</td><td>${money(s.best === -Infinity ? 0 : s.best)}</td></tr>
       <tr><td><b>רווח / הפסד כולל</b></td><td>${money(s.net)}</td></tr>
+      ${mvpTitles(pid) ? `<tr><td>👑 תארי MVP חודשיים</td><td class="num">${mvpTitles(pid)}</td></tr>` : ''}
     </table></div>` : '<div class="empty">עוד לא שיחק</div>';
+  const mvpNow = currentMvp();
+  const mvpHtml = (mvpNow && mvpNow.pid === pid)
+    ? `<div class="card felt" style="text-align:center;margin-bottom:14px">
+         <div style="font-size:1.5rem">👑</div>
+         <div style="font-weight:700">MVP של ${heMonth(mvpNow.month)}</div>
+         <div style="color:var(--ink-dim);font-size:.82rem">הרווח הגדול בחודש · ${money(mvpNow.net)}</div>
+       </div>` : '';
   const histHtml = hist.length ? `<h2>רווח והפסד לפי משחק</h2>
     <div class="card" style="margin-bottom:14px;max-height:210px;overflow-y:auto">
       ${hist.map(h => `<div class="hist-row">
@@ -1405,8 +1492,9 @@ function openProfile(pid) {
   if (!isAdmin()) {
     sheet(`<h3>פרופיל שחקן</h3>
       <div class="row" style="margin-bottom:14px">${avatarHtml(p, 'big')}
-        <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(p.name)}${p.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
+        <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(p.name)}${mvpBadge(p.id)}${p.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
         ${nickLine(p.id)}</div></div>
+      ${mvpHtml}
       ${statsHtml}
       ${histHtml}
       ${wallHtml}`);
@@ -1426,6 +1514,7 @@ function openProfile(pid) {
       <div class="chip ${!p.guest ? 'on' : ''}" onclick="setPlayerGuest('${pid}',false)">שחקן קבוע</div>
       <div class="chip ${p.guest ? 'on' : ''}" onclick="setPlayerGuest('${pid}',true)">אורח</div>
     </div>
+    ${mvpHtml}
     ${statsHtml}
     ${histHtml}
     ${wallHtml}
@@ -1509,7 +1598,7 @@ function statsView() {
       `<div class="lb" style="cursor:pointer" onclick="openProfile('${r.pid}')">
         <div class="rank">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</div>
         ${avatarHtml(player(r.pid))}
-        <div class="who"><div>${esc(pname(r.pid))}</div>
+        <div class="who"><div>${esc(pname(r.pid))}${mvpBadge(r.pid)}</div>
         ${nickLine(r.pid)}
         <div class="meta">${r.games} משחקים · ${r.firsts}🥇 ${r.seconds}🥈${r.bubbles ? ' ' + r.bubbles + '🎈' : ''} · שיא ${money(r.best === -Infinity ? 0 : r.best)}</div></div>
         ${money(r.net)}</div>`).join('') + `</div>`
@@ -1646,7 +1735,7 @@ function settingsView() {
           ${[10, 12, 15, 20].map(v => `<option value="${v}" ${s.levelMinutes === v ? 'selected' : ''}>${v} דקות ${v === 10 ? '(טורבו)' : v === 15 ? '(רגיל)' : v === 20 ? '(רגוע)' : ''}</option>`).join('')}
         </select></label>
       <div class="row">
-        <label class="field grow"><span>הפסקה אחרי רמה</span><input type="number" inputmode="numeric" id="st-brkafter" value="${s.breakAfter}"></label>
+        <label class="field grow"><span>הפסקה אוטומטית אחרי רמה (0 = ללא)</span><input type="number" inputmode="numeric" id="st-brkafter" value="${s.breakAfter}"></label>
         <label class="field grow"><span>אורך הפסקה (דק')</span><input type="number" inputmode="numeric" id="st-brkmin" value="${s.breakMinutes}"></label>
       </div>
       <div class="row" style="margin-top:4px">
@@ -1654,7 +1743,8 @@ function settingsView() {
         <div class="chip ${s.voice ? 'on' : ''}" onclick="S.settings.voice=!S.settings.voice;save();render()">🗣 הכרזה קולית</div>
       </div>
       <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
-        סולם בליינדים: 10/20 ← 15/30 ← 20/40 ← 30/60 ← 40/80 ← הפסקה ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← ... כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.
+        סולם בליינדים: 10/20 ← 15/30 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← ... כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
+        אין סבב אוטומטי אחרי 40/80 — הפסקות נקבעות ידנית מכפתורי ☕ / 🚬 שליד השעון.
       </div>
     </div>
     <button class="btn-primary btn-big" onclick="saveSettings()">שמירת הגדרות</button>
