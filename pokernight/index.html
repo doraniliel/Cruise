@@ -179,36 +179,36 @@
 
   /* fullscreen clock */
   #clock {
-    position: fixed; inset: 0; z-index: 50;
+    position: fixed; inset: 0; z-index: 50; width: 100vw; height: 100dvh;
     background: linear-gradient(rgba(7, 12, 9, .78), rgba(7, 12, 9, .9)), url(bg.jpg) center / cover no-repeat var(--bg);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: clamp(4px, 1.5vh, 14px); padding: 20px; user-select: none;
   }
-  #clock .lvl { color: var(--ink-dim); font-size: clamp(1rem, 3vmin, 1.4rem); letter-spacing: .06em; }
-  #clock .time { font-size: clamp(4rem, 24vmin, 12rem); font-weight: 700; line-height: 1; direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; }
-  #clock .blinds { font-size: clamp(2rem, 10vmin, 5rem); font-weight: 700; color: var(--gold); direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; text-shadow: 0 0 24px rgba(212, 175, 55, .25); }
-  #clock .next { color: var(--ink-dim); font-size: clamp(.95rem, 3vmin, 1.3rem); }
+  #clock .lvl { color: var(--ink-dim); font-size: max(1rem, 3.4vmin); letter-spacing: .12em; }
+  #clock .time { font-size: max(3.5rem, 27vmin); font-weight: 700; line-height: .98; direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; }
+  #clock .blinds { font-size: max(2rem, 11.5vmin); font-weight: 700; color: var(--gold); direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; text-shadow: 0 0 .35em rgba(212, 175, 55, .3); }
+  #clock .next { color: var(--ink-dim); font-size: max(.95rem, 3.2vmin); }
   #clock .roster {
     display: flex; flex-wrap: wrap; justify-content: center;
-    gap: clamp(6px, 1.2vmin, 10px); margin-top: 1.6vh;
-    max-width: min(1150px, 94vw);
+    gap: max(6px, 1.3vmin); margin-top: 1.4vh; max-width: 94vw;
   }
   #clock .roster .pl {
-    display: flex; align-items: center; gap: 7px;
+    display: flex; align-items: center; gap: .5em;
     background: rgba(0, 0, 0, .34); border: 1px solid rgba(212, 175, 55, .28);
-    border-radius: 999px; padding: 4px 13px;
-    font-size: clamp(.82rem, 2.3vmin, 1.15rem);
+    border-radius: 999px; padding: .28em .85em;
+    font-size: max(.82rem, 2.7vmin);
   }
   #clock .roster .pl b { color: var(--gold); font-variant-numeric: tabular-nums; font-weight: 700; }
   #clock .roster .pl .out { opacity: .45; }
-  #clock .stats { display: flex; gap: clamp(12px, 4vmin, 34px); margin-top: 1vh; flex-wrap: wrap; justify-content: center; }
+  #clock .stats { display: flex; gap: max(12px, 4.5vmin); margin-top: 1.2vh; flex-wrap: wrap; justify-content: center; }
   #clock .stats div { text-align: center; }
-  #clock .stats .v { font-size: clamp(1.1rem, 4vmin, 1.7rem); font-weight: 700; }
-  #clock .stats .k { font-size: .72rem; color: var(--ink-dim); }
+  #clock .stats .v { font-size: max(1.1rem, 4.4vmin); font-weight: 700; }
+  #clock .stats .k { font-size: max(.7rem, 1.8vmin); color: var(--ink-dim); }
   #clock.break-mode { background: linear-gradient(rgba(46, 37, 15, .8), rgba(10, 8, 2, .92)), url(bg.jpg) center / cover no-repeat var(--bg); }
   #clock .ctrls {
     position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); right: 0; left: 0;
-    display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+    display: flex; justify-content: center; gap: max(10px, 1.2vmin); flex-wrap: wrap;
+    font-size: max(1rem, 2.1vmin);
     transition: opacity .25s; opacity: 0; pointer-events: none;
   }
   #clock.show-ctrls .ctrls { opacity: 1; pointer-events: auto; }
@@ -360,6 +360,7 @@
 <body>
 <div id="bgimg"></div>
 <div id="app"></div>
+<div id="clock-root"></div>
 <nav id="nav"></nav>
 <div id="toast"></div>
 
@@ -989,6 +990,8 @@ function render() {
   renderNav();
   const app = document.getElementById('app');
   const views = { home, game: gameView, clock: clockView, players: playersView, stats: statsView, history: historyView, settings: settingsView, newgame: newGameView, manual: manualView, summary: summaryView };
+  const croot = document.getElementById('clock-root');
+  if (view !== 'clock' && croot.innerHTML) croot.innerHTML = '';
   app.innerHTML = '';
   (views[view] || home)();
   injectRefresh();
@@ -1323,7 +1326,7 @@ async function shareGame(id) {
 function clockView() {
   const g = activeGame();
   if (!g) { go('home'); return; }
-  const app = document.getElementById('app');
+  const app = document.getElementById('clock-root');
   app.innerHTML = `<div id="clock" onclick="toggleCtrls(event)">
     <div class="flash" id="clock-flash"></div>
     <button class="exit btn-ghost" onclick="event.stopPropagation();go('game')">→ חזרה</button>
