@@ -188,6 +188,19 @@
   #clock .time { font-size: clamp(4rem, 24vmin, 12rem); font-weight: 700; line-height: 1; direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; }
   #clock .blinds { font-size: clamp(2rem, 10vmin, 5rem); font-weight: 700; color: var(--gold); direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; text-shadow: 0 0 24px rgba(212, 175, 55, .25); }
   #clock .next { color: var(--ink-dim); font-size: clamp(.95rem, 3vmin, 1.3rem); }
+  #clock .roster {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: clamp(6px, 1.2vmin, 10px); margin-top: 1.6vh;
+    max-width: min(1150px, 94vw);
+  }
+  #clock .roster .pl {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(0, 0, 0, .34); border: 1px solid rgba(212, 175, 55, .28);
+    border-radius: 999px; padding: 4px 13px;
+    font-size: clamp(.82rem, 2.3vmin, 1.15rem);
+  }
+  #clock .roster .pl b { color: var(--gold); font-variant-numeric: tabular-nums; font-weight: 700; }
+  #clock .roster .pl .out { opacity: .45; }
   #clock .stats { display: flex; gap: clamp(12px, 4vmin, 34px); margin-top: 1vh; flex-wrap: wrap; justify-content: center; }
   #clock .stats div { text-align: center; }
   #clock .stats .v { font-size: clamp(1.1rem, 4vmin, 1.7rem); font-weight: 700; }
@@ -1260,6 +1273,7 @@ function clockView() {
     <div class="time num" id="ck-time">--:--</div>
     <div class="blinds" id="ck-blinds"></div>
     <div class="next" id="ck-next"></div>
+    <div class="roster" id="ck-roster"></div>
     <div class="stats">
       <div><div class="v num" id="ck-players"></div><div class="k">שחקנים</div></div>
       <div><div class="v num" id="ck-entries"></div><div class="k">כניסות</div></div>
@@ -1350,6 +1364,18 @@ function updateClock() {
     el('ck-lvl').innerHTML = (cur.type === 'break' ? '☕ הפסקה' : `רמה ${cur.n}`) + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
     el('ck-blinds').textContent = cur.type === 'break' ? '☕' : `${cur.sb} / ${cur.bb}`;
     el('ck-next').textContent = nxt ? (nxt.type === 'break' ? 'בהמשך: הפסקה' : `הבליינדים הבאים: ${nxt.sb} / ${nxt.bb}`) : 'רמה אחרונה';
+  }
+  const roster = el('ck-roster');
+  if (roster) {
+    const sig = g.playerIds.map(pid => pid + ':' + entriesOf(g, pid)).join('|');
+    if (roster.dataset.sig !== sig) {
+      roster.dataset.sig = sig;
+      roster.innerHTML = g.playerIds
+        .map(pid => ({ pid, n: entriesOf(g, pid) }))
+        .sort((a, b) => b.n - a.n)
+        .map(x => `<span class="pl">${esc(pname(x.pid))} <b>×${x.n}</b></span>`)
+        .join('');
+    }
   }
   el('ck-players').textContent = g.playerIds.length;
   el('ck-entries').textContent = totalEntries(g);
