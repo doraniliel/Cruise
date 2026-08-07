@@ -878,17 +878,40 @@ function speak(text) {
 /* wake lock */
 let wakeLock = null;
 async function acquireWake() {
-  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  if (wakeLock || !('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) { wakeLock = null; }
 }
 function releaseWake() { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && view === 'clock') acquireWake();
+  if (document.visibilityState === 'visible') acquireWake();
 });
+document.addEventListener('click', acquireWake, { passive: true });
+setInterval(acquireWake, 30000);
+
+/* ---- periodic refresh: reloads the app every 2 minutes so a display left
+   running all night stays on the newest build and re-arms the wake lock.
+   Skipped whenever a reload would interrupt something. ---- */
+const AUTO_REFRESH_MS = 120000;
+setInterval(() => {
+  if (document.visibilityState !== 'visible') return;
+  if (document.querySelector('.overlay')) return;                       // a dialog or sheet is open
+  if (SYNC.dirty || SYNC.pushing) return;                               // changes not yet in the cloud
+  const ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;       // someone is typing
+  const g = activeGame();
+  if (g && timerMode(g) === 'awaiting') return;                         // waiting for the manager's approval
+  location.reload();
+}, AUTO_REFRESH_MS);
 
 /* ================= router / render ================= */
 let view = 'home', viewParam = null;
+const VIEW_KEY = 'pokernight_view';
 function go(v, param) {
   view = v; viewParam = param ?? null;
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ v, param: viewParam })); } catch (e) {}
   window.scrollTo(0, 0);
   render();
 }
@@ -1867,9 +1890,17 @@ window.addEventListener('load', () => {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
 });
 const _g = activeGame();
-if (_g) { timerCatchUp(_g, true); view = 'game'; }
+if (_g) {
+  timerCatchUp(_g, true);
+  view = 'game';
+  try {
+    const last = JSON.parse(localStorage.getItem(VIEW_KEY));
+    if (last && (last.v === 'clock' || last.v === 'game')) { view = last.v; viewParam = last.param ?? null; }
+  } catch (e) {}
+}
 render();
 if (_g) startTick();
+acquireWake();
 if (SESSION) pullState();
 </script>
 </body>
