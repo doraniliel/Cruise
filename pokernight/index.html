@@ -190,20 +190,23 @@
   #clock .next { color: var(--ink-dim); font-size: max(.95rem, 3.2vmin); }
   #clock .roster {
     display: flex; flex-wrap: wrap; justify-content: center;
-    gap: max(6px, 1.3vmin); margin-top: 1.4vh; max-width: 94vw;
+    gap: max(8px, 1.8vmin); margin-top: 2vh; max-width: 94vw;
   }
   #clock .roster .pl {
-    display: flex; align-items: center; gap: .5em;
+    display: flex; align-items: center; gap: .55em;
     background: rgba(0, 0, 0, .34); border: 1px solid rgba(212, 175, 55, .28);
-    border-radius: 999px; padding: .28em .85em;
-    font-size: max(.82rem, 2.7vmin);
+    border-radius: 999px; padding: .34em 1.05em;
+    font-size: max(.95rem, 3.4vmin);
   }
   #clock .roster .pl b { color: var(--gold); font-variant-numeric: tabular-nums; font-weight: 700; }
   #clock .roster .pl .out { opacity: .45; }
-  #clock .stats { display: flex; gap: max(12px, 4.5vmin); margin-top: 1.2vh; flex-wrap: wrap; justify-content: center; }
+  #clock .stats {
+    display: flex; gap: max(30px, 11vmin); margin-top: 3.2vh;
+    flex-wrap: wrap; justify-content: center; max-width: 94vw;
+  }
   #clock .stats div { text-align: center; }
-  #clock .stats .v { font-size: max(1.1rem, 4.4vmin); font-weight: 700; }
-  #clock .stats .k { font-size: max(.7rem, 1.8vmin); color: var(--ink-dim); }
+  #clock .stats .v { font-size: max(1.15rem, 4.6vmin); font-weight: 700; line-height: 1.1; }
+  #clock .stats .k { font-size: max(.72rem, 1.9vmin); color: var(--ink-dim); margin-top: .35em; letter-spacing: .04em; }
   #clock.break-mode { background: linear-gradient(rgba(46, 37, 15, .8), rgba(10, 8, 2, .92)), url(bg.jpg) center / cover no-repeat var(--bg); }
   #clock .ctrls {
     position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); right: 0; left: 0;
