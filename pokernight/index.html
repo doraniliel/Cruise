@@ -303,6 +303,16 @@
     filter: saturate(1.08) contrast(1.04);
     pointer-events: none;
   }
+  .refresh-btn {
+    width: 34px; height: 34px; border-radius: 50%; padding: 0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .25); color: var(--gold-dim);
+  }
+  .refresh-btn svg { width: 17px; height: 17px; }
+  .refresh-btn.spin svg { animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(-360deg); } }
+  #clock .refresh-btn { background: rgba(0, 0, 0, .3); }
+  .topbar { gap: 10px; }
   .avatar-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
   .crown {
     position: absolute; top: -11px; left: 50%; z-index: 2;
@@ -411,6 +421,7 @@ async function sha256hex(s) {
 let loginMode = 'user';
 function renderLogin() {
   document.getElementById('nav').hidden = true;
+  setTimeout(injectRefresh, 0);
   document.getElementById('app').innerHTML = `
     <div style="min-height:88dvh;display:flex;flex-direction:column;justify-content:center">
       <div style="text-align:center;margin-bottom:26px">
@@ -425,10 +436,12 @@ function renderLogin() {
         ${loginMode === 'user' ? `
           <label class="field"><span>איך קוראים לך?</span><input type="text" id="lg-name" autocomplete="off"></label>
           <button class="btn-primary btn-big" onclick="userLogin()">כניסה</button>
+          <div class="login-actions row" style="justify-content:center;margin-top:12px"></div>
         ` : `
           <label class="field"><span>שם משתמש</span><input type="text" id="lg-user" autocomplete="off" autocapitalize="off"></label>
           <label class="field"><span>סיסמה</span><input type="password" id="lg-pass"></label>
           <button class="btn-primary btn-big" onclick="adminLogin()">כניסת מנהל</button>
+          <div class="login-actions row" style="justify-content:center;margin-top:12px"></div>
         `}
       </div>
     </div>`;
@@ -924,6 +937,7 @@ const ICONS = {
   settings: SVG('M4 6.5h7.2M14.8 6.5H20M4 12h9.2M16.8 12H20M4 17.5h4.2M11.8 17.5H20', '<circle cx="13" cy="6.5" r="1.9"/><circle cx="15" cy="12" r="1.9"/><circle cx="10" cy="17.5" r="1.9"/>'),
   user: SVG('M4.5 20c0-3.4 3.2-5.6 7.5-5.6s7.5 2.2 7.5 5.6', '<circle cx="12" cy="7.8" r="3.8"/>'),
   key: SVG('M11.2 12H20m-2.6 0v3.4m-3.4-3.4v2.6', '<circle cx="7.2" cy="12" r="3.6"/>'),
+  refresh: SVG('M19.6 12a7.6 7.6 0 1 1-2.2-5.4', '<path d="M20 4.1v4.2h-4.2"/>'),
   share: SVG('M12 15.5V4.5m0 0 3.8 3.8M12 4.5 8.2 8.3M5 12.5v6A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-6'),
   spade: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C9.5 6 4.5 9 4.5 13a4 4 0 0 0 6.6 3c-.3 1.9-1 3.3-2.1 4.5v1h6v-1c-1.1-1.2-1.8-2.6-2.1-4.5a4 4 0 0 0 6.6-3c0-4-5-7-7.5-10.5z"/></svg>`,
 };
@@ -942,6 +956,26 @@ function renderNav() {
     `<button class="${(view === v || (view === 'game' && v === 'home') || (view === 'summary' && v === 'history')) ? 'active' : ''}" onclick="go('${v}')"><span class="ico">${ICONS[ico]}</span>${lbl}</button>`
   ).join('');
 }
+function doRefresh(e) {
+  const b = e && e.currentTarget;
+  if (b && b.classList) b.classList.add('spin');
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ v: view, param: viewParam })); } catch (err) {}
+  try { navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r => r && r.update()); } catch (err) {}
+  setTimeout(() => location.reload(), 220);
+}
+function injectRefresh() {
+  const host = document.querySelector('#app .topbar') || document.querySelector('#app .login-actions');
+  if (!host || host.querySelector('.refresh-btn')) return;
+  const b = document.createElement('button');
+  b.className = 'refresh-btn';
+  b.type = 'button';
+  b.title = 'רענון';
+  b.setAttribute('aria-label', 'רענון');
+  b.innerHTML = ICONS.refresh;
+  b.addEventListener('click', doRefresh);
+  host.appendChild(b);
+}
+
 const ADMIN_VIEWS = ['history', 'settings', 'newgame', 'manual'];
 const TABLE_BG_VIEWS = ['home', 'newgame'];
 function setBackdrop(v) {
@@ -957,6 +991,7 @@ function render() {
   const views = { home, game: gameView, clock: clockView, players: playersView, stats: statsView, history: historyView, settings: settingsView, newgame: newGameView, manual: manualView, summary: summaryView };
   app.innerHTML = '';
   (views[view] || home)();
+  injectRefresh();
 }
 
 /* ================= views ================= */
@@ -1292,6 +1327,7 @@ function clockView() {
   app.innerHTML = `<div id="clock" onclick="toggleCtrls(event)">
     <div class="flash" id="clock-flash"></div>
     <button class="exit btn-ghost" onclick="event.stopPropagation();go('game')">→ חזרה</button>
+    <button class="exit refresh-btn" style="inset-inline-start:auto;inset-inline-end:14px" onclick="event.stopPropagation();doRefresh(event)" title="רענון">${ICONS.refresh}</button>
     <div class="lvl" id="ck-lvl"></div>
     <div class="time num" id="ck-time">--:--</div>
     <div class="blinds" id="ck-blinds"></div>
