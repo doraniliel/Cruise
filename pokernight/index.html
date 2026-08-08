@@ -1396,7 +1396,8 @@ function buildWhatsApp(g) {
     ...g.playerIds.map(pid => {
       const n = p.nets[pid];
       const s = n > 0 ? `${L}+₪${n}` : n < 0 ? `${L}-₪${Math.abs(n)}` : `₪0`;
-      return `${pname(pid)}: ${s}`;
+      const e = entriesOf(g, pid);
+      return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${s}`;
     }),
   ];
   return lines.join('\n');
