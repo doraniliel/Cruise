@@ -382,7 +382,7 @@ const LADDER = [
   [300, 600], [400, 800], [500, 1000], [750, 1500], [1000, 2000],
 ];
 const DEFAULT_SETTINGS = {
-  entryPrice: 30, houseFee: 30, vaultFee: 30,
+  entryPrice: 30, houseFee: 10, savingsFee: 20,
   splitFirst: 65, splitSecond: 25, splitHouse: 10,
   maxRebuys: 12,
   levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
@@ -769,10 +769,12 @@ function payouts(g) {
   const second = Math.round(pool * g.config.splitSecond / 100);
   const house10 = Math.round(pool * g.config.splitHouse / 100);
   const first = pool - second - house10; // remainder to 1st
-  const houseTotal = house10 + g.playerIds.length * g.config.houseFee;
-  // savings vault: collected from every player, kept apart from the house
-  const vaultFee = g.config.vaultFee || 0;
-  const vault = g.playerIds.length * vaultFee;
+  const n = g.playerIds.length;
+  const houseFee = g.config.houseFee || 0;                       // per player, to the house
+  const savingsFee = savingsFeeOf(g.config);                     // per player, for wear & tear
+  const houseFees = n * houseFee;
+  const savings = n * savingsFee;
+  const houseTotal = house10 + houseFees;                        // everything the house keeps
   const nets = {};
   for (const pid of g.playerIds) {
     let win = 0;
@@ -780,11 +782,13 @@ function payouts(g) {
       if (g.results.first === pid) win += first;
       if (g.results.second === pid) win += second;
     }
-    nets[pid] = win - entriesOf(g, pid) * g.config.entryPrice - g.config.houseFee - vaultFee;
+    nets[pid] = win - entriesOf(g, pid) * g.config.entryPrice - houseFee - savingsFee;
   }
-  return { pool, first, second, house10, houseTotal, vault, nets };
+  return { pool, first, second, house10, houseFees, houseTotal, savings, nets };
 }
-const vaultBalance = () => S.games.reduce((s, g) => s + g.playerIds.length * ((g.config && g.config.vaultFee) || 0), 0);
+// older games stored the whole per-player fee as vaultFee; keep their history exact
+const savingsFeeOf = cfg => (cfg && (cfg.savingsFee != null ? cfg.savingsFee : (cfg.vaultFee || 0))) || 0;
+const savingsBalance = () => S.games.reduce((s, g) => s + g.playerIds.length * savingsFeeOf(g.config), 0);
 
 function buildTimeline(cfg) {
   const t = [];
@@ -1162,7 +1166,7 @@ function startGame() {
     startAt: now, endAt: null, status: 'active', isManual: false,
     config: {
       entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
-      vaultFee: S.settings.vaultFee,
+      savingsFee: S.settings.savingsFee,
       splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
       maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
       breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
@@ -1222,7 +1226,7 @@ function gameView() {
     ${isAdmin() ? `<button class="btn-ghost" style="width:100%;margin:4px 0 12px" onclick="openAddPlayerToGame()">+ הוספת שחקן באיחור</button>` : ''}
     <div class="pool-bar">
       <div><div class="pool">קופה: ${shk(p.pool)}</div>
-      <div class="amounts">🥇 ${shk(p.first)} · 🥈 ${shk(p.second)} · 🏠 ${shk(p.houseTotal)}</div></div>
+      <div class="amounts">🥇 ${shk(p.first)} · 🥈 ${shk(p.second)} · 🏠 ${shk(p.house10)}</div></div>
       ${isAdmin() ? `<button class="btn-danger" onclick="beginEndGame()">סיום משחק</button>` : ''}
     </div>`;
   startTick();
@@ -1324,7 +1328,9 @@ function showEndConfirm() {
       <tr><td>🥇 ${esc(pname(endPick.first))}</td><td>${shk(p.first)}</td></tr>
       <tr><td>🥈 ${esc(pname(endPick.second))}</td><td>${shk(p.second)}</td></tr>
       ${endPick.bubble ? `<tr><td>🎈 ${esc(pname(endPick.bubble))} — באבל בוי</td><td>—</td></tr>` : ''}
-      <tr><td>🏠 הבית (10% + דמי בית)</td><td>${shk(p.houseTotal)}</td></tr>
+      <tr><td>🏠 הבית (10% מהקופה)</td><td>${shk(p.house10)}</td></tr>
+      <tr><td>🧰 חיסכון</td><td>${shk(p.savings)}</td></tr>
+      <tr><td>🏠 דמי בית</td><td>${shk(p.houseFees)}</td></tr>
       <tr><td>💰 קופה</td><td>${shk(p.pool)}</td></tr>
     </table>
     <div style="height:14px"></div>
@@ -1367,7 +1373,9 @@ function summaryView() {
           return `<tr><td>${medal}${esc(pname(pid))}</td><td class="num">${entriesOf(g, pid)}</td>
             <td>${win ? shk(win) : '—'}</td><td>${money(p.nets[pid])}</td></tr>`;
         }).join('')}
-        <tr><td>🏠 הבית</td><td></td><td>${shk(p.houseTotal)}</td><td></td></tr>
+        <tr><td>🏠 הבית (10% מהקופה)</td><td></td><td>${shk(p.house10)}</td><td></td></tr>
+        <tr><td>🧰 חיסכון (${shk(savingsFeeOf(g.config))} לשחקן)</td><td></td><td>${shk(p.savings)}</td><td></td></tr>
+        <tr><td>🏠 דמי בית (${shk(g.config.houseFee || 0)} לשחקן)</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
       </table>
     </div>
     <button class="btn-primary btn-big" onclick="shareGame('${g.id}')"><span class="gi">${ICONS.share}</span> שיתוף בוואטסאפ</button>
@@ -1390,7 +1398,9 @@ function buildWhatsApp(g) {
     `🥇 ${pname(g.results.first)} — ₪${p.first}`,
     `🥈 ${pname(g.results.second)} — ₪${p.second}`,
     ...(g.results.bubble ? [`🎈 ${pname(g.results.bubble)} — הבאבל בוי`] : []),
-    `🏠 הבית — ₪${p.houseTotal}`,
+    `🏠 הבית (10%) — ₪${p.house10}`,
+    `🧰 חיסכון — ₪${p.savings}`,
+    `🏠 דמי בית — ₪${p.houseFees}`,
     `➖➖➖➖➖➖`,
     `מאזן סופי:`,
     ...g.playerIds.map(pid => {
@@ -1861,7 +1871,7 @@ function saveManual() {
     id: uid(), date: m.date, startAt: null, endAt: null, status: 'done', isManual: true,
     config: {
       entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
-      vaultFee: 0, // historical games predate the vault
+      savingsFee: 0, // historical games predate the savings fund
       splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
       maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
       breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
@@ -1901,7 +1911,11 @@ function settingsView() {
     <h2>כסף</h2>
     <div class="card">
       <label class="field"><span>מחיר כניסה (₪)</span><input type="number" inputmode="numeric" id="st-entry" value="${s.entryPrice}"></label>
-      <label class="field"><span>דמי בית לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-fee" value="${s.houseFee}"></label>
+      <div class="row">
+        <label class="field grow"><span>חיסכון לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-savings" value="${s.savingsFee}"></label>
+        <label class="field grow"><span>דמי בית לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-fee" value="${s.houseFee}"></label>
+      </div>
+      <div class="empty" style="padding:0 0 10px;font-size:.75rem;text-align:right">סה״כ ${shk((s.savingsFee || 0) + (s.houseFee || 0))} מכל שחקן בערב.</div>
       <div class="row">
         <label class="field grow"><span>מקום 1 (%)</span><input type="number" inputmode="numeric" id="st-s1" value="${s.splitFirst}"></label>
         <label class="field grow"><span>מקום 2 (%)</span><input type="number" inputmode="numeric" id="st-s2" value="${s.splitSecond}"></label>
@@ -1929,11 +1943,10 @@ function settingsView() {
       </div>
     </div>
     <button class="btn-primary btn-big" onclick="saveSettings()">שמירת הגדרות</button>
-    <h2>כספת</h2>
+    <h2>קופת חיסכון</h2>
     <div class="card">
-      <div class="row"><div class="grow" style="font-weight:700;font-size:1.15rem;color:var(--gold)">₪${vaultBalance().toLocaleString('he-IL')}</div></div>
-      <label class="field" style="margin-top:10px"><span>סכום לכספת מכל שחקן בערב (₪)</span><input type="number" inputmode="numeric" id="st-vault" value="${s.vaultFee}"></label>
-      <div class="empty" style="padding:0;font-size:.76rem;text-align:right">נגבה מכל שחקן פעם בערב, בנפרד מדמי הבית, ונשמר לציוד ותיקונים.<br>לא מופיע בקופה, בשעון, בסיכום המשחק או בהודעת הוואטסאפ — רק כאן.</div>
+      <div style="font-weight:700;font-size:1.35rem;color:var(--gold)">₪${savingsBalance().toLocaleString('he-IL')}</div>
+      <div class="empty" style="padding:8px 0 0;font-size:.76rem;text-align:right">נצבר מכל המשחקים — ${shk(s.savingsFee)} מכל שחקן בערב, לציוד, בלאי ותיקונים.<br>כסף החיסכון נפרד לחלוטין מכספי הבית.</div>
     </div>
 
     <h2>גיבוי</h2>
@@ -1955,7 +1968,7 @@ function saveSettings() {
   if (s1 + s2 + sh !== 100) { toast(`האחוזים חייבים להסתכם ב-100 (עכשיו ${s1 + s2 + sh})`); return; }
   Object.assign(S.settings, {
     entryPrice: Math.max(1, v('st-entry')), houseFee: Math.max(0, v('st-fee')),
-    vaultFee: Math.max(0, v('st-vault')),
+    savingsFee: Math.max(0, v('st-savings')),
     splitFirst: s1, splitSecond: s2, splitHouse: sh,
     maxRebuys: Math.max(0, v('st-cap')),
     levelMinutes: parseInt(document.getElementById('st-lvlmin').value, 10),
