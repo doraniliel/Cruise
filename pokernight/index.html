@@ -377,7 +377,7 @@
 const LS_KEY = 'pokernight_v1';
 const CHIPS_PER_ENTRY = 1500;
 const LADDER = [
-  [10, 20], [15, 30], [20, 40], [30, 60], [40, 80],
+  [10, 20], [20, 40], [30, 60], [40, 80],
   [50, 100], [75, 150], [100, 200], [150, 300], [200, 400],
   [300, 600], [400, 800], [500, 1000], [750, 1500], [1000, 2000],
 ];
@@ -792,7 +792,7 @@ const savingsBalance = () => S.games.reduce((s, g) => s + g.playerIds.length * s
 
 function buildTimeline(cfg) {
   const t = [];
-  LADDER.forEach(([sb, bb], i) => {
+  ((cfg && cfg.ladder) || LADDER).forEach(([sb, bb], i) => {
     t.push({ type: 'level', n: i + 1, sb, bb, min: cfg.levelMinutes });
     if (cfg.breakAfter && i + 1 === cfg.breakAfter) t.push({ type: 'break', min: cfg.breakMinutes });
   });
@@ -1167,6 +1167,7 @@ function startGame() {
     config: {
       entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
       savingsFee: S.settings.savingsFee,
+      ladder: LADDER.map(l => l.slice()),
       splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
       maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
       breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
@@ -1938,7 +1939,7 @@ function settingsView() {
         <div class="chip ${s.voice ? 'on' : ''}" onclick="S.settings.voice=!S.settings.voice;save();render()">🗣 הכרזה קולית</div>
       </div>
       <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
-        סולם בליינדים: 10/20 ← 15/30 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← 200/400 ← 300/600 ← 400/800 ← 500/1000 ← 750/1500 ← 1000/2000 (אחרונה). כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
+        סולם בליינדים: 10/20 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← 200/400 ← 300/600 ← 400/800 ← 500/1000 ← 750/1500 ← 1000/2000 (אחרונה). כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
         אין סבב אוטומטי אחרי 40/80 — הפסקות נקבעות ידנית מכפתורי ☕ / 🚬 שליד השעון.
       </div>
     </div>
