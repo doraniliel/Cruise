@@ -27,8 +27,20 @@ export default async (req) => {
     if (!body.data || !Array.isArray(body.data.players) || !Array.isArray(body.data.games)) {
       return new Response('bad request', { status: 400 });
     }
+
     const raw = await store.get(KEY);
-    const cur = raw ? JSON.parse(raw) : { version: 0 };
+    const cur = raw ? JSON.parse(raw) : { version: 0, updatedAt: null, data: null };
+
+    // Optimistic concurrency: a device that built its upload on an older
+    // version must not overwrite newer work (that is how a finished game used
+    // to come back to life). Hand it the current state so it can merge.
+    if (typeof body.baseVersion === 'number' && body.baseVersion !== cur.version) {
+      return Response.json(
+        { conflict: true, version: cur.version, updatedAt: cur.updatedAt, data: cur.data },
+        { status: 409, headers: { 'cache-control': 'no-store' } }
+      );
+    }
+
     const next = {
       version: (cur.version || 0) + 1,
       updatedAt: Date.now(),

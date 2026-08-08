@@ -40,6 +40,7 @@ export default async (req) => {
       if (list.length > MAX_PER_PLAYER) list.splice(0, list.length - MAX_PER_PLAYER);
     }
 
+    for (const k of Object.keys(all)) if (!all[k] || !all[k].length) delete all[k]; // drop empty walls
     await store.set(KEY, JSON.stringify(all));
     return Response.json({ ok: true }, { headers: { 'cache-control': 'no-store' } });
   }

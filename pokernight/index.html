@@ -379,11 +379,10 @@ const CHIPS_PER_ENTRY = 1500;
 const LADDER = [
   [10, 20], [15, 30], [20, 40], [30, 60], [40, 80],
   [50, 100], [75, 150], [100, 200], [150, 300], [200, 400],
-  [300, 600], [400, 800], [600, 1200], [800, 1600], [1000, 2000],
-  [1500, 3000], [2000, 4000], [3000, 6000],
+  [300, 600], [400, 800], [500, 1000], [750, 1500], [1000, 2000],
 ];
 const DEFAULT_SETTINGS = {
-  entryPrice: 30, houseFee: 30,
+  entryPrice: 30, houseFee: 30, vaultFee: 30,
   splitFirst: 65, splitSecond: 25, splitHouse: 10,
   maxRebuys: 12,
   levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
@@ -405,7 +404,10 @@ function loadState() {
   } catch (e) { console.error(e); }
   return { players: [], games: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
 }
-function save() { mvpDirty = true; localStorage.setItem(LS_KEY, JSON.stringify(S)); schedulePush(); }
+function saveLocal() { mvpDirty = true; localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+function save() { saveLocal(); schedulePush(); }
+// stamp what changed so a merge can tell newer from older
+function touchGame(g) { if (g) g.updatedAt = Date.now(); }
 function uid() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)); }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 
@@ -547,36 +549,86 @@ try { Object.assign(SYNC, JSON.parse(localStorage.getItem(SYNCMETA_KEY)) || {});
 SYNC.pushing = false;
 function syncMetaSave() { localStorage.setItem(SYNCMETA_KEY, JSON.stringify({ version: SYNC.version, dirty: SYNC.dirty })); }
 
-function applyRemote(remote) {
-  S = {
-    players: remote.data.players || [],
-    games: remote.data.games || [],
-    settings: Object.assign({}, DEFAULT_SETTINGS, remote.data.settings || {}),
-  };
+/* ---- merging two copies of the data, newest-wins per record ----
+   Devices each hold a full copy, so a plain overwrite lets an old copy undo
+   newer work. Everything below merges record by record instead. ---- */
+const FINISHED_KEY = 'pokernight_finished';
+let FINISHED = [];
+try { FINISHED = JSON.parse(localStorage.getItem(FINISHED_KEY)) || []; } catch (e) {}
+function rememberFinished(id) {
+  if (!FINISHED.includes(id)) FINISHED.push(id);
+  if (FINISHED.length > 200) FINISHED = FINISHED.slice(-200);
+  localStorage.setItem(FINISHED_KEY, JSON.stringify(FINISHED));
+}
+const entryKey = e => e.id || (e.pid + '|' + e.ts + '|' + e.delta);
+function mergeById(a, b) {
+  const m = new Map();
+  for (const it of [...(a || []), ...(b || [])]) {
+    const prev = m.get(it.id);
+    if (!prev || (it.updatedAt || 0) > (prev.updatedAt || 0)) m.set(it.id, it);
+  }
+  return [...m.values()];
+}
+function mergeGame(a, b) {
+  // a finished game can never go back to being active
+  const aDone = a.status === 'done' || FINISHED.includes(a.id);
+  const bDone = b.status === 'done' || FINISHED.includes(b.id);
+  let base;
+  if (aDone && !bDone) base = a;
+  else if (bDone && !aDone) base = b;
+  else base = (a.updatedAt || 0) >= (b.updatedAt || 0) ? a : b;
+  const other = base === a ? b : a;
+  const out = Object.assign({}, base);
+  if (FINISHED.includes(out.id) && out.status !== 'done' && other.status === 'done') return Object.assign({}, other);
+  // entries are append-only, so union them and drop anyone no longer in the game
+  const seen = new Set(), entries = [];
+  for (const e of [...(base.entries || []), ...(other.entries || [])]) {
+    const k = entryKey(e);
+    if (seen.has(k)) continue;
+    seen.add(k); entries.push(e);
+  }
+  out.entries = entries.filter(e => (out.playerIds || []).includes(e.pid));
+  return out;
+}
+function mergeGames(a, b) {
+  const m = new Map();
+  for (const g of [...(a || []), ...(b || [])]) {
+    const prev = m.get(g.id);
+    m.set(g.id, prev ? mergeGame(prev, g) : g);
+  }
+  return [...m.values()];
+}
+function mergeRemote(remote) {
+  const rd = remote.data || {};
+  const before = JSON.stringify([S.players, S.games, S.settings]);
+  S.players = mergeById(S.players, rd.players);
+  S.games = mergeGames(S.games, rd.games);
+  const rs = rd.settings || {};
+  if ((rs.updatedAt || 0) > (S.settings.updatedAt || 0)) S.settings = Object.assign({}, DEFAULT_SETTINGS, rs);
+  for (const g of S.games) if (g.status === 'done') rememberFinished(g.id);
   dropScheduledBreak(S);
   mvpDirty = true;
   localStorage.setItem(LS_KEY, JSON.stringify(S));
   SYNC.version = remote.version;
-  SYNC.dirty = false;
   syncMetaSave();
+  return before !== JSON.stringify([S.players, S.games, S.settings]);
 }
 
 async function pullState(force) {
-  // an admin with unpushed local changes never pulls over them
-  if (SYNC.dirty && isAdmin()) { pushState(); return; }
   try {
     const r = await fetch(API, { cache: 'no-store' });
     if (!r.ok) throw new Error(r.status);
     const remote = await r.json();
-    if (remote.data && (remote.version > SYNC.version || force)) {
-      applyRemote(remote);
-      if (SESSION) render();
+    if (remote.data && (remote.version !== SYNC.version || force)) {
+      const changed = mergeRemote(remote);
+      if (changed && SESSION) render();
     } else if (remote.version === 0 && isAdmin() && (S.players.length || S.games.length)) {
       schedulePush(); // seed the cloud from this device
     }
     SYNC.status = 'ok';
     pullComments();
   } catch (e) { SYNC.status = 'offline'; }
+  if (SYNC.dirty && isAdmin()) pushState();
   updateSyncBadge();
 }
 
@@ -585,19 +637,33 @@ function schedulePush() {
   if (!isAdmin() || !SESSION.key) return;
   SYNC.dirty = true; syncMetaSave();
   clearTimeout(pushTimer);
-  pushTimer = setTimeout(pushState, 1500);
+  pushTimer = setTimeout(pushState, 700);
   updateSyncBadge();
 }
-async function pushState() {
+async function pushState(attempt) {
   if (!isAdmin() || !SESSION.key || SYNC.pushing) return;
+  clearTimeout(pushTimer);
   SYNC.pushing = true;
   try {
     const r = await fetch(API, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-admin-key': SESSION.key },
-      body: JSON.stringify({ data: { players: S.players, games: S.games, settings: S.settings } }),
+      body: JSON.stringify({
+        baseVersion: SYNC.version,
+        data: { players: S.players, games: S.games, settings: S.settings },
+      }),
     });
     if (r.status === 401) { SYNC.status = 'auth'; SYNC.pushing = false; updateSyncBadge(); return; }
+    if (r.status === 409) {
+      // someone else wrote first: merge their state in, then send the result
+      const remote = await r.json();
+      const changed = mergeRemote(remote);
+      if (changed && SESSION) render();
+      SYNC.pushing = false;
+      if ((attempt || 0) < 4) return pushState((attempt || 0) + 1);
+      updateSyncBadge();
+      return;
+    }
     if (!r.ok) throw new Error(r.status);
     const j = await r.json();
     SYNC.version = j.version; SYNC.dirty = false; SYNC.status = 'ok';
@@ -620,7 +686,7 @@ function updateSyncBadge() {
   const el = document.getElementById('sync-badge');
   if (el) el.textContent = syncBadgeText();
 }
-setInterval(() => { if (document.visibilityState === 'visible') pullState(); }, 10000);
+setInterval(() => { if (document.visibilityState === 'visible') pullState(); }, 3000);
 window.addEventListener('online', () => { SYNC.dirty ? pushState() : pullState(); });
 
 /* ================= helpers ================= */
@@ -704,6 +770,9 @@ function payouts(g) {
   const house10 = Math.round(pool * g.config.splitHouse / 100);
   const first = pool - second - house10; // remainder to 1st
   const houseTotal = house10 + g.playerIds.length * g.config.houseFee;
+  // savings vault: collected from every player, kept apart from the house
+  const vaultFee = g.config.vaultFee || 0;
+  const vault = g.playerIds.length * vaultFee;
   const nets = {};
   for (const pid of g.playerIds) {
     let win = 0;
@@ -711,10 +780,11 @@ function payouts(g) {
       if (g.results.first === pid) win += first;
       if (g.results.second === pid) win += second;
     }
-    nets[pid] = win - entriesOf(g, pid) * g.config.entryPrice - g.config.houseFee;
+    nets[pid] = win - entriesOf(g, pid) * g.config.entryPrice - g.config.houseFee - vaultFee;
   }
-  return { pool, first, second, house10, houseTotal, nets };
+  return { pool, first, second, house10, houseTotal, vault, nets };
 }
+const vaultBalance = () => S.games.reduce((s, g) => s + g.playerIds.length * ((g.config && g.config.vaultFee) || 0), 0);
 
 function buildTimeline(cfg) {
   const t = [];
@@ -759,6 +829,7 @@ function timerRemaining(g) {
   return t.running ? t.endAt - Date.now() : t.remainingMs;
 }
 function startBreak(g, min) {
+  touchGame(g);
   const t = g.timer;
   t.resumeIdx = t.idx;
   t.resumeRemainingMs = Math.max(0, t.running ? t.endAt - Date.now() : (t.remainingMs ?? 0));
@@ -768,12 +839,13 @@ function startBreak(g, min) {
 }
 // break countdown finished: hold at 0:00 until the manager approves
 function breakFinished(g) {
-  g.timer.mode = 'awaiting'; save();
+  g.timer.mode = 'awaiting'; saveLocal();
   playGong();
   if (S.settings.voice) speak('ההפסקה הסתיימה');
   flashClock();
 }
 function resumeFromBreak(g) {
+  touchGame(g);
   const t = g.timer;
   if (t.resumeIdx != null) t.idx = t.resumeIdx;
   const tl = buildTimeline(g.config);
@@ -796,30 +868,34 @@ function timerCatchUp(g, silent) {
     advanced = true;
   }
   if (advanced) {
-    save();
+    saveLocal();          // derived from timestamps on every device; never pushed
     if (!silent) levelChanged(g);
   }
   return advanced;
 }
 function timerPause(g) {
+  touchGame(g);
   const t = g.timer;
   if (!t.running) return;
   t.remainingMs = Math.max(0, t.endAt - Date.now());
   t.running = false; save();
 }
 function timerResume(g) {
+  touchGame(g);
   const t = g.timer;
   if (t.running) return;
   t.endAt = Date.now() + (t.remainingMs ?? 0);
   t.running = true; t.remainingMs = null; save();
 }
 function timerAddMinute(g, delta) {
+  touchGame(g);
   const t = g.timer, d = (delta || 1) * 60000, MIN = 10000;
   if (t.running) t.endAt = Math.max(Date.now() + MIN, t.endAt + d);
   else t.remainingMs = Math.max(MIN, (t.remainingMs || 0) + d);
   save();
 }
 function timerJump(g, dir) {
+  touchGame(g);
   const t = g.timer, tl = buildTimeline(g.config);
   const ni = Math.min(tl.length - 1, Math.max(0, t.idx + dir));
   t.idx = ni;
@@ -1086,12 +1162,14 @@ function startGame() {
     startAt: now, endAt: null, status: 'active', isManual: false,
     config: {
       entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
+      vaultFee: S.settings.vaultFee,
       splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
       maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
       breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
     },
     playerIds: [...ngSel],
-    entries: [...ngSel].map(pid => ({ pid, delta: 1, ts: now })),
+    entries: [...ngSel].map(pid => ({ id: uid(), pid, delta: 1, ts: now })),
+    updatedAt: now,
     results: null, timer: null,
   };
   timerInit(g);
@@ -1155,12 +1233,12 @@ function addEntry(pid, delta) {
   const cnt = entriesOf(g, pid);
   if (delta > 0 && cnt >= g.config.maxRebuys + 1) {
     confirmDlg(`⚠️ ${esc(pname(pid))} הגיע לתקרת הרי-באי (${g.config.maxRebuys}).<br>לחרוג מהתקרה?`, () => {
-      g.entries.push({ pid, delta: 1, ts: Date.now(), override: true }); save(); playClick(); render();
+      g.entries.push({ id: uid(), pid, delta: 1, ts: Date.now(), override: true }); touchGame(g); save(); playClick(); render();
     });
     return;
   }
   if (delta < 0 && cnt <= 0) return;
-  g.entries.push({ pid, delta, ts: Date.now() }); save(); playClick();
+  g.entries.push({ id: uid(), pid, delta, ts: Date.now() }); touchGame(g); save(); playClick();
   if (delta < 0) toast('כניסה בוטלה ↩');
   render();
 }
@@ -1184,7 +1262,7 @@ function removeFromGame(pid) {
     if (g.results) for (const k of ['first', 'second', 'bubble']) if (g.results[k] === pid) g.results[k] = null;
     // a guest added by mistake, who never played anywhere else, leaves no trace
     if (p && p.guest && !S.games.some(x => x.playerIds.includes(pid))) S.players = S.players.filter(x => x.id !== pid);
-    save(); closeSheet(); render(); toast('השחקן הוסר מהמשחק');
+    touchGame(g); save(); closeSheet(); render(); toast('השחקן הוסר מהמשחק');
   });
 }
 function openAddPlayerToGame() {
@@ -1199,8 +1277,8 @@ function lateAdd(pid) {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g || g.playerIds.includes(pid)) return;
   g.playerIds.push(pid);
-  g.entries.push({ pid, delta: 1, ts: Date.now() });
-  save(); closeSheet(); render(); toast(`${pname(pid)} הצטרף למשחק 🎉`);
+  g.entries.push({ id: uid(), pid, delta: 1, ts: Date.now() });
+  touchGame(g); save(); closeSheet(); render(); toast(`${pname(pid)} הצטרף למשחק 🎉`);
 }
 
 /* ---- end game flow ---- */
@@ -1258,7 +1336,11 @@ function finishGame() {
   const g = activeGame(); if (!g) return;
   g.results = { first: endPick.first, second: endPick.second, bubble: endPick.bubble || null };
   g.status = 'done'; g.endAt = Date.now();
-  save(); closeSheet(); stopTick(); releaseWake();
+  touchGame(g);
+  rememberFinished(g.id);
+  saveLocal();
+  pushState();            // ending a game syncs immediately, no debounce
+  closeSheet(); stopTick(); releaseWake();
   go('summary', g.id);
   toast('המשחק נשמר 🎉');
 }
@@ -1532,7 +1614,7 @@ function saveNewPlayer(ctx) {
   const name = document.getElementById('np-name').value.trim();
   const nick = document.getElementById('np-nick').value.trim();
   if (!name) { toast('צריך שם 🙂'); return; }
-  const p = { id: uid(), name, nickname: nick || null, avatar: null, active: true, guest: npGuest || false, createdAt: Date.now() };
+  const p = { id: uid(), name, nickname: nick || null, avatar: null, active: true, guest: npGuest || false, createdAt: Date.now(), updatedAt: Date.now() };
   S.players.push(p); save(); closeSheet();
   if (ctx === 'ng') { ngSel.add(p.id); render(); }
   else if (ctx === 'game') { lateAdd(p.id); }
@@ -1620,19 +1702,20 @@ function openProfile(pid) {
 function setPlayerGuest(pid, v) {
   if (!requireAdmin()) return;
   const p = player(pid); if (!p) return;
-  p.guest = v; save(); openProfile(pid); render();
+  p.guest = v; p.updatedAt = Date.now(); save(); openProfile(pid); render();
 }
 function saveProfile(pid) {
   if (!requireAdmin()) return;
   const p = player(pid); if (!p) return;
   p.name = document.getElementById('pf-name').value.trim() || p.name;
   p.nickname = document.getElementById('pf-nick').value.trim() || null;
+  p.updatedAt = Date.now();
   save(); closeSheet(); render(); toast('נשמר ✔');
 }
 function togglePlayerActive(pid) {
   if (!requireAdmin()) return;
   const p = player(pid); if (!p) return;
-  p.active = p.active === false; save(); closeSheet(); render();
+  p.active = p.active === false; p.updatedAt = Date.now(); save(); closeSheet(); render();
 }
 function deletePlayer(pid) {
   if (!requireAdmin()) return;
@@ -1655,6 +1738,7 @@ function pickAvatar(pid) {
       ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256);
       const p = player(pid);
       p.avatar = c.toDataURL('image/jpeg', 0.82);
+      p.updatedAt = Date.now();
       save(); openProfile(pid); render();
       URL.revokeObjectURL(img.src);
     };
@@ -1776,12 +1860,14 @@ function saveManual() {
     id: uid(), date: m.date, startAt: null, endAt: null, status: 'done', isManual: true,
     config: {
       entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
+      vaultFee: 0, // historical games predate the vault
       splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
       maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
       breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
     },
     playerIds: pids,
-    entries: pids.map(pid => ({ pid, delta: m.players[pid], ts: Date.now() })),
+    entries: pids.map(pid => ({ id: uid(), pid, delta: m.players[pid], ts: Date.now() })),
+    updatedAt: Date.now(),
     results: { first: m.first, second: m.second, bubble: m.bubble || null }, timer: null,
   };
   S.games.push(g); save(); manualState = null;
@@ -1837,11 +1923,18 @@ function settingsView() {
         <div class="chip ${s.voice ? 'on' : ''}" onclick="S.settings.voice=!S.settings.voice;save();render()">🗣 הכרזה קולית</div>
       </div>
       <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
-        סולם בליינדים: 10/20 ← 15/30 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← ... כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
+        סולם בליינדים: 10/20 ← 15/30 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← 200/400 ← 300/600 ← 400/800 ← 500/1000 ← 750/1500 ← 1000/2000 (אחרונה). כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
         אין סבב אוטומטי אחרי 40/80 — הפסקות נקבעות ידנית מכפתורי ☕ / 🚬 שליד השעון.
       </div>
     </div>
     <button class="btn-primary btn-big" onclick="saveSettings()">שמירת הגדרות</button>
+    <h2>כספת</h2>
+    <div class="card">
+      <div class="row"><div class="grow" style="font-weight:700;font-size:1.15rem;color:var(--gold)">₪${vaultBalance().toLocaleString('he-IL')}</div></div>
+      <label class="field" style="margin-top:10px"><span>סכום לכספת מכל שחקן בערב (₪)</span><input type="number" inputmode="numeric" id="st-vault" value="${s.vaultFee}"></label>
+      <div class="empty" style="padding:0;font-size:.76rem;text-align:right">נגבה מכל שחקן פעם בערב, בנפרד מדמי הבית, ונשמר לציוד ותיקונים.<br>לא מופיע בקופה, בשעון, בסיכום המשחק או בהודעת הוואטסאפ — רק כאן.</div>
+    </div>
+
     <h2>גיבוי</h2>
     <div class="card">
       <div class="row">
@@ -1861,11 +1954,13 @@ function saveSettings() {
   if (s1 + s2 + sh !== 100) { toast(`האחוזים חייבים להסתכם ב-100 (עכשיו ${s1 + s2 + sh})`); return; }
   Object.assign(S.settings, {
     entryPrice: Math.max(1, v('st-entry')), houseFee: Math.max(0, v('st-fee')),
+    vaultFee: Math.max(0, v('st-vault')),
     splitFirst: s1, splitSecond: s2, splitHouse: sh,
     maxRebuys: Math.max(0, v('st-cap')),
     levelMinutes: parseInt(document.getElementById('st-lvlmin').value, 10),
     breakAfter: Math.max(0, v('st-brkafter')), breakMinutes: Math.max(1, v('st-brkmin')),
   });
+  S.settings.updatedAt = Date.now();
   save(); toast('ההגדרות נשמרו ✔ (יחולו ממשחק חדש)');
 }
 function exportBackup() {
