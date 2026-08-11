@@ -399,6 +399,7 @@ function loadState() {
       s.players = s.players || [];
       s.games = s.games || [];
       dropScheduledBreak(s);
+      clampTimers(s);
       return s;
     }
   } catch (e) { console.error(e); }
@@ -607,6 +608,7 @@ function mergeRemote(remote) {
   if ((rs.updatedAt || 0) > (S.settings.updatedAt || 0)) S.settings = Object.assign({}, DEFAULT_SETTINGS, rs);
   for (const g of S.games) if (g.status === 'done') rememberFinished(g.id);
   dropScheduledBreak(S);
+  clampTimers(S);
   mvpDirty = true;
   localStorage.setItem(LS_KEY, JSON.stringify(S));
   SYNC.version = remote.version;
@@ -798,6 +800,17 @@ function buildTimeline(cfg) {
   });
   return t;
 }
+// a timer may point past the end after the ladder is shortened — pull it back
+const levelAt = (tl, i) => tl[Math.max(0, Math.min(i | 0, tl.length - 1))] || tl[0];
+function clampTimers(s) {
+  for (const g of s.games || []) {
+    if (!g.timer || !g.config) continue;
+    const max = buildTimeline(g.config).length - 1;
+    if (!(g.timer.idx >= 0)) g.timer.idx = 0;
+    if (g.timer.idx > max) g.timer.idx = max;
+    if (g.timer.resumeIdx != null && g.timer.resumeIdx > max) g.timer.resumeIdx = max;
+  }
+}
 // the scheduled break after 40/80 is gone — breaks are called manually now
 function dropScheduledBreak(s) {
   if (s.settings) s.settings.breakAfter = 0;
@@ -853,7 +866,7 @@ function resumeFromBreak(g) {
   const t = g.timer;
   if (t.resumeIdx != null) t.idx = t.resumeIdx;
   const tl = buildTimeline(g.config);
-  t.endAt = Date.now() + (t.resumeRemainingMs ?? tl[t.idx].min * 60000);
+  t.endAt = Date.now() + (t.resumeRemainingMs ?? levelAt(tl, t.idx).min * 60000);
   t.running = true; t.remainingMs = null; t.mode = 'level';
   delete t.breakEndAt; delete t.breakMin; delete t.resumeIdx; delete t.resumeRemainingMs;
   warned = {}; save();
@@ -909,7 +922,7 @@ function timerJump(g, dir) {
 }
 let warned = {};
 function levelChanged(g) {
-  const tl = buildTimeline(g.config), cur = tl[g.timer.idx];
+  const tl = buildTimeline(g.config), cur = levelAt(tl, g.timer.idx);
   playGong();
   if (S.settings.voice) {
     if (cur.type === 'break') speak('הפסקה');
@@ -1079,7 +1092,17 @@ function render() {
   const croot = document.getElementById('clock-root');
   if (view !== 'clock' && croot.innerHTML) croot.innerHTML = '';
   app.innerHTML = '';
-  (views[view] || home)();
+  try {
+    (views[view] || home)();
+  } catch (err) {
+    console.error(err);
+    app.innerHTML = `<div class="card" style="margin-top:20px">
+      <h2 style="color:var(--gold-dim)">אופס — משהו השתבש במסך הזה</h2>
+      <div class="empty" style="padding:6px 0 14px">${esc(err && err.message || '')}</div>
+      <button class="btn-primary btn-big" onclick="doRefresh(event)">רענון</button>
+      <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="go('home')">חזרה לדף הבית</button>
+    </div>`;
+  }
   injectRefresh();
 }
 
@@ -1091,7 +1114,7 @@ function home() {
   <img src="neon.jpg" class="neon-hero" alt="ערב פוקר">`;
 
   if (g) {
-    const tl = buildTimeline(g.config), cur = tl[g.timer.idx];
+    const tl = buildTimeline(g.config), cur = levelAt(tl, g.timer.idx);
     html += `<div class="card felt" onclick="go('game')" style="cursor:pointer">
       <div class="row"><div class="grow">
         <div style="font-weight:700"><span class="live-dot"></span> משחק פעיל</div>
@@ -1190,8 +1213,8 @@ function gameView() {
   timerCatchUp(g, true);
   const mode = timerMode(g);
   const tl = buildTimeline(g.config);
-  const lvlIdx = mode === 'level' ? g.timer.idx : (g.timer.resumeIdx ?? g.timer.idx);
-  const cur = tl[lvlIdx], nxt = tl[lvlIdx + 1];
+  const lvlIdx = Math.min(mode === 'level' ? g.timer.idx : (g.timer.resumeIdx ?? g.timer.idx), tl.length - 1);
+  const cur = levelAt(tl, lvlIdx), nxt = tl[lvlIdx + 1];
   const p = payouts(g);
   const app = document.getElementById('app');
   app.innerHTML = `
@@ -1486,7 +1509,7 @@ function breakUI(min) {
 function resumeUI() {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g) return;
-  const tl = buildTimeline(g.config), lvl = tl[g.timer.resumeIdx ?? g.timer.idx];
+  const tl = buildTimeline(g.config), lvl = levelAt(tl, g.timer.resumeIdx ?? g.timer.idx);
   resumeFromBreak(g);
   toast(lvl && lvl.type === 'level' ? `חוזרים לרמה ${lvl.n} · ${lvl.sb}/${lvl.bb}` : 'המשחק ממשיך');
   render();
@@ -1503,8 +1526,8 @@ function updateClock() {
   const g = activeGame(); if (!g || view !== 'clock') return;
   timerCatchUp(g);
   const tl = buildTimeline(g.config), t = g.timer, mode = timerMode(g);
-  const lvlIdx = (mode === 'level') ? t.idx : (t.resumeIdx ?? t.idx);
-  const cur = tl[lvlIdx], nxt = tl[lvlIdx + 1];
+  const lvlIdx = Math.min((mode === 'level') ? t.idx : (t.resumeIdx ?? t.idx), tl.length - 1);
+  const cur = levelAt(tl, lvlIdx), nxt = tl[lvlIdx + 1];
   const rem = Math.max(0, timerRemaining(g));
   const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
   const el = id => document.getElementById(id);

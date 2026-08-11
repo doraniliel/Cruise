@@ -31,6 +31,16 @@ export default async (req) => {
     const raw = await store.get(KEY);
     const cur = raw ? JSON.parse(raw) : { version: 0, updatedAt: null, data: null };
 
+    // A client that does not declare which version it edited cannot be trusted
+    // not to clobber newer work — that is how a finished game lost its results.
+    // Old cached builds land here and are refused until they reload.
+    if (typeof body.baseVersion !== 'number' && cur.version > 0) {
+      return Response.json(
+        { staleClient: true, message: 'refresh required', version: cur.version },
+        { status: 426, headers: { 'cache-control': 'no-store' } }
+      );
+    }
+
     // Optimistic concurrency: a device that built its upload on an older
     // version must not overwrite newer work (that is how a finished game used
     // to come back to life). Hand it the current state so it can merge.
