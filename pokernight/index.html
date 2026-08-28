@@ -581,6 +581,14 @@ function mergeGame(a, b) {
   const other = base === a ? b : a;
   const out = Object.assign({}, base);
   if (FINISHED.includes(out.id) && out.status !== 'done' && other.status === 'done') return Object.assign({}, other);
+  // an edited game had its entry list rewritten — take that side as-is rather
+  // than unioning, or the old entries would come straight back
+  const aRev = a.entriesRev || 0, bRev = b.entriesRev || 0;
+  if (aRev !== bRev) {
+    const newer = aRev > bRev ? a : b;
+    out.entries = (newer.entries || []).filter(e => (out.playerIds || []).includes(e.pid));
+    return out;
+  }
   // entries are append-only, so union them and drop anyone no longer in the game
   const seen = new Set(), entries = [];
   for (const e of [...(base.entries || []), ...(other.entries || [])]) {
@@ -1485,7 +1493,8 @@ function summaryView() {
       </table>
     </div>
     <button class="btn-primary btn-big" onclick="shareGame('${g.id}')"><span class="gi">${ICONS.share}</span> שיתוף בוואטסאפ</button>
-    ${isAdmin() ? `<button class="btn-ghost btn-danger" style="width:100%;margin-top:10px" onclick="deleteGame('${g.id}')">מחיקת המשחק</button>` : ''}`;
+    ${isAdmin() ? `<button class="btn-ghost" style="width:100%;margin-top:10px" onclick="editGame('${g.id}')">✏️ עריכת המשחק</button>
+    <button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deleteGame('${g.id}')">מחיקת המשחק</button>` : ''}`;
 }
 function deleteGame(id) {
   if (!requireAdmin()) return;
@@ -1922,7 +1931,25 @@ function historyView() {
 let manualState = null;
 function startManual() {
   if (!requireAdmin()) return;
-  manualState = { date: new Date().toISOString().slice(0, 10), players: {}, first: null, second: null, bubble: null };
+  manualState = { date: new Date().toISOString().slice(0, 10), players: {}, first: null, second: null, bubble: null,
+                  chop: false, pctFirst: 50, editId: null };
+  go('manual');
+}
+// fix a mistake in a game that already happened
+function editGame(id) {
+  if (!requireAdmin()) return;
+  const g = S.games.find(x => x.id === id);
+  if (!g) { toast('המשחק לא נמצא'); return; }
+  const counts = {};
+  for (const pid of g.playerIds) counts[pid] = entriesOf(g, pid);
+  const r = g.results || {};
+  manualState = {
+    date: g.date, players: counts,
+    first: r.first || null, second: r.second || null, bubble: r.bubble || null,
+    chop: !!r.chop, pctFirst: r.pctFirst != null ? r.pctFirst : 50,
+    editId: g.id,
+  };
+  closeSheet();
   go('manual');
 }
 function manualView() {
@@ -1932,8 +1959,17 @@ function manualView() {
   const act = S.players.filter(p => p.active !== false);
   const chosen = Object.keys(m.players);
   app.innerHTML = `
-    <div class="topbar"><h1>משחק ישן</h1><button class="btn-ghost" onclick="manualState=null;go('history')">ביטול</button></div>
+    <div class="topbar"><h1>${m.editId ? 'עריכת משחק' : 'משחק ישן'}</h1><button class="btn-ghost" onclick="manualState=null;go(${m.editId ? `'summary','${m.editId}'` : `'history'`})">ביטול</button></div>
+    ${m.editId ? `<div class="card" style="padding:10px 14px"><div class="empty" style="padding:0;font-size:.78rem;text-align:right">עריכת משחק שכבר נשמר. דמי הבית והחיסכון של אותו ערב נשמרים כפי שהיו.</div></div>` : ''}
     <label class="field"><span>תאריך</span><input type="date" value="${m.date}" onchange="manualState.date=this.value"></label>
+    <h2>סיום המשחק</h2>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip ${!m.chop ? 'on' : ''}" onclick="mSetChop(false)">🥇🥈 ראשון ושני</div>
+      <div class="chip ${m.chop ? 'on' : ''}" onclick="mSetChop(true)">🤝 צ׳ופ</div>
+      ${m.chop ? `<div class="chip">${m.pctFirst}/${100 - m.pctFirst}</div>` : ''}
+    </div>
+    ${m.chop ? `<label class="field"><span>אחוז ל${m.first ? esc(pname(m.first)) : 'מנצח א׳'} (%)</span>
+      <input type="number" inputmode="numeric" min="0" max="100" value="${m.pctFirst}" onchange="mSetPct(this.value)"></label>` : ''}
     <h2>שחקנים וכניסות</h2>
     <div class="chips" style="margin-bottom:12px">${act.filter(p => !m.players[p.id]).map(p =>
       `<div class="chip" onclick="manualState.players['${p.id}']=1;render()">${chipLabel(p)}</div>`).join('')}
@@ -1943,8 +1979,8 @@ function manualView() {
         <div class="name"><div class="nick">${esc(pname(pid))}</div>
           ${nickLine(pid)}
           <div class="meta">
-            <span class="chip ${m.first === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('first','${pid}')">🥇</span>
-            <span class="chip ${m.second === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('second','${pid}')">🥈</span>
+            <span class="chip ${m.first === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('first','${pid}')">${m.chop ? '🤝א' : '🥇'}</span>
+            <span class="chip ${m.second === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('second','${pid}')">${m.chop ? '🤝ב' : '🥈'}</span>
             <span class="chip ${m.bubble === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('bubble','${pid}')">🎈</span>
           </div></div>
         <div class="stepper">
@@ -1956,14 +1992,21 @@ function manualView() {
       קופה: <b style="color:var(--gold)">₪${(Object.values(m.players).reduce((a, b) => a + b, 0) * S.settings.entryPrice).toLocaleString('he-IL')}</b>
       · ${Object.values(m.players).reduce((a, b) => a + b, 0)} כניסות</div>` : ''}
     <div style="height:10px"></div>
-    <button class="btn-primary btn-big" ${chosen.length < 2 || !m.first || !m.second ? 'disabled' : ''} onclick="saveManual()">שמירת המשחק</button>
-    ${chosen.length >= 2 && (!m.first || !m.second) ? '<div class="empty" style="padding:10px">סמנו 🥇 ו-🥈 ליד השחקנים</div>' : ''}`;
+    <button class="btn-primary btn-big" ${chosen.length < 2 || !m.first || !m.second ? 'disabled' : ''} onclick="saveManual()">${m.editId ? 'שמירת השינויים' : 'שמירת המשחק'}</button>
+    ${chosen.length >= 2 && (!m.first || !m.second) ? `<div class="empty" style="padding:10px">סמנו ${m.chop ? 'את שני המנצחים בצ׳ופ' : '🥇 ו-🥈'} ליד השחקנים</div>` : ''}`;
 }
 function mStep(pid, d) {
   const m = manualState;
   const v = (m.players[pid] || 1) + d;
   if (v <= 0) { delete m.players[pid]; for (const k of ['first', 'second', 'bubble']) if (m[k] === pid) m[k] = null; }
   else m.players[pid] = Math.min(v, S.settings.maxRebuys + 1);
+  render();
+}
+function mSetChop(v) { manualState.chop = v; render(); }
+function mSetPct(v) {
+  let n = Math.round(Number(v));
+  if (!isFinite(n)) n = 50;
+  manualState.pctFirst = Math.max(0, Math.min(100, n));
   render();
 }
 function mSetPlace(place, pid) {
@@ -1977,6 +2020,29 @@ function saveManual() {
   const m = manualState;
   const pids = Object.keys(m.players);
   if (pids.length < 2 || !m.first || !m.second) return;
+  const results = { first: m.first, second: m.second, bubble: m.bubble || null,
+                    chop: !!m.chop, pctFirst: m.chop ? m.pctFirst : undefined };
+
+  if (m.editId) {
+    const eg = S.games.find(x => x.id === m.editId);
+    if (!eg) { toast('המשחק לא נמצא'); manualState = null; go('history'); return; }
+    eg.date = m.date;
+    eg.playerIds = pids;
+    // the entry list is rewritten wholesale, so mark the revision — a device
+    // holding the old list must not merge its entries back in
+    eg.entries = pids.map(pid => ({ id: uid(), pid, delta: m.players[pid], ts: eg.startAt || Date.now() }));
+    eg.entriesRev = (eg.entriesRev || 0) + 1;
+    eg.results = results;
+    eg.status = 'done';
+    eg.editedAt = Date.now();
+    touchGame(eg);
+    rememberFinished(eg.id);
+    saveLocal(); pushState();
+    manualState = null;
+    go('summary', eg.id); toast('השינויים נשמרו ✔');
+    return;
+  }
+
   const g = {
     id: uid(), date: m.date, startAt: null, endAt: null, status: 'done', isManual: true,
     config: {
@@ -1989,7 +2055,7 @@ function saveManual() {
     playerIds: pids,
     entries: pids.map(pid => ({ id: uid(), pid, delta: m.players[pid], ts: Date.now() })),
     updatedAt: Date.now(),
-    results: { first: m.first, second: m.second, bubble: m.bubble || null }, timer: null,
+    results, timer: null,
   };
   S.games.push(g); save(); manualState = null;
   go('summary', g.id); toast('המשחק נוסף להיסטוריה ✔');
