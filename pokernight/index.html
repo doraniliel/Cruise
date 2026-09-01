@@ -387,6 +387,7 @@ const DEFAULT_SETTINGS = {
   splitFirst: 65, splitSecond: 25, splitHouse: 10,
   maxRebuys: 12,
   levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
+  cashEntryPrice: 20, cashHouseFee: 10, cashChips: 1000, cashRoundMinutes: 15,
   sound: true, voice: true,
 };
 
@@ -740,7 +741,7 @@ function mvpByMonth() {
   if (!mvpDirty && mvpCache) return mvpCache;
   const totals = {};
   for (const g of S.games) {
-    if (g.status !== 'done' || !g.results) continue;
+    if (g.status !== 'done' || !g.results || isCash(g)) continue;   // MVP is tournaments only
     const m = monthOf(g.date), p = payouts(g);
     const acc = totals[m] || (totals[m] = {});
     for (const pid of g.playerIds) acc[pid] = (acc[pid] || 0) + p.nets[pid];
@@ -770,12 +771,16 @@ const isMvp = pid => { const m = currentMvp(); return !!m && m.pid === pid; };
 const mvpBadge = pid => isMvp(pid) ? ' <span class="mvp-badge">MVP</span>' : '';
 
 /* ================= game math ================= */
+const isCash = g => !!g && g.type === 'cash';
+const chipsOf = g => (g && g.config && g.config.chipsPerEntry) || CHIPS_PER_ENTRY;
+const CASH_BLINDS = [10, 20];
 const activeGame = () => S.games.find(g => g.status === 'active');
 const entriesOf = (g, pid) => g.entries.filter(e => e.pid === pid).reduce((s, e) => s + e.delta, 0);
 const totalEntries = g => g.entries.reduce((s, e) => s + e.delta, 0);
 const poolOf = g => totalEntries(g) * g.config.entryPrice;
 
 function payouts(g) {
+  if (isCash(g)) return cashPayouts(g);
   const pool = poolOf(g);
   const house10 = Math.round(pool * g.config.splitHouse / 100);
   let first, second;
@@ -806,9 +811,29 @@ function payouts(g) {
   }
   return { pool, first, second, house10, houseFees, houseTotal, savings, nets };
 }
+// a cash night: everyone buys chips and cashes out; the house takes a flat fee
+function cashPayouts(g) {
+  const onTable = poolOf(g);                       // entries x buy-in = money in play
+  const n = g.playerIds.length;
+  const houseFee = g.config.houseFee || 0;
+  const houseFees = n * houseFee;
+  const cashouts = (g.results && g.results.cashouts) || {};
+  const nets = {};
+  let cashedOut = 0;
+  for (const pid of g.playerIds) {
+    const out = Number(cashouts[pid]) || 0;
+    cashedOut += out;
+    nets[pid] = out - entriesOf(g, pid) * g.config.entryPrice - houseFee;
+  }
+  return {
+    cash: true, pool: onTable, onTable, cashedOut, diff: cashedOut - onTable,
+    first: 0, second: 0, house10: 0, savings: 0,
+    houseFees, houseTotal: houseFees, cashouts, nets,
+  };
+}
 // older games stored the whole per-player fee as vaultFee; keep their history exact
 const savingsFeeOf = cfg => (cfg && (cfg.savingsFee != null ? cfg.savingsFee : (cfg.vaultFee || 0))) || 0;
-const savingsBalance = () => S.games.reduce((s, g) => s + g.playerIds.length * savingsFeeOf(g.config), 0);
+const savingsBalance = () => S.games.reduce((s, g) => s + (isCash(g) ? 0 : g.playerIds.length * savingsFeeOf(g.config)), 0);
 
 function buildTimeline(cfg) {
   const t = [];
@@ -854,7 +879,7 @@ function dropScheduledBreak(s) {
 
 /* ================= timer engine ================= */
 function timerInit(g) {
-  g.timer = { idx: 0, running: true, endAt: Date.now() + buildTimeline(g.config)[0].min * 60000, remainingMs: null };
+  g.timer = { idx: 0, round: 1, running: true, endAt: Date.now() + buildTimeline(g.config)[0].min * 60000, remainingMs: null };
 }
 const timerMode = g => g.timer.mode || 'level';
 function timerRemaining(g) {
@@ -895,6 +920,18 @@ function timerCatchUp(g, silent) {
   if (timerMode(g) === 'break') {
     if (Date.now() >= t.breakEndAt) { if (silent) { t.mode = 'awaiting'; save(); } else breakFinished(g); return true; }
     return false;
+  }
+  if (isCash(g)) {
+    // blinds never move — the round simply starts over
+    const ms = (g.config.levelMinutes || 15) * 60000;
+    let rolled = false;
+    while (t.running && Date.now() >= t.endAt && ms > 0) {
+      t.round = (t.round || 1) + 1;
+      t.endAt += ms;
+      rolled = true;
+    }
+    if (rolled) { saveLocal(); warned = {}; if (!silent) flashClock(); }
+    return rolled;
   }
   let advanced = false;
   while (t.running && Date.now() >= t.endAt && t.idx < tl.length - 1) {
@@ -1146,7 +1183,7 @@ function home() {
   }
 
   const done = S.games.filter(x => x.status === 'done').sort((a, b) => b.date.localeCompare(a.date));
-  const bgame = done.find(x => x.results && x.results.bubble);
+  const bgame = done.find(x => !isCash(x) && x.results && x.results.bubble);
   if (bgame) {
     const bp = player(bgame.results.bubble);
     html += `<h2>הבאבל בוי של השבוע</h2>
@@ -1163,7 +1200,7 @@ function home() {
     <div class="card" onclick="go('summary','${lg.id}')" style="cursor:pointer">
       <div class="row"><div class="grow">
         <div style="font-weight:600">${heDate(lg.date)}</div>
-        <div class="sub" style="color:var(--ink-dim);font-size:.82rem">${lg.results.chop ? `🤝 ${esc(pname(lg.results.first))} + ${esc(pname(lg.results.second))}` : `🥇 ${esc(pname(lg.results.first))} · 🥈 ${esc(pname(lg.results.second))}`}</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.82rem">${isCash(lg) ? '💵 ערב קאש' : (lg.results.chop ? `🤝 ${esc(pname(lg.results.first))} + ${esc(pname(lg.results.second))}` : `🥇 ${esc(pname(lg.results.first))} · 🥈 ${esc(pname(lg.results.second))}`)}</div>
       </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div>
     </div>`;
   }
@@ -1181,38 +1218,60 @@ function home() {
 
 /* ---- new game ---- */
 let ngSel = new Set();
+let ngType = 'tournament';
 let npGuest = false;
 function newGameView() {
   const app = document.getElementById('app');
   const act = S.players.filter(p => p.active !== false);
+  const cash = ngType === 'cash';
   app.innerHTML = `
     <div class="topbar"><h1>משחק חדש</h1><button class="btn-ghost" onclick="go('home')">ביטול</button></div>
+    <h2>סוג המשחק</h2>
+    <div class="chips" style="margin-bottom:6px">
+      <div class="chip ${!cash ? 'on' : ''}" onclick="setNgType('tournament')">🏆 טורניר</div>
+      <div class="chip ${cash ? 'on' : ''}" onclick="setNgType('cash')">💵 קאש</div>
+    </div>
     <h2>מי משחק הערב? (כל שחקן מתחיל בכניסה אחת)</h2>
     <div class="chips" id="ng-chips">${act.map(p =>
       `<div class="chip ${ngSel.has(p.id) ? 'on' : ''}" onclick="ngToggle('${p.id}')">${chipLabel(p)}</div>`).join('')}
       <div class="chip" onclick="quickAddPlayer('ng')">+ שחקן חדש</div>
     </div>
     <div style="height:18px"></div>
-    <button class="btn-primary btn-big" ${ngSel.size < 2 ? 'disabled' : ''} onclick="startGame()">התחלת משחק (${ngSel.size} שחקנים)</button>
-    <div class="empty" style="padding-top:14px">בליינדים: 10/20 · ${S.settings.levelMinutes} דק' לרמה · כל כניסה ${shk(S.settings.entryPrice)} (${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים)</div>`;
+    <button class="btn-primary btn-big" ${ngSel.size < 2 ? 'disabled' : ''} onclick="startGame()">התחלת ${cash ? 'קאש' : 'טורניר'} (${ngSel.size} שחקנים)</button>
+    <div class="empty" style="padding-top:14px">${cash
+      ? `בליינדים קבועים 10/20 · סבב ${S.settings.cashRoundMinutes} דק' · כל כניסה ${shk(S.settings.cashEntryPrice)} (${(S.settings.cashChips).toLocaleString()} צ'יפים) · דמי בית ${shk(S.settings.cashHouseFee)} לשחקן`
+      : `בליינדים עולים מ-10/20 · ${S.settings.levelMinutes} דק' לרמה · כל כניסה ${shk(S.settings.entryPrice)} (${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים)`}</div>`;
 }
+function setNgType(t) { ngType = t; render(); }
 function ngToggle(pid) { ngSel.has(pid) ? ngSel.delete(pid) : ngSel.add(pid); render(); }
 function startGame() {
   if (!requireAdmin()) return;
   if (activeGame()) { toast('יש כבר משחק פעיל'); return; }
   if (ngSel.size < 2) return;
   const now = Date.now();
+  const cash = ngType === 'cash';
+  const config = cash ? {
+    // cash: fixed blinds, no prize split, house fee only, no rebuy cap
+    entryPrice: S.settings.cashEntryPrice, houseFee: S.settings.cashHouseFee, savingsFee: 0,
+    ladder: [CASH_BLINDS.slice()],
+    splitFirst: 0, splitSecond: 0, splitHouse: 0,
+    maxRebuys: 0, levelMinutes: S.settings.cashRoundMinutes,
+    breakAfter: 0, breakMinutes: S.settings.breakMinutes,
+    chipsPerEntry: S.settings.cashChips,
+  } : {
+    entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
+    savingsFee: S.settings.savingsFee,
+    ladder: LADDER.map(l => l.slice()),
+    splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
+    maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
+    breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
+    chipsPerEntry: CHIPS_PER_ENTRY,
+  };
   const g = {
     id: uid(), date: new Date().toISOString().slice(0, 10),
+    type: cash ? 'cash' : 'tournament',
     startAt: now, endAt: null, status: 'active', isManual: false,
-    config: {
-      entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
-      savingsFee: S.settings.savingsFee,
-      ladder: LADDER.map(l => l.slice()),
-      splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
-      maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
-      breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
-    },
+    config,
     playerIds: [...ngSel],
     entries: [...ngSel].map(pid => ({ id: uid(), pid, delta: 1, ts: now })),
     updatedAt: now,
@@ -1239,10 +1298,10 @@ function gameView() {
     <div class="topbar"><h1>משחק פעיל</h1><div class="sub">התחיל ${hhmm(g.startAt)}</div></div>
     <div class="row" style="align-items:stretch;gap:8px;margin-bottom:12px">
       <div class="strip grow" style="margin:0" onclick="go('clock')">
-        <div><div class="lvl">${mode === 'break' ? (g.timer.breakMin === 5 ? 'הפסקת סיגריה 🚬' : 'הפסקת אוכל ☕') : mode === 'awaiting' ? 'ההפסקה הסתיימה' : 'רמה ' + cur.n + (g.timer.running ? '' : ' · מושהה ⏸')}</div>
+        <div><div class="lvl">${mode === 'break' ? (g.timer.breakMin === 5 ? 'הפסקת סיגריה 🚬' : 'הפסקת אוכל ☕') : mode === 'awaiting' ? 'ההפסקה הסתיימה' : (isCash(g) ? 'סבב ' + (g.timer.round || 1) : 'רמה ' + cur.n) + (g.timer.running ? '' : ' · מושהה ⏸')}</div>
         <div class="b" style="direction:ltr;text-align:right">${cur.type === 'break' ? '' : cur.sb + ' / ' + cur.bb}</div></div>
         <div style="text-align:left"><div class="t num" id="strip-time">--:--</div>
-        <div class="lvl">${mode === 'awaiting' ? 'ממתין לאישור' : mode === 'break' ? `נחזור לרמה ${cur.n}` : (nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : '')}</div></div>
+        <div class="lvl">${mode === 'awaiting' ? 'ממתין לאישור' : mode === 'break' ? `נחזור ל${isCash(g) ? 'משחק' : 'רמה ' + cur.n}` : (isCash(g) ? 'בליינדים קבועים' : (nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : ''))}</div></div>
       </div>
       ${isAdmin() ? (mode === 'level' ? `<div class="break-col">
         <button class="break-btn" onclick="ckPause()" title="${g.timer.running ? 'השהיית השעון' : 'המשך השעון'}">${g.timer.running ? '⏸' : '▶️'}<b>${g.timer.running ? 'השהיה' : 'המשך'}</b></button>
@@ -1254,7 +1313,7 @@ function gameView() {
     </div>
     ${g.playerIds.map(pid => {
       const pl = player(pid), cnt = entriesOf(g, pid);
-      const maxed = cnt >= g.config.maxRebuys + 1;
+      const maxed = g.config.maxRebuys > 0 && cnt >= g.config.maxRebuys + 1;
       return `<div class="prow">
         ${avatarHtml(pl)}
         <div class="name" style="cursor:pointer" onclick="openGamePlayer('${pid}')"><div class="nick">${esc(pname(pid))}${mvpBadge(pid)}${pl && pl.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
@@ -1267,8 +1326,10 @@ function gameView() {
     }).join('')}
     ${isAdmin() ? `<button class="btn-ghost" style="width:100%;margin:4px 0 12px" onclick="openAddPlayerToGame()">+ הוספת שחקן באיחור</button>` : ''}
     <div class="pool-bar">
-      <div><div class="pool">קופה: ${shk(p.pool)}</div>
-      <div class="amounts">🥇 ${shk(p.first)} · 🥈 ${shk(p.second)} · 🏠 ${shk(p.house10)}</div></div>
+      <div><div class="pool">${isCash(g) ? 'על השולחן' : 'קופה'}: ${shk(p.pool)}</div>
+      <div class="amounts">${isCash(g)
+        ? `💵 קאש · 🏠 דמי בית ${shk(p.houseFees)}`
+        : `🥇 ${shk(p.first)} · 🥈 ${shk(p.second)} · 🏠 ${shk(p.house10)}`}</div></div>
       ${isAdmin() ? `<button class="btn-danger" onclick="beginEndGame()">סיום משחק</button>` : ''}
     </div>`;
   startTick();
@@ -1277,7 +1338,7 @@ function addEntry(pid, delta) {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g) return;
   const cnt = entriesOf(g, pid);
-  if (delta > 0 && cnt >= g.config.maxRebuys + 1) {
+  if (delta > 0 && g.config.maxRebuys > 0 && cnt >= g.config.maxRebuys + 1) {
     confirmDlg(`⚠️ ${esc(pname(pid))} הגיע לתקרת הרי-באי (${g.config.maxRebuys}).<br>לחרוג מהתקרה?`, () => {
       g.entries.push({ id: uid(), pid, delta: 1, ts: Date.now(), override: true }); touchGame(g); save(); playClick(); render();
     });
@@ -1336,8 +1397,10 @@ const endResults = () => ({
 function beginEndGame() {
   if (!requireAdmin()) return;
   const g = activeGame(); if (!g) return;
-  confirmDlg('לסיים את המשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">בשלב הבא בוחרים איך הסתיים המשחק.</span>', () => {
-    endPick = { chop: null, first: null, second: null, bubble: null, pctFirst: 50 };
+  const cash = isCash(g);
+  confirmDlg(`לסיים את המשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">${cash ? 'בשלב הבא רושמים כמה כל אחד לקח מהשולחן.' : 'בשלב הבא בוחרים איך הסתיים המשחק.'}</span>`, () => {
+    endPick = { chop: null, first: null, second: null, bubble: null, pctFirst: 50, cashouts: {} };
+    if (cash) { renderCashout(); return; }
     renderEndMode();
   });
 }
@@ -1432,6 +1495,80 @@ function setChop(v, typing) {
   }
   renderChopSplit();
 }
+// cash night: type what each player took off the table, and keep the books honest
+function renderCashout() {
+  const g = activeGame(); if (!g) return;
+  const co = endPick.cashouts;
+  const onTable = poolOf(g);
+  const out = g.playerIds.reduce((s, pid) => s + (Number(co[pid]) || 0), 0);
+  const diff = out - onTable;
+  const balanced = diff === 0;
+  sheet(`<h3>💵 כמה כל אחד לקח מהשולחן?</h3>
+    <div class="card" style="margin-bottom:12px">
+      <div class="row"><div class="grow">על השולחן</div><div style="font-weight:700;color:var(--gold)">${shk(onTable)}</div></div>
+      <div class="row" style="margin-top:4px"><div class="grow">נספר עד כה</div><div style="font-weight:700">${shk(out)}</div></div>
+      <div class="row" style="margin-top:4px"><div class="grow">${balanced ? '✔ מאוזן' : (diff < 0 ? 'חסר' : 'עודף')}</div>
+        <div style="font-weight:700;color:${balanced ? 'var(--pos)' : 'var(--neg)'}">${balanced ? '—' : shk(Math.abs(diff))}</div></div>
+    </div>
+    ${g.playerIds.map(pid => `
+      <div class="prow">${avatarHtml(player(pid))}
+        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+          <div class="meta">${entriesOf(g, pid)} כניסות · ${shk(entriesOf(g, pid) * g.config.entryPrice)}</div></div>
+        <input type="number" inputmode="numeric" style="width:96px;text-align:center"
+               value="${co[pid] != null ? co[pid] : ''}" placeholder="₪"
+               onchange="setCashout('${pid}', this.value)">
+      </div>`).join('')}
+    <div style="height:12px"></div>
+    <button class="btn-primary btn-big" onclick="cashoutNext()">${balanced ? 'המשך' : 'המשך בכל זאת'}</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function setCashout(pid, v) {
+  const n = Math.round(Number(v));
+  if (v === '' || !isFinite(n)) delete endPick.cashouts[pid];
+  else endPick.cashouts[pid] = Math.max(0, n);
+  renderCashout();
+}
+function cashoutNext() {
+  const g = activeGame(); if (!g) return;
+  const p = cashPayouts(Object.assign({}, g, { results: { cash: true, cashouts: endPick.cashouts } }));
+  const finish = () => showCashConfirm();
+  if (p.diff !== 0) {
+    confirmDlg(`הסכומים לא מאוזנים — ${p.diff < 0 ? 'חסר' : 'עודף'} ${shk(Math.abs(p.diff))}.<br>
+      <span style="color:var(--ink-dim);font-size:.85rem">לשמור בכל זאת?</span>`, finish);
+    return;
+  }
+  finish();
+}
+function showCashConfirm() {
+  const g = activeGame();
+  const p = cashPayouts(Object.assign({}, g, { results: { cash: true, cashouts: endPick.cashouts } }));
+  sheet(`<h3>סיכום ואישור</h3>
+    <table class="sheet">
+      <tr><th>שחקן</th><th>כניסות</th><th>לקח</th><th>מאזן</th></tr>
+      ${g.playerIds.map(pid => `<tr><td>${esc(pname(pid))}</td>
+        <td class="num">${entriesOf(g, pid)}</td>
+        <td>${shk(Number(endPick.cashouts[pid]) || 0)}</td>
+        <td>${money(p.nets[pid])}</td></tr>`).join('')}
+      <tr><td>🏠 דמי בית</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
+      <tr><td>💵 על השולחן</td><td></td><td>${shk(p.onTable)}</td><td></td></tr>
+    </table>
+    <div style="height:14px"></div>
+    <button class="btn-primary btn-big" onclick="finishCashGame()">אישור וסיום המשחק</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="renderCashout()">חזרה</button>`);
+}
+function finishCashGame() {
+  if (!requireAdmin()) return;
+  const g = activeGame(); if (!g) return;
+  g.results = { cash: true, cashouts: Object.assign({}, endPick.cashouts) };
+  g.status = 'done'; g.endAt = Date.now();
+  touchGame(g);
+  rememberFinished(g.id);
+  saveLocal();
+  pushState();
+  closeSheet(); stopTick(); releaseWake();
+  go('summary', g.id);
+  toast('ערב הקאש נשמר 💵');
+}
 function showEndConfirm() {
   const g = activeGame();
   const p = payouts(Object.assign({}, g, { results: endResults() }));
@@ -1474,12 +1611,22 @@ function summaryView() {
   app.innerHTML = `
     <div class="topbar"><h1>סיכום משחק</h1>${isAdmin() ? `<button class="btn-ghost" onclick="go('history')">→ היסטוריה</button>` : `<button class="btn-ghost" onclick="go('home')">→ חזרה</button>`}</div>
     <div class="card felt">
-      <div style="font-weight:700;font-size:1.05rem">${heDate(g.date)}${g.isManual ? ' <span style="font-size:.7rem;color:var(--ink-dim)">(הוזן ידנית)</span>' : ''}</div>
+      <div style="font-weight:700;font-size:1.05rem">${isCash(g) ? '💵 ' : '🏆 '}${heDate(g.date)}${g.isManual ? ' <span style="font-size:.7rem;color:var(--ink-dim)">(הוזן ידנית)</span>' : ''}</div>
       ${g.startAt && g.endAt ? `<div class="sub" style="color:var(--ink-dim);font-size:.85rem">🕗 <bdi>${hhmm(g.startAt)}–${hhmm(g.endAt)}</bdi></div>` : ''}
-      <div style="margin-top:8px;color:var(--gold);font-weight:700;font-size:1.2rem">💰 קופה: ${shk(p.pool)}</div>
+      <div style="margin-top:8px;color:var(--gold);font-weight:700;font-size:1.2rem">${isCash(g) ? `💵 על השולחן: ${shk(p.onTable)}` : `💰 קופה: ${shk(p.pool)}`}</div>
+      ${isCash(g) && p.diff ? `<div style="color:var(--neg);font-size:.8rem;margin-top:4px">${p.diff < 0 ? 'חסר' : 'עודף'} ${shk(Math.abs(p.diff))} בספירה</div>` : ''}
       ${g.results.chop ? `<div style="margin-top:6px;font-weight:600">🤝 צ׳ופ ${g.results.pctFirst}/${100 - g.results.pctFirst} — ${esc(pname(g.results.first))} ו${esc(pname(g.results.second))} מנצחים משותפים</div>` : ''}
     </div>
-    <div class="card">
+    ${isCash(g) ? `<div class="card">
+      <table class="sheet">
+        <tr><th>שחקן</th><th>כניסות</th><th>לקח</th><th>מאזן</th></tr>
+        ${g.playerIds.map(pid => `<tr><td>${esc(pname(pid))}</td>
+          <td class="num">${entriesOf(g, pid)}</td>
+          <td>${shk(Number((g.results.cashouts || {})[pid]) || 0)}</td>
+          <td>${money(p.nets[pid])}</td></tr>`).join('')}
+        <tr><td>🏠 דמי בית (${shk(g.config.houseFee || 0)} לשחקן)</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
+      </table>
+    </div>` : `<div class="card">
       <table class="sheet">
         <tr><th>שחקן</th><th>כניסות</th><th>זכייה</th><th>מאזן</th></tr>
         ${g.playerIds.map(pid => {
@@ -1492,7 +1639,7 @@ function summaryView() {
         <tr><td>🧰 חיסכון (${shk(savingsFeeOf(g.config))} לשחקן)</td><td></td><td>${shk(p.savings)}</td><td></td></tr>
         <tr><td>🏠 דמי בית (${shk(g.config.houseFee || 0)} לשחקן)</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
       </table>
-    </div>
+    </div>`}
     <button class="btn-primary btn-big" onclick="shareGame('${g.id}')"><span class="gi">${ICONS.share}</span> שיתוף בוואטסאפ</button>
     ${isAdmin() ? `<button class="btn-ghost" style="width:100%;margin-top:10px" onclick="editGame('${g.id}')">✏️ עריכת המשחק</button>
     <button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deleteGame('${g.id}')">מחיקת המשחק</button>` : ''}`;
@@ -1506,6 +1653,23 @@ function deleteGame(id) {
 function buildWhatsApp(g) {
   const p = payouts(g);
   const L = '‎'; // keep +/− readable in RTL
+  if (isCash(g)) {
+    return [
+      `💵 ערב קאש — ${heDate(g.date)}`,
+      g.startAt && g.endAt
+        ? `🕗 ${hhmm(g.startAt)}–${hhmm(g.endAt)} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`
+        : `👥 ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`,
+      `💰 על השולחן: ₪${p.onTable}`,
+      `🏠 דמי בית — ₪${p.houseFees}`,
+      `➖➖➖➖➖➖`,
+      `מאזן סופי:`,
+      ...g.playerIds.map(pid => {
+        const n = p.nets[pid], e = entriesOf(g, pid);
+        const s = n > 0 ? `${L}+₪${n}` : n < 0 ? `${L}-₪${Math.abs(n)}` : `₪0`;
+        return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${s}`;
+      }),
+    ].join('\n');
+  }
   const lines = [
     `🃏 ערב פוקר — ${heDate(g.date)}`,
     g.startAt && g.endAt ? `🕗 ${hhmm(g.startAt)}–${hhmm(g.endAt)} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות` : `👥 ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`,
@@ -1636,11 +1800,16 @@ function updateClock() {
   if (mode === 'break') {
     el('ck-lvl').innerHTML = t.breakMin === 5 ? '🚬 הפסקת סיגריה' : '☕ הפסקת אוכל';
     el('ck-blinds').textContent = cur.type === 'level' ? `${cur.sb} / ${cur.bb}` : '☕';
-    el('ck-next').textContent = cur.type === 'level' ? `נחזור לרמה ${cur.n}` : 'הפסקה';
+    el('ck-next').textContent = isCash(g) ? 'נחזור למשחק' : (cur.type === 'level' ? `נחזור לרמה ${cur.n}` : 'הפסקה');
   } else if (mode === 'awaiting') {
     el('ck-lvl').innerHTML = '<span class="paused-tag">ההפסקה הסתיימה</span>';
     el('ck-blinds').textContent = cur.type === 'level' ? `${cur.sb} / ${cur.bb}` : '☕';
     el('ck-next').textContent = isAdmin() ? 'ממתין לאישור המנהל — הקישו על המסך' : 'ממתין לאישור המנהל';
+  } else if (isCash(g)) {
+    el('ck-lvl').innerHTML = `💵 קאש · סבב ${t.round || 1}` + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
+    el('ck-blinds').textContent = `${CASH_BLINDS[0]} / ${CASH_BLINDS[1]}`;
+    const mins = g.startAt ? Math.floor((Date.now() - g.startAt) / 60000) : 0;
+    el('ck-next').textContent = `בליינדים קבועים · במשחק ${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')} שעות`;
   } else {
     el('ck-lvl').innerHTML = (cur.type === 'break' ? '☕ הפסקה' : `רמה ${cur.n}`) + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
     el('ck-blinds').textContent = cur.type === 'break' ? '☕' : `${cur.sb} / ${cur.bb}`;
@@ -1661,9 +1830,12 @@ function updateClock() {
   el('ck-players').textContent = g.playerIds.length;
   el('ck-entries').textContent = totalEntries(g);
   el('ck-pool').textContent = '₪' + poolOf(g).toLocaleString('he-IL');
-  el('ck-chips').textContent = (totalEntries(g) * CHIPS_PER_ENTRY).toLocaleString('he-IL');
-  // one-minute warning
-  if (mode === 'level' && t.running && rem <= 60000 && rem > 0 && !warned[t.idx]) { warned[t.idx] = true; playWarn(); }
+  el('ck-chips').textContent = (totalEntries(g) * chipsOf(g)).toLocaleString('he-IL');
+  const poolLabel = document.querySelector('#clock .stats div:nth-child(3) .k');
+  if (poolLabel) poolLabel.textContent = isCash(g) ? 'על השולחן' : 'קופה';
+  // one-minute warning (per round on a cash night)
+  const warnKey = isCash(g) ? 'r' + (t.round || 1) : t.idx;
+  if (mode === 'level' && t.running && rem <= 60000 && rem > 0 && !warned[warnKey]) { warned[warnKey] = true; playWarn(); }
 }
 
 /* tick loop */
@@ -1684,7 +1856,8 @@ function startTick() {
       const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
       const elx = document.getElementById('strip-time');
       if (elx) elx.textContent = `${mm}:${String(ss).padStart(2, '0')}`;
-      if (timerMode(g) === 'level' && g.timer.running && rem <= 60000 && rem > 0 && !warned[g.timer.idx]) { warned[g.timer.idx] = true; playWarn(); }
+      const wk = isCash(g) ? 'r' + (g.timer.round || 1) : g.timer.idx;
+      if (timerMode(g) === 'level' && g.timer.running && rem <= 60000 && rem > 0 && !warned[wk]) { warned[wk] = true; playWarn(); }
     } else if (view !== 'home') return;
     else timerCatchUp(g);
   }, 250);
@@ -1753,8 +1926,13 @@ function saveNewPlayer(ctx) {
   else render();
   toast(`${nick || name} נוסף ✔`);
 }
+const cashStats = pid => S.games.reduce((a, g) => {
+  if (!isCash(g) || g.status !== 'done' || !g.playerIds.includes(pid)) return a;
+  a.games++; a.net += payouts(g).nets[pid] || 0;
+  return a;
+}, { games: 0, net: 0 });
 function playerGames(pid) {
-  return S.games.filter(g => g.status === 'done' && g.playerIds.includes(pid))
+  return S.games.filter(g => g.status === 'done' && !isCash(g) && g.playerIds.includes(pid))
     .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id))
     .map(g => {
       const medal = g.results.first === pid ? '🥇' : g.results.second === pid ? (g.results.chop ? '🥇' : '🥈') : g.results.bubble === pid ? '🎈' : '';
@@ -1774,6 +1952,11 @@ function openProfile(pid) {
       <tr><td><b>רווח / הפסד כולל</b></td><td>${money(s.net)}</td></tr>
       ${mvpTitles(pid) ? `<tr><td>👑 תארי MVP חודשיים</td><td class="num">${mvpTitles(pid)}</td></tr>` : ''}
     </table></div>` : '<div class="empty">עוד לא שיחק</div>';
+  const cs = cashStats(pid);
+  const cashHtml = cs.games ? `<div class="card" style="margin-bottom:14px"><table class="sheet">
+      <tr><td>💵 ערבי קאש</td><td class="num">${cs.games}</td></tr>
+      <tr><td>מאזן בקאש</td><td>${money(cs.net)}</td></tr>
+    </table><div class="empty" style="padding:6px 0 0;font-size:.72rem;text-align:right">קאש נספר בנפרד ואינו משפיע על הטבלה או על ה-MVP.</div></div>` : '';
   const mvpNow = currentMvp();
   const mvpHtml = (mvpNow && mvpNow.pid === pid)
     ? `<div class="card felt" style="text-align:center;margin-bottom:14px">
@@ -1803,6 +1986,7 @@ function openProfile(pid) {
         ${nickLine(p.id)}</div></div>
       ${mvpHtml}
       ${statsHtml}
+      ${cashHtml}
       ${histHtml}
       ${wallHtml}`);
     renderWall(pid); pullComments(pid);
@@ -1823,6 +2007,7 @@ function openProfile(pid) {
     </div>
     ${mvpHtml}
     ${statsHtml}
+    ${cashHtml}
     ${histHtml}
     ${wallHtml}
     <button class="btn-primary btn-big" onclick="saveProfile('${pid}')">שמירה</button>
@@ -1882,7 +2067,7 @@ function pickAvatar(pid) {
 function allStats() {
   const st = {};
   for (const g of S.games) {
-    if (g.status !== 'done') continue;
+    if (g.status !== 'done' || isCash(g)) continue;   // cash nights stay out of the table
     const p = payouts(g);
     for (const pid of g.playerIds) {
       const s = st[pid] || (st[pid] = { pid, games: 0, entries: 0, firsts: 0, seconds: 0, bubbles: 0, net: 0, best: -Infinity });
@@ -1924,8 +2109,8 @@ function historyView() {
       const p = payouts(g);
       return `<div class="card" style="cursor:pointer" onclick="go('summary','${g.id}')">
         <div class="row"><div class="grow">
-          <div style="font-weight:600">${heDateShort(g.date)}${g.isManual ? ' <span style="font-size:.68rem;color:var(--ink-dim)">ידני</span>' : ''}</div>
-          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">${g.results.chop ? `🤝 ${esc(pname(g.results.first))} + ${esc(pname(g.results.second))} (צ׳ופ)` : `🥇 ${esc(pname(g.results.first))} · 🥈 ${esc(pname(g.results.second))}`}${g.results.bubble ? ' · 🎈 ' + esc(pname(g.results.bubble)) : ''} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות</div>
+          <div style="font-weight:600">${isCash(g) ? '💵 ' : ''}${heDateShort(g.date)}${g.isManual ? ' <span style="font-size:.68rem;color:var(--ink-dim)">ידני</span>' : ''}</div>
+          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">${isCash(g) ? 'קאש · בליינדים קבועים' : (g.results.chop ? `🤝 ${esc(pname(g.results.first))} + ${esc(pname(g.results.second))} (צ׳ופ)` : `🥇 ${esc(pname(g.results.first))} · 🥈 ${esc(pname(g.results.second))}`) + (g.results.bubble ? ' · 🎈 ' + esc(pname(g.results.bubble)) : '')} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות</div>
         </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div></div>`;
     }).join('') : `<div class="empty empty-lg">אין משחקים שמורים.<br>הוסיפו משחקים ישנים כדי למלא את הסטטיסטיקות 🏆</div>`}`;
 }
@@ -1936,11 +2121,77 @@ function startManual() {
                   chop: false, pctFirst: 50, editId: null };
   go('manual');
 }
+// fix a finished cash night: entry counts and what each player took
+function editCashGame(g) {
+  if (!requireAdmin()) return;
+  cashEdit = { id: g.id, counts: {}, cashouts: Object.assign({}, (g.results && g.results.cashouts) || {}) };
+  for (const pid of g.playerIds) cashEdit.counts[pid] = entriesOf(g, pid);
+  closeSheet();
+  renderCashEdit();
+}
+let cashEdit = null;
+function renderCashEdit() {
+  const g = S.games.find(x => x.id === cashEdit.id);
+  if (!g) { cashEdit = null; go('history'); return; }
+  const e = cashEdit;
+  const onTable = Object.values(e.counts).reduce((a, b) => a + b, 0) * g.config.entryPrice;
+  const out = Object.keys(e.counts).reduce((s, pid) => s + (Number(e.cashouts[pid]) || 0), 0);
+  const diff = out - onTable;
+  sheet(`<h3>✏️ עריכת ערב קאש</h3>
+    <div class="card" style="margin-bottom:12px">
+      <div class="row"><div class="grow">על השולחן</div><div style="font-weight:700;color:var(--gold)">${shk(onTable)}</div></div>
+      <div class="row" style="margin-top:4px"><div class="grow">${diff === 0 ? '✔ מאוזן' : (diff < 0 ? 'חסר' : 'עודף')}</div>
+        <div style="font-weight:700;color:${diff === 0 ? 'var(--pos)' : 'var(--neg)'}">${diff === 0 ? '—' : shk(Math.abs(diff))}</div></div>
+    </div>
+    ${Object.keys(e.counts).map(pid => `
+      <div class="prow">${avatarHtml(player(pid))}
+        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+          <div class="meta">כניסות</div></div>
+        <div class="stepper">
+          <button onclick="cashEditStep('${pid}',-1)">−</button>
+          <div class="cnt num">${e.counts[pid]}</div>
+          <button onclick="cashEditStep('${pid}',1)">+</button>
+        </div>
+        <input type="number" inputmode="numeric" style="width:86px;text-align:center" placeholder="₪"
+               value="${e.cashouts[pid] != null ? e.cashouts[pid] : ''}"
+               onchange="cashEditOut('${pid}', this.value)">
+      </div>`).join('')}
+    <div style="height:12px"></div>
+    <button class="btn-primary btn-big" onclick="saveCashEdit()">שמירת השינויים</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="cashEdit=null;closeSheet()">ביטול</button>`);
+}
+function cashEditStep(pid, d) {
+  const v = (cashEdit.counts[pid] || 0) + d;
+  cashEdit.counts[pid] = Math.max(1, v);
+  renderCashEdit();
+}
+function cashEditOut(pid, v) {
+  const n = Math.round(Number(v));
+  if (v === '' || !isFinite(n)) delete cashEdit.cashouts[pid];
+  else cashEdit.cashouts[pid] = Math.max(0, n);
+  renderCashEdit();
+}
+function saveCashEdit() {
+  if (!requireAdmin()) return;
+  const g = S.games.find(x => x.id === cashEdit.id);
+  if (!g) { cashEdit = null; closeSheet(); return; }
+  const pids = Object.keys(cashEdit.counts);
+  g.playerIds = pids;
+  g.entries = pids.map(pid => ({ id: uid(), pid, delta: cashEdit.counts[pid], ts: g.startAt || Date.now() }));
+  g.entriesRev = (g.entriesRev || 0) + 1;
+  g.results = { cash: true, cashouts: Object.assign({}, cashEdit.cashouts) };
+  g.editedAt = Date.now();
+  touchGame(g); rememberFinished(g.id);
+  saveLocal(); pushState();
+  cashEdit = null; closeSheet(); render();
+  toast('השינויים נשמרו ✔');
+}
 // fix a mistake in a game that already happened
 function editGame(id) {
   if (!requireAdmin()) return;
   const g = S.games.find(x => x.id === id);
   if (!g) { toast('המשחק לא נמצא'); return; }
+  if (isCash(g)) { editCashGame(g); return; }
   const counts = {};
   for (const pid of g.playerIds) counts[pid] = entriesOf(g, pid);
   const r = g.results || {};
@@ -2100,6 +2351,19 @@ function settingsView() {
       </div>
       <label class="field"><span>תקרת רי-באי לשחקן</span><input type="number" inputmode="numeric" id="st-cap" value="${s.maxRebuys}"></label>
     </div>
+    <h2>קאש 💵</h2>
+    <div class="card">
+      <div class="row">
+        <label class="field grow"><span>כניסה בקאש (₪)</span><input type="number" inputmode="numeric" id="st-cash-entry" value="${s.cashEntryPrice}"></label>
+        <label class="field grow"><span>דמי בית בקאש (₪)</span><input type="number" inputmode="numeric" id="st-cash-fee" value="${s.cashHouseFee}"></label>
+      </div>
+      <div class="row">
+        <label class="field grow"><span>צ׳יפים לכניסה</span><input type="number" inputmode="numeric" id="st-cash-chips" value="${s.cashChips}"></label>
+        <label class="field grow"><span>אורך סבב (דק')</span><input type="number" inputmode="numeric" id="st-cash-round" value="${s.cashRoundMinutes}"></label>
+      </div>
+      <div class="empty" style="padding:0;font-size:.75rem;text-align:right">בקאש הבליינדים קבועים על 10/20 והשעון סופר סבב ומתחיל מחדש. אין חלוקת פרסים ואין חיסכון — כל שחקן לוקח את הצ׳יפים שלו, והבית גובה דמי בית בלבד.<br>ערבי קאש נשמרים בהיסטוריה אך לא נכנסים לטבלה או ל-MVP.</div>
+    </div>
+
     <h2>שעון</h2>
     <div class="card">
       <label class="field"><span>אורך רמה</span>
@@ -2146,6 +2410,8 @@ function saveSettings() {
   Object.assign(S.settings, {
     entryPrice: Math.max(1, v('st-entry')), houseFee: Math.max(0, v('st-fee')),
     savingsFee: Math.max(0, v('st-savings')),
+    cashEntryPrice: Math.max(1, v('st-cash-entry')), cashHouseFee: Math.max(0, v('st-cash-fee')),
+    cashChips: Math.max(1, v('st-cash-chips')), cashRoundMinutes: Math.max(1, v('st-cash-round')),
     splitFirst: s1, splitSecond: s2, splitHouse: sh,
     maxRebuys: Math.max(0, v('st-cap')),
     levelMinutes: parseInt(document.getElementById('st-lvlmin').value, 10),
