@@ -573,6 +573,18 @@ function mergeById(a, b) {
   return [...m.values()];
 }
 function mergeGame(a, b) {
+  // deletion travels with the data: whichever happened last, deleting or
+  // restoring, is what the merged game reflects
+  const lastDel = Math.max(a.deleted ? (a.deletedAt || 1) : 0, b.deleted ? (b.deletedAt || 1) : 0);
+  const lastRes = Math.max(a.restoredAt || 0, b.restoredAt || 0);
+  const purged = !!(a.purged || b.purged);
+  const stamp = out => {
+    if (purged || lastDel > lastRes) { out.deleted = true; out.deletedAt = lastDel || Date.now(); }
+    else { out.deleted = false; }
+    if (lastRes) out.restoredAt = lastRes;
+    if (purged) { out.purged = true; out.entries = []; out.playerIds = []; }
+    return out;
+  };
   // a finished game can never go back to being active
   const aDone = a.status === 'done' || FINISHED.includes(a.id);
   const bDone = b.status === 'done' || FINISHED.includes(b.id);
@@ -582,14 +594,14 @@ function mergeGame(a, b) {
   else base = (a.updatedAt || 0) >= (b.updatedAt || 0) ? a : b;
   const other = base === a ? b : a;
   const out = Object.assign({}, base);
-  if (FINISHED.includes(out.id) && out.status !== 'done' && other.status === 'done') return Object.assign({}, other);
+  if (FINISHED.includes(out.id) && out.status !== 'done' && other.status === 'done') return stamp(Object.assign({}, other));
   // an edited game had its entry list rewritten — take that side as-is rather
   // than unioning, or the old entries would come straight back
   const aRev = a.entriesRev || 0, bRev = b.entriesRev || 0;
   if (aRev !== bRev) {
     const newer = aRev > bRev ? a : b;
     out.entries = (newer.entries || []).filter(e => (out.playerIds || []).includes(e.pid));
-    return out;
+    return stamp(out);
   }
   // entries are append-only, so union them and drop anyone no longer in the game
   const seen = new Set(), entries = [];
@@ -599,7 +611,7 @@ function mergeGame(a, b) {
     seen.add(k); entries.push(e);
   }
   out.entries = entries.filter(e => (out.playerIds || []).includes(e.pid));
-  return out;
+  return stamp(out);
 }
 function mergeGames(a, b) {
   const m = new Map();
@@ -740,7 +752,7 @@ const heMonth = ym => new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'n
 function mvpByMonth() {
   if (!mvpDirty && mvpCache) return mvpCache;
   const totals = {};
-  for (const g of S.games) {
+  for (const g of liveGames()) {
     if (g.status !== 'done' || !g.results || isCash(g)) continue;   // MVP is tournaments only
     const m = monthOf(g.date), p = payouts(g);
     const acc = totals[m] || (totals[m] = {});
@@ -771,10 +783,12 @@ const isMvp = pid => { const m = currentMvp(); return !!m && m.pid === pid; };
 const mvpBadge = pid => isMvp(pid) ? ' <span class="mvp-badge">MVP</span>' : '';
 
 /* ================= game math ================= */
+const isDeleted = g => !!g && g.deleted === true;
+const liveGames = () => S.games.filter(g => !g.deleted);
 const isCash = g => !!g && g.type === 'cash';
 const chipsOf = g => (g && g.config && g.config.chipsPerEntry) || CHIPS_PER_ENTRY;
 const CASH_BLINDS = [10, 20];
-const activeGame = () => S.games.find(g => g.status === 'active');
+const activeGame = () => S.games.find(g => g.status === 'active' && !g.deleted);
 const entriesOf = (g, pid) => g.entries.filter(e => e.pid === pid).reduce((s, e) => s + e.delta, 0);
 const totalEntries = g => g.entries.reduce((s, e) => s + e.delta, 0);
 const poolOf = g => totalEntries(g) * g.config.entryPrice;
@@ -833,7 +847,7 @@ function cashPayouts(g) {
 }
 // older games stored the whole per-player fee as vaultFee; keep their history exact
 const savingsFeeOf = cfg => (cfg && (cfg.savingsFee != null ? cfg.savingsFee : (cfg.vaultFee || 0))) || 0;
-const savingsBalance = () => S.games.reduce((s, g) => s + (isCash(g) ? 0 : g.playerIds.length * savingsFeeOf(g.config)), 0);
+const savingsBalance = () => liveGames().reduce((s, g) => s + (isCash(g) ? 0 : g.playerIds.length * savingsFeeOf(g.config)), 0);
 
 function buildTimeline(cfg) {
   const t = [];
@@ -1182,7 +1196,7 @@ function home() {
     html += `<button class="btn-primary btn-big" onclick="go('newgame')" style="margin-bottom:12px"><span class="gi">${ICONS.spade}</span> משחק חדש</button>`;
   }
 
-  const done = S.games.filter(x => x.status === 'done').sort((a, b) => b.date.localeCompare(a.date));
+  const done = liveGames().filter(x => x.status === 'done').sort((a, b) => b.date.localeCompare(a.date));
   const bgame = done.find(x => !isCash(x) && x.results && x.results.bubble);
   if (bgame) {
     const bp = player(bgame.results.bubble);
@@ -1606,10 +1620,16 @@ function finishGame() {
 function summaryView() {
   const g = S.games.find(x => x.id === viewParam);
   if (!g || g.status !== 'done') { go('history'); return; }
+  if (g.deleted && !isAdmin()) { go('home'); return; }
   const p = payouts(g);
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="topbar"><h1>סיכום משחק</h1>${isAdmin() ? `<button class="btn-ghost" onclick="go('history')">→ היסטוריה</button>` : `<button class="btn-ghost" onclick="go('home')">→ חזרה</button>`}</div>
+    ${g.deleted ? `<div class="card" style="border-color:var(--neg)">
+      <div style="font-weight:700">🗑 המשחק הזה נמחק</div>
+      <div class="empty" style="padding:6px 0 10px;font-size:.8rem;text-align:right">הוא לא מופיע בהיסטוריה, בטבלה או אצל השחקנים.</div>
+      <button class="btn-primary btn-big" onclick="restoreGame('${g.id}')">שחזור המשחק</button>
+    </div>` : ''}
     <div class="card felt">
       <div style="font-weight:700;font-size:1.05rem">${isCash(g) ? '💵 ' : '🏆 '}${heDate(g.date)}${g.isManual ? ' <span style="font-size:.7rem;color:var(--ink-dim)">(הוזן ידנית)</span>' : ''}</div>
       ${g.startAt && g.endAt ? `<div class="sub" style="color:var(--ink-dim);font-size:.85rem">🕗 <bdi>${hhmm(g.startAt)}–${hhmm(g.endAt)}</bdi></div>` : ''}
@@ -1641,13 +1661,42 @@ function summaryView() {
       </table>
     </div>`}
     <button class="btn-primary btn-big" onclick="shareGame('${g.id}')"><span class="gi">${ICONS.share}</span> שיתוף בוואטסאפ</button>
-    ${isAdmin() ? `<button class="btn-ghost" style="width:100%;margin-top:10px" onclick="editGame('${g.id}')">✏️ עריכת המשחק</button>
+    ${isAdmin() && !g.deleted ? `<button class="btn-ghost" style="width:100%;margin-top:10px" onclick="editGame('${g.id}')">✏️ עריכת המשחק</button>
     <button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deleteGame('${g.id}')">מחיקת המשחק</button>` : ''}`;
 }
+// Deleting has to be recorded rather than simply dropped: every device holds a
+// full copy, so a game that merely vanishes locally is re-added by the next
+// merge. The game is kept as a tombstone and hidden everywhere instead.
 function deleteGame(id) {
   if (!requireAdmin()) return;
-  confirmDlg('למחוק את המשחק לצמיתות?', () => {
-    S.games = S.games.filter(g => g.id !== id); save(); go('history'); toast('המשחק נמחק');
+  const g = S.games.find(x => x.id === id); if (!g) return;
+  confirmDlg('למחוק את המשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">אפשר לשחזר אותו אחר כך מרשימת המשחקים שנמחקו.</span>', () => {
+    g.deleted = true;
+    g.deletedAt = Date.now();
+    delete g.restoredAt;
+    touchGame(g);
+    saveLocal(); pushState();
+    go('history'); toast('המשחק נמחק — ניתן לשחזור');
+  });
+}
+function restoreGame(id) {
+  if (!requireAdmin()) return;
+  const g = S.games.find(x => x.id === id); if (!g || g.purged) return;
+  g.deleted = false;
+  g.restoredAt = Date.now();
+  touchGame(g);
+  saveLocal(); pushState();
+  render(); toast('המשחק שוחזר ✔');
+}
+function purgeGame(id) {
+  if (!requireAdmin()) return;
+  const i = S.games.findIndex(x => x.id === id); if (i < 0) return;
+  confirmDlg('למחוק את המשחק לצמיתות?<br><span style="color:var(--neg);font-size:.85rem">אי אפשר לשחזר אותו אחרי זה.</span>', () => {
+    // keep a bare marker so the game cannot come back through another device
+    S.games[i] = { id, deleted: true, purged: true, deletedAt: S.games[i].deletedAt || Date.now(),
+                   updatedAt: Date.now(), playerIds: [], entries: [], status: 'done' };
+    saveLocal(); pushState();
+    render(); toast('נמחק לצמיתות');
   });
 }
 function buildWhatsApp(g) {
@@ -1926,13 +1975,13 @@ function saveNewPlayer(ctx) {
   else render();
   toast(`${nick || name} נוסף ✔`);
 }
-const cashStats = pid => S.games.reduce((a, g) => {
+const cashStats = pid => liveGames().reduce((a, g) => {
   if (!isCash(g) || g.status !== 'done' || !g.playerIds.includes(pid)) return a;
   a.games++; a.net += payouts(g).nets[pid] || 0;
   return a;
 }, { games: 0, net: 0 });
 function playerGames(pid) {
-  return S.games.filter(g => g.status === 'done' && !isCash(g) && g.playerIds.includes(pid))
+  return liveGames().filter(g => g.status === 'done' && !isCash(g) && g.playerIds.includes(pid))
     .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id))
     .map(g => {
       const medal = g.results.first === pid ? '🥇' : g.results.second === pid ? (g.results.chop ? '🥇' : '🥈') : g.results.bubble === pid ? '🎈' : '';
@@ -2066,7 +2115,7 @@ function pickAvatar(pid) {
 /* ---- stats ---- */
 function allStats() {
   const st = {};
-  for (const g of S.games) {
+  for (const g of liveGames()) {
     if (g.status !== 'done' || isCash(g)) continue;   // cash nights stay out of the table
     const p = payouts(g);
     for (const pid of g.playerIds) {
@@ -2085,7 +2134,7 @@ function leaderboard() { return Object.values(allStats()).sort((a, b) => b.net -
 function statsView() {
   const app = document.getElementById('app');
   const lb = leaderboard();
-  const gamesCount = S.games.filter(g => g.status === 'done').length;
+  const gamesCount = liveGames().filter(g => g.status === 'done').length;
   app.innerHTML = `
     <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.stats}</span> טבלת כל הזמנים</h1><div class="sub">${gamesCount} משחקים</div></div>
     ${lb.length ? `<div class="card">` + lb.map((r, i) =>
@@ -2102,9 +2151,31 @@ function statsView() {
 /* ---- history + manual ---- */
 function historyView() {
   const app = document.getElementById('app');
-  const done = S.games.filter(g => g.status === 'done').sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  const done = liveGames().filter(g => g.status === 'done').sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
   app.innerHTML = `
     <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.history}</span> היסטוריה</h1>${isAdmin() ? `<button class="btn-primary" onclick="startManual()">+ משחק ישן</button>` : ''}</div>
+    <!-- games list first, recovery bin after -->
+    ${(() => {
+      if (!isAdmin()) return '';
+      const bin = S.games.filter(g => g.deleted && !g.purged)
+        .sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+      if (!bin.length) return '';
+      return `<h2>🗑 משחקים שנמחקו (${bin.length})</h2>
+        <div class="empty" style="padding:0 0 8px;font-size:.74rem;text-align:right">מוצג למנהל בלבד. שחקנים לא רואים את המשחקים האלה בשום מקום.</div>
+        ${bin.map(g => {
+          const p = payouts(g);
+          return `<div class="card" style="opacity:.72">
+            <div class="row"><div class="grow">
+              <div style="font-weight:600">${isCash(g) ? '💵 ' : ''}${heDateShort(g.date)}</div>
+              <div class="sub" style="color:var(--ink-dim);font-size:.78rem">${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות · ${shk(p.pool)}</div>
+            </div></div>
+            <div class="row" style="margin-top:10px">
+              <button class="btn-primary grow" onclick="restoreGame('${g.id}')">שחזור</button>
+              <button class="btn-ghost btn-danger grow" onclick="purgeGame('${g.id}')">מחיקה לצמיתות</button>
+            </div>
+          </div>`;
+        }).join('')}`;
+    })()}
     ${done.length ? done.map(g => {
       const p = payouts(g);
       return `<div class="card" style="cursor:pointer" onclick="go('summary','${g.id}')">
