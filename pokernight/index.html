@@ -361,6 +361,107 @@
   .winner-pick .prow { cursor: pointer; }
   .winner-pick .prow:active { border-color: var(--gold); }
   a { color: var(--gold); }
+
+  /* ---- build / staleness banner ---- */
+  #update-bar {
+    position: fixed; top: 0; right: 0; left: 0; z-index: 90;
+    background: linear-gradient(165deg, #efd77c, #d4af37 55%, #a8892b);
+    color: #17130a; font-weight: 700; font-size: .88rem;
+    padding: calc(9px + env(safe-area-inset-top)) 14px 9px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .5);
+  }
+  #update-bar button {
+    background: rgba(0, 0, 0, .82); color: #f6e9b8; border: none;
+    border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: .82rem;
+  }
+
+  /* ---- sync dot ---- */
+  .sync-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: var(--ink-dim); box-shadow: 0 0 6px currentColor;
+  }
+  .sync-dot.ok { background: var(--pos); }
+  .sync-dot.wait { background: #e0a93f; animation: livePulse 1.6s infinite; }
+  .sync-dot.bad { background: var(--neg); }
+  .sync-pill {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .18);
+    border-radius: 999px; padding: 5px 11px 5px 9px; font-size: .7rem;
+    color: var(--ink-dim); cursor: pointer;
+  }
+
+  /* ---- toast with an action ---- */
+  #toast.wide { white-space: normal; max-width: 92vw; }
+  #toast .undo {
+    background: var(--gold); color: #17130a; border: none; font-weight: 700;
+    border-radius: 999px; padding: 4px 12px; font-size: .8rem; margin-inline-start: 10px;
+  }
+  #toast.show { pointer-events: auto; }
+
+  /* ---- profile chart ---- */
+  .spark { width: 100%; height: 92px; display: block; }
+  .spark .zero { stroke: rgba(212, 175, 55, .28); stroke-dasharray: 3 4; }
+  .spark .line { fill: none; stroke: var(--gold); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+  .spark .dot { fill: var(--gold); }
+  .kpis { display: flex; flex-wrap: wrap; }
+  .kpis > div { flex: 1 1 33%; text-align: center; padding: 6px 2px; }
+  .kpis .v { font-size: 1.12rem; font-weight: 700; }
+  .kpis .k { font-size: .68rem; color: var(--ink-dim); margin-top: 2px; }
+  .streak-tag {
+    display: inline-block; border-radius: 999px; padding: 3px 11px; font-size: .74rem;
+    font-weight: 600; border: 1px solid rgba(212, 175, 55, .3); color: var(--gold);
+  }
+  .streak-tag.cold { color: var(--ink-dim); border-color: var(--line); }
+
+  /* ---- season tabs ---- */
+  .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tabs .tab {
+    flex: 1; text-align: center; padding: 9px 6px; border-radius: 12px; cursor: pointer;
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .14);
+    font-size: .84rem; color: var(--ink-dim);
+  }
+  .tabs .tab.on { color: var(--gold); border-color: var(--gold-dim); background: rgba(212, 175, 55, .09); }
+
+  /* ---- bigger touch targets ---- */
+  .btn-plus { width: 54px; height: 54px; font-size: 1.7rem; }
+  .btn-minus { width: 44px; height: 44px; font-size: 1.3rem; }
+  nav button { min-height: 50px; justify-content: center; }
+  .prow { padding: 12px; }
+  .chip { min-height: 42px; }
+  .stepper button { width: 44px; height: 44px; }
+
+  /* ---- avatar tint for players with no photo ---- */
+  .avatar.tint { background: var(--tint, var(--felt-hi)); }
+  .no-photo::after {
+    content: '📷'; position: absolute; bottom: -2px; inset-inline-start: -2px;
+    background: var(--card-hi); border: 1px solid var(--gold-dim); border-radius: 50%;
+    width: 19px; height: 19px; font-size: .6rem; line-height: 17px; text-align: center;
+  }
+
+  /* ---- home hero cards ---- */
+  .hero-card { text-align: center; }
+  .hero-card .who { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .hero-card .title { font-weight: 700; font-size: 1.2rem; margin-top: 8px; font-family: 'Frank Ruhl Libre', serif; }
+  .hero-card .sub2 { color: var(--ink-dim); font-size: .8rem; margin-top: 2px; }
+
+  /* ---- TV clock extras ---- */
+  #clock .upnext {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    margin-top: 1.2vh; font-size: max(.8rem, 2.4vmin); color: var(--ink-dim);
+  }
+  #clock .upnext span { margin: .3vh max(8px, 2.4vmin); }
+  #clock .upnext b { color: var(--gold-dim); font-weight: 700; }
+  #clock .panel {
+    margin-top: 2.4vh; min-height: max(2.6rem, 7vmin);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; max-width: 92vw;
+    font-size: max(1rem, 3.2vmin); color: var(--ink);
+    transition: opacity .45s ease; opacity: 1;
+  }
+  #clock .panel.fade { opacity: 0; }
+  #clock .panel b { color: var(--gold); }
+  #clock.tv .exit { display: none; }
 </style>
 </head>
 <body>
@@ -375,6 +476,8 @@
 
 /* ================= state ================= */
 const LS_KEY = 'pokernight_v1';
+// bumped on every deploy; a device holding an older build is told to refresh
+const APP_BUILD = 35;
 const CHIPS_PER_ENTRY = 1500;
 const LADDER = [
   [10, 20], [20, 40], [30, 60], [40, 80],
@@ -388,7 +491,8 @@ const DEFAULT_SETTINGS = {
   maxRebuys: 12,
   levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
   cashEntryPrice: 20, cashHouseFee: 10, cashChips: 1000, cashRoundMinutes: 15,
-  sound: true, voice: true,
+  sound: true, voice: true, haptics: true,
+  seasonStart: null, seasonName: '',
 };
 
 let S = loadState();
@@ -400,19 +504,30 @@ function loadState() {
       s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings || {});
       s.players = s.players || [];
       s.games = s.games || [];
+      s.seasons = s.seasons || [];
       dropScheduledBreak(s);
       clampTimers(s);
       return s;
     }
   } catch (e) { console.error(e); }
-  return { players: [], games: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
+  return { players: [], games: [], seasons: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
 }
 function saveLocal() { mvpDirty = true; localStorage.setItem(LS_KEY, JSON.stringify(S)); }
 function save() { saveLocal(); schedulePush(); }
 // stamp what changed so a merge can tell newer from older
-function touchGame(g) { if (g) g.updatedAt = Date.now(); }
+function touchGame(g) {
+  if (!g) return;
+  g.updatedAt = Date.now();
+  // who last touched this game, so a table full of phones can tell whose
+  // count is on screen
+  if (SESSION) g.updatedBy = isAdmin() ? (SESSION.name || 'מנהל') : (SESSION.name || '');
+}
 function uid() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)); }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+/* ---- TV mode: ?tv=1 boots straight into a read-only clock for a big screen,
+   with no login, no nav and no controls ---- */
+const TV_MODE = /(^|[?&])tv=1(&|$)/.test(location.search);
 
 /* ================= auth ================= */
 const ADMIN_USER = 'pitboss';
@@ -420,15 +535,38 @@ const ADMIN_HASH = '4a25821c2a1389c33ea72d492e616f0c2fcc56e274ca2070b0964494eadb
 const SESSION_KEY = 'pokernight_session';
 let SESSION = null;
 try { SESSION = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) {}
+// a wall screen never signs in; it just watches
+if (TV_MODE) SESSION = { role: 'user', name: 'מסך', tv: true, ts: Date.now() };
 const isAdmin = () => !!SESSION && SESSION.role === 'admin';
+// a dealer runs the table — entries, late joins and the clock — but cannot
+// finish, delete or edit a game, and the server enforces that too
+const isDealer = () => !!SESSION && SESSION.role === 'dealer';
+const canDeal = () => isAdmin() || isDealer();
+const syncKey = () => (SESSION && SESSION.key) || '';
 function requireAdmin() {
   if (isAdmin()) return true;
+  toast(isDealer() ? 'רק המנהל יכול לעשות את זה 🔒' : 'פעולה למנהל בלבד 🔒');
+  return false;
+}
+function requireDeal() {
+  if (canDeal()) return true;
   toast('פעולה למנהל בלבד 🔒');
   return false;
 }
 async function sha256hex(s) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+/* ---- dealer code ----
+   Derived from the admin password on the admin's own device, so a dealer can
+   be handed a code without ever learning the master password. The server
+   derives the same value from its env var and accepts it for a narrow set of
+   writes only. ---- */
+const DEALER_CODE_LEN = 12;
+const normalizeCode = c => String(c || '').replace(/[^0-9a-fA-F]/g, '').toLowerCase().slice(0, DEALER_CODE_LEN);
+const prettyCode = c => (normalizeCode(c).toUpperCase().match(/.{1,4}/g) || []).join('-');
+async function dealerCodeFor(pass) {
+  return (await sha256hex('pn-dealer|' + pass)).slice(0, DEALER_CODE_LEN);
 }
 let loginMode = 'user';
 function renderLogin() {
@@ -443,11 +581,18 @@ function renderLogin() {
       <div class="card felt">
         <div class="chips" style="justify-content:center;margin-bottom:16px">
           <div class="chip ${loginMode === 'user' ? 'on' : ''}" onclick="loginMode='user';renderLogin()"><span class="gi">${ICONS.user}</span> שחקן</div>
+          <div class="chip ${loginMode === 'dealer' ? 'on' : ''}" onclick="loginMode='dealer';renderLogin()">🃏 דילר</div>
           <div class="chip ${loginMode === 'admin' ? 'on' : ''}" onclick="loginMode='admin';renderLogin()"><span class="gi">${ICONS.key}</span> מנהל</div>
         </div>
         ${loginMode === 'user' ? `
           <label class="field"><span>איך קוראים לך?</span><input type="text" id="lg-name" autocomplete="off"></label>
           <button class="btn-primary btn-big" onclick="userLogin()">כניסה</button>
+          <div class="login-actions row" style="justify-content:center;margin-top:12px"></div>
+        ` : loginMode === 'dealer' ? `
+          <label class="field"><span>איך קוראים לך?</span><input type="text" id="lg-dname" autocomplete="off"></label>
+          <label class="field"><span>קוד דילר</span><input type="text" id="lg-code" autocomplete="off" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX" style="direction:ltr;text-align:center;letter-spacing:.12em"></label>
+          <button class="btn-primary btn-big" id="lg-dbtn" onclick="dealerLogin()">כניסת דילר</button>
+          <div class="empty" style="padding:12px 0 0;font-size:.76rem">דילר יכול להוסיף כניסות, לצרף שחקנים ולהפעיל את השעון — אבל לא לסיים, למחוק או לערוך משחק. את הקוד מקבלים מהמנהל (הגדרות ← קוד דילר).</div>
           <div class="login-actions row" style="justify-content:center;margin-top:12px"></div>
         ` : `
           <label class="field"><span>שם משתמש</span><input type="text" id="lg-user" autocomplete="off" autocapitalize="off"></label>
@@ -457,7 +602,7 @@ function renderLogin() {
         `}
       </div>
     </div>`;
-  setTimeout(() => document.getElementById(loginMode === 'user' ? 'lg-name' : 'lg-user')?.focus(), 60);
+  setTimeout(() => document.getElementById(loginMode === 'user' ? 'lg-name' : loginMode === 'dealer' ? 'lg-dname' : 'lg-user')?.focus(), 60);
 }
 function setSession(sess) {
   SESSION = sess;
@@ -468,6 +613,32 @@ function userLogin() {
   if (!name) { toast('צריך שם 🙂'); return; }
   setSession({ role: 'user', name, ts: Date.now() });
   playLoginChime();
+  render();
+  pullState(true);
+}
+async function dealerLogin() {
+  const name = document.getElementById('lg-dname').value.trim();
+  const code = normalizeCode(document.getElementById('lg-code').value);
+  if (!name) { toast('צריך שם 🙂'); return; }
+  if (code.length !== DEALER_CODE_LEN) { toast('הקוד לא שלם'); return; }
+  const btn = document.getElementById('lg-dbtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'בודק…'; }
+  let role = null;
+  try {
+    const r = await fetch(API, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': code },
+      body: JSON.stringify({ verify: true }),
+    });
+    if (r.ok) role = (await r.json()).role || null;
+  } catch (e) { toast('אין חיבור לרשת'); }
+  if (role !== 'dealer') {
+    if (btn) { btn.disabled = false; btn.textContent = 'כניסת דילר'; }
+    if (role === null) toast('קוד דילר שגוי');
+    return;
+  }
+  setSession({ role: 'dealer', name, key: code, ts: Date.now() });
+  playLoginChime();
+  toast(`ברוך הבא, ${name} 🃏`);
   render();
   pullState(true);
 }
@@ -623,9 +794,10 @@ function mergeGames(a, b) {
 }
 function mergeRemote(remote) {
   const rd = remote.data || {};
-  const before = JSON.stringify([S.players, S.games, S.settings]);
+  const before = JSON.stringify([S.players, S.games, S.seasons, S.settings]);
   S.players = mergeById(S.players, rd.players);
   S.games = mergeGames(S.games, rd.games);
+  S.seasons = mergeById(S.seasons || [], rd.seasons);
   const rs = rd.settings || {};
   if ((rs.updatedAt || 0) > (S.settings.updatedAt || 0)) S.settings = Object.assign({}, DEFAULT_SETTINGS, rs);
   for (const g of S.games) if (g.status === 'done') rememberFinished(g.id);
@@ -635,7 +807,7 @@ function mergeRemote(remote) {
   localStorage.setItem(LS_KEY, JSON.stringify(S));
   SYNC.version = remote.version;
   syncMetaSave();
-  return before !== JSON.stringify([S.players, S.games, S.settings]);
+  return before !== JSON.stringify([S.players, S.games, S.seasons, S.settings]);
 }
 
 async function pullState(force) {
@@ -643,6 +815,8 @@ async function pullState(force) {
     const r = await fetch(API, { cache: 'no-store' });
     if (!r.ok) throw new Error(r.status);
     const remote = await r.json();
+    // another device is already on a newer build — this one is behind
+    if (remote.build && remote.build > APP_BUILD) showUpdateBar('יש גרסה חדשה של האפליקציה');
     if (remote.data && (remote.version !== SYNC.version || force)) {
       const changed = mergeRemote(remote);
       if (changed && SESSION) render();
@@ -652,32 +826,46 @@ async function pullState(force) {
     SYNC.status = 'ok';
     pullComments();
   } catch (e) { SYNC.status = 'offline'; }
-  if (SYNC.dirty && isAdmin()) pushState();
+  if (SYNC.dirty && canDeal()) pushState();
   updateSyncBadge();
 }
 
 let pushTimer = null;
 function schedulePush() {
-  if (!isAdmin() || !SESSION.key) return;
+  if (!canDeal() || !syncKey()) return;
   SYNC.dirty = true; syncMetaSave();
   clearTimeout(pushTimer);
   pushTimer = setTimeout(pushState, 700);
   updateSyncBadge();
 }
 async function pushState(attempt) {
-  if (!isAdmin() || !SESSION.key || SYNC.pushing) return;
+  if (!canDeal() || !syncKey() || SYNC.pushing) return;
   clearTimeout(pushTimer);
   SYNC.pushing = true;
   try {
     const r = await fetch(API, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-admin-key': SESSION.key },
+      headers: { 'content-type': 'application/json', 'x-admin-key': syncKey() },
       body: JSON.stringify({
-        baseVersion: SYNC.version,
-        data: { players: S.players, games: S.games, settings: S.settings },
+        baseVersion: SYNC.version, build: APP_BUILD,
+        data: { players: S.players, games: S.games, seasons: S.seasons || [], settings: S.settings },
       }),
     });
     if (r.status === 401) { SYNC.status = 'auth'; SYNC.pushing = false; updateSyncBadge(); return; }
+    if (r.status === 403) {
+      // the server refused a write this role is not allowed to make
+      SYNC.status = 'denied'; SYNC.dirty = false; syncMetaSave();
+      SYNC.pushing = false; updateSyncBadge();
+      toast('השינוי הזה מותר למנהל בלבד 🔒');
+      pullState(true);
+      return;
+    }
+    if (r.status === 426) {
+      // this build is too old for the server to trust — say so, loudly
+      SYNC.status = 'stale'; SYNC.pushing = false; updateSyncBadge();
+      showUpdateBar('הגרסה במכשיר ישנה — צריך לרענן כדי לשמור');
+      return;
+    }
     if (r.status === 409) {
       // someone else wrote first: merge their state in, then send the result
       const remote = await r.json();
@@ -700,15 +888,63 @@ async function pushState(attempt) {
   updateSyncBadge();
 }
 function syncBadgeText() {
+  if (SYNC.status === 'stale') return '⚠️ גרסה ישנה — רעננו';
   if (SYNC.status === 'auth') return '🔒 מפתח סנכרון שגוי';
+  if (SYNC.status === 'denied') return '🔒 אין הרשאה לשינוי הזה';
   if (SYNC.dirty) return '⟳ ממתין לסנכרון';
   if (SYNC.status === 'ok') return '☁️ מסונכרן';
   if (SYNC.status === 'offline') return '📴 אופליין — הנתונים נשמרים במכשיר';
   return '';
 }
+// one glance: green synced, amber pending, red offline or refused
+function syncDotClass() {
+  if (SYNC.status === 'stale' || SYNC.status === 'auth' || SYNC.status === 'denied') return 'bad';
+  if (SYNC.dirty || SYNC.pushing) return 'wait';
+  if (SYNC.status === 'offline') return 'bad';
+  if (SYNC.status === 'ok') return 'ok';
+  return '';
+}
+function syncDotLabel() {
+  const c = syncDotClass();
+  return c === 'ok' ? 'מסונכרן' : c === 'wait' ? 'שומר…' : c === 'bad' ? 'לא מסונכרן' : 'ממתין';
+}
 function updateSyncBadge() {
   const el = document.getElementById('sync-badge');
   if (el) el.textContent = syncBadgeText();
+  for (const d of document.querySelectorAll('.sync-dot')) d.className = 'sync-dot ' + syncDotClass();
+  for (const t of document.querySelectorAll('.sync-pill .lbl')) t.textContent = syncDotLabel();
+}
+function syncPillHtml() {
+  return `<span class="sync-pill" onclick="showSyncInfo()" title="מצב סנכרון">
+    <span class="sync-dot ${syncDotClass()}"></span><span class="lbl">${syncDotLabel()}</span></span>`;
+}
+function showSyncInfo() {
+  const rows = [
+    ['מצב', syncBadgeText() || '—'],
+    ['גרסת נתונים', String(SYNC.version || 0)],
+    ['גרסת אפליקציה', String(APP_BUILD)],
+    ['תפקיד', isAdmin() ? 'מנהל' : isDealer() ? 'דילר' : 'שחקן'],
+  ];
+  sheet(`<h3>סנכרון</h3>
+    <table class="sheet">${rows.map(([k, v]) => `<tr><td>${k}</td><td>${esc(v)}</td></tr>`).join('')}</table>
+    <div style="height:14px"></div>
+    <button class="btn-primary btn-big" onclick="doRefresh(event)">רענון עכשיו</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">סגירה</button>`);
+}
+
+/* ---- "this build is old" bar ---- */
+let updateBarShown = false;
+function showUpdateBar(msg) {
+  if (updateBarShown) return;
+  updateBarShown = true;
+  const bar = document.createElement('div');
+  bar.id = 'update-bar';
+  bar.innerHTML = `<span>${esc(msg || 'יש גרסה חדשה של האפליקציה')}</span>
+    <button type="button">רענון</button>`;
+  bar.querySelector('button').addEventListener('click', () => doRefresh());
+  document.body.appendChild(bar);
+  const app = document.getElementById('app');
+  if (app) app.style.paddingTop = '52px';
 }
 setInterval(() => { if (document.visibilityState === 'visible') pullState(); }, 3000);
 window.addEventListener('online', () => { SYNC.dirty ? pushState() : pullState(); });
@@ -729,19 +965,55 @@ const pname = pid => { const p = player(pid); return p ? p.name : '?'; };
 const pnick = pid => { const p = player(pid); return p && p.nickname && p.nickname !== p.name ? p.nickname : null; };
 const nickLine = pid => pnick(pid) ? `<div class="nickname">\u05f4${esc(pnick(pid))}\u05f4</div>` : '';
 const chipLabel = p => `${esc(p.name)}${p.nickname && p.nickname !== p.name ? ` <span class="nickname">\u05f4${esc(p.nickname)}\u05f4</span>` : ''}`;
+// initials get a colour of their own so a photo-less roster still reads apart
+function tintFor(seed) {
+  const s = String(seed || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return `hsl(${h} 32% 24%)`;
+}
 function avatarHtml(p, cls) {
-  const c = 'avatar' + (cls ? ' ' + cls : '');
-  const inner = (p && p.avatar) ? `<img src="${p.avatar}" alt="">`
+  const photo = !!(p && p.avatar);
+  const c = 'avatar' + (cls ? ' ' + cls : '') + (photo ? '' : ' tint');
+  const style = photo ? '' : ` style="--tint:${tintFor(p ? (p.id || p.name) : '')}"`;
+  const inner = photo ? `<img src="${p.avatar}" alt="">`
     : esc(p ? (p.name || p.nickname || '?').trim().charAt(0) : '?');
   const crown = (p && isMvp(p.id)) ? '<span class="crown" title="MVP החודש">👑</span>' : '';
-  return `<div class="avatar-wrap${cls ? ' ' + cls : ''}">${crown}<div class="${c}">${inner}</div></div>`;
+  return `<div class="avatar-wrap${cls ? ' ' + cls : ''}">${crown}<div class="${c}"${style}>${inner}</div></div>`;
 }
+const vibe = ms => { try { if (S.settings.haptics !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
+  undoFn = null;
+  el.className = ''; el.textContent = msg; el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+/* a toast you can take back, for the actions that are easy to hit by mistake */
+let undoFn = null;
+function toastAction(msg, label, fn, ms) {
+  const el = document.getElementById('toast');
+  undoFn = fn;
+  el.className = 'wide';
+  el.innerHTML = `<span>${esc(msg)}</span><button class="undo" type="button" onclick="runUndo()">${esc(label)}</button>`;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); el.className = ''; undoFn = null; }, ms || 7000);
+}
+function runUndo() {
+  const f = undoFn; undoFn = null;
+  const el = document.getElementById('toast');
+  el.classList.remove('show'); el.className = '';
+  if (f) f();
+}
+
+// who last changed this game, and when — settles "is this count current?"
+function lastTouchLine(g) {
+  if (!g || !g.updatedAt) return '';
+  const mins = Math.round((Date.now() - g.updatedAt) / 60000);
+  const when = mins < 1 ? 'עכשיו' : mins < 60 ? `לפני ${mins} דק'` : hhmm(g.updatedAt);
+  return g.updatedBy ? `עודכן ${when} · ${g.updatedBy}` : `עודכן ${when}`;
 }
 
 /* ================= MVP of the month ================= */
@@ -910,6 +1182,7 @@ function startBreak(g, min) {
   t.mode = 'break'; t.breakMin = min; t.breakEndAt = Date.now() + min * 60000;
   t.running = false; t.remainingMs = null;
   warned = {}; save();
+  playBreakStart(); vibe(60);
 }
 // break countdown finished: hold at 0:00 until the manager approves
 function breakFinished(g) {
@@ -992,7 +1265,8 @@ function timerJump(g, dir) {
 let warned = {};
 function levelChanged(g) {
   const tl = buildTimeline(g.config), cur = levelAt(tl, g.timer.idx);
-  playGong();
+  cur.type === 'break' ? playBreakStart() : playLevelUp();
+  vibe([80, 60, 80]);
   if (S.settings.voice) {
     if (cur.type === 'break') speak('הפסקה');
     else speak(`הבליינדים עולים: ${cur.sb}, ${cur.bb}`);
@@ -1017,6 +1291,12 @@ function tone(freq, dur, delay, vol) {
   o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + dur + 0.05);
 }
 function playGong() { if (!S.settings.sound) return; try { tone(660, 1.2, 0, .5); tone(880, 1.4, 0.15, .35); tone(440, 1.6, 0.05, .3); } catch (e) {} }
+// blinds up: a rising figure, so the room can tell it from a break ending
+function playLevelUp() { if (!S.settings.sound) return; try { tone(523, .5, 0, .38); tone(659, .5, .14, .38); tone(880, 1.1, .28, .42); } catch (e) {} }
+// break called: a soft descending figure
+function playBreakStart() { if (!S.settings.sound) return; try { tone(784, .45, 0, .3); tone(587, .55, .16, .3); tone(392, .9, .32, .26); } catch (e) {} }
+// game over: a short fanfare
+function playFanfare() { if (!S.settings.sound) return; try { tone(523, .25, 0, .34); tone(659, .25, .16, .34); tone(784, .25, .32, .36); tone(1047, .9, .48, .4); } catch (e) {} }
 function playWarn() { if (!S.settings.sound) return; try { tone(880, .18, 0, .35); tone(880, .18, .28, .35); } catch (e) {} }
 function playClick() { if (!S.settings.sound) return; try { tone(1200, .06, 0, .18); } catch (e) {} }
 const loginAudio = new Audio('login.mp3');
@@ -1092,6 +1372,7 @@ setInterval(() => {
 let view = 'home', viewParam = null;
 const VIEW_KEY = 'pokernight_view';
 function go(v, param) {
+  if (TV_MODE) { view = 'clock'; viewParam = null; render(); return; }
   view = v; viewParam = param ?? null;
   try { localStorage.setItem(VIEW_KEY, JSON.stringify({ v, param: viewParam })); } catch (e) {}
   window.scrollTo(0, 0);
@@ -1126,7 +1407,7 @@ function renderNav() {
   ).join('');
 }
 function doRefresh(e) {
-  const b = e && e.currentTarget;
+  const b = e && e.currentTarget && e.currentTarget.classList ? e.currentTarget : null;
   if (b && b.classList) b.classList.add('spin');
   try { localStorage.setItem(VIEW_KEY, JSON.stringify({ v: view, param: viewParam })); } catch (err) {}
   try { navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r => r && r.update()); } catch (err) {}
@@ -1134,7 +1415,14 @@ function doRefresh(e) {
 }
 function injectRefresh() {
   const host = document.querySelector('#app .topbar') || document.querySelector('#app .login-actions');
-  if (!host || host.querySelector('.refresh-btn')) return;
+  if (!host) return;
+  // a sync light on every screen, so "did that save?" is never a guess
+  if (SESSION && !host.querySelector('.sync-pill')) {
+    const holder = document.createElement('div');
+    holder.innerHTML = syncPillHtml();
+    host.appendChild(holder.firstElementChild);
+  }
+  if (host.querySelector('.refresh-btn')) return;
   const b = document.createElement('button');
   b.className = 'refresh-btn';
   b.type = 'button';
@@ -1153,6 +1441,7 @@ function setBackdrop(v) {
 }
 function render() {
   if (!SESSION) { setBackdrop('login'); renderLogin(); return; }
+  if (TV_MODE) { view = 'clock'; viewParam = null; }
   if (!isAdmin() && ADMIN_VIEWS.includes(view)) { view = 'home'; viewParam = null; }
   setBackdrop(view);
   renderNav();
@@ -1173,13 +1462,14 @@ function render() {
     </div>`;
   }
   injectRefresh();
+  if (view === 'settings') settingsExtras();
 }
 
 /* ================= views ================= */
 function home() {
   const g = activeGame();
   const app = document.getElementById('app');
-  let html = `<div class="topbar" style="margin-bottom:4px"><div class="sub" style="text-align:left;margin-inline-start:auto">${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name) + ' <button class="btn-ghost" style="font-size:.68rem;padding:2px 8px;margin-inline-start:4px" onclick="logout()">יציאה</button>'}<br><span id="sync-badge" style="font-size:.7rem">${syncBadgeText()}</span></div></div>
+  let html = `<div class="topbar" style="margin-bottom:4px"><div class="sub" style="text-align:left;margin-inline-start:auto">${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : (isDealer() ? '🃏 ' + esc(SESSION.name) + ' · דילר' : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name)) + ' <button class="btn-ghost" style="font-size:.68rem;padding:2px 8px;margin-inline-start:4px" onclick="logout()">יציאה</button>'}</div></div>
   <img src="neon.jpg" class="neon-hero" alt="ערב פוקר">`;
 
   if (g) {
@@ -1188,6 +1478,7 @@ function home() {
       <div class="row"><div class="grow">
         <div style="font-weight:700"><span class="live-dot"></span> משחק פעיל</div>
         <div class="sub" style="color:var(--ink-dim);font-size:.85rem">${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות · קופה ${shk(poolOf(g))}</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.72rem;margin-top:2px">${esc(lastTouchLine(g))}</div>
       </div>
       <div style="text-align:left"><div style="color:var(--gold);font-weight:700;direction:ltr">${cur.type === 'break' ? 'הפסקה' : cur.sb + ' / ' + cur.bb}</div></div></div>
       <button class="btn-primary btn-big" style="margin-top:12px">חזרה למשחק ←</button>
@@ -1208,11 +1499,23 @@ function home() {
       <div style="color:var(--ink-dim);font-size:.8rem;margin-top:2px">יצא שלישי, על סף הכסף · ${heDateShort(bgame.date)}</div>
     </div>`;
   }
+  const mvp = currentMvp();
+  if (mvp) {
+    html += `<h2>MVP של ${esc(heMonth(mvp.month))}</h2>
+    <div class="card felt" style="cursor:pointer" onclick="openProfile('${mvp.pid}')">
+      <div class="row">${avatarHtml(player(mvp.pid), 'big')}
+        <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(pname(mvp.pid))}</div>
+          ${nickLine(mvp.pid)}
+          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">הרווח הגדול של החודש</div></div>
+        <div style="text-align:left">${money(mvp.net)}</div></div>
+    </div>`;
+  }
   if (done.length) {
     const lg = done[0], p = payouts(lg);
+    const champ = !isCash(lg) && lg.results ? lg.results.first : null;
     html += `<h2>המשחק האחרון</h2>
     <div class="card" onclick="go('summary','${lg.id}')" style="cursor:pointer">
-      <div class="row"><div class="grow">
+      <div class="row">${champ ? avatarHtml(player(champ)) : ''}<div class="grow">
         <div style="font-weight:600">${heDate(lg.date)}</div>
         <div class="sub" style="color:var(--ink-dim);font-size:.82rem">${isCash(lg) ? '💵 ערב קאש' : (lg.results.chop ? `🤝 ${esc(pname(lg.results.first))} + ${esc(pname(lg.results.second))}` : `🥇 ${esc(pname(lg.results.first))} · 🥈 ${esc(pname(lg.results.second))}`)}</div>
       </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div>
@@ -1225,6 +1528,15 @@ function home() {
       `<div class="lb"><div class="rank">${['🥇', '🥈', '🥉'][i]}</div>${avatarHtml(player(r.pid))}
        <div class="who"><div>${esc(pname(r.pid))}${mvpBadge(r.pid)}</div>${nickLine(r.pid)}<div class="meta">${r.games} משחקים</div></div>${money(r.net)}</div>`
     ).join('') + `</div>`;
+  }
+  if (isAdmin()) {
+    const noPhoto = S.players.filter(p => p.active !== false && !p.guest && !p.avatar);
+    if (noPhoto.length) {
+      html += `<div class="card" style="cursor:pointer" onclick="go('players')">
+        <div class="row"><div class="grow"><div style="font-weight:600">📷 ${noPhoto.length} שחקנים בלי תמונה</div>
+          <div class="sub" style="color:var(--ink-dim);font-size:.78rem">${esc(noPhoto.slice(0, 4).map(p => p.name).join(', '))}${noPhoto.length > 4 ? ' ועוד' : ''}</div></div>
+          <div style="color:var(--gold)">←</div></div></div>`;
+    }
   }
   if (!done.length && !g) html += `<div class="empty empty-lg">ברוכים הבאים! התחילו משחק חדש,<br>או הוסיפו משחקים ישנים דרך ההיסטוריה 📜</div>`;
   app.innerHTML = html;
@@ -1309,7 +1621,7 @@ function gameView() {
   const p = payouts(g);
   const app = document.getElementById('app');
   app.innerHTML = `
-    <div class="topbar"><h1>משחק פעיל</h1><div class="sub">התחיל ${hhmm(g.startAt)}</div></div>
+    <div class="topbar"><h1>משחק פעיל</h1><div class="sub">התחיל ${hhmm(g.startAt)}<br><span style="font-size:.72rem">${esc(lastTouchLine(g))}</span></div></div>
     <div class="row" style="align-items:stretch;gap:8px;margin-bottom:12px">
       <div class="strip grow" style="margin:0" onclick="go('clock')">
         <div><div class="lvl">${mode === 'break' ? (g.timer.breakMin === 5 ? 'הפסקת סיגריה 🚬' : 'הפסקת אוכל ☕') : mode === 'awaiting' ? 'ההפסקה הסתיימה' : (isCash(g) ? 'סבב ' + (g.timer.round || 1) : 'רמה ' + cur.n) + (g.timer.running ? '' : ' · מושהה ⏸')}</div>
@@ -1317,7 +1629,7 @@ function gameView() {
         <div style="text-align:left"><div class="t num" id="strip-time">--:--</div>
         <div class="lvl">${mode === 'awaiting' ? 'ממתין לאישור' : mode === 'break' ? `נחזור ל${isCash(g) ? 'משחק' : 'רמה ' + cur.n}` : (isCash(g) ? 'בליינדים קבועים' : (nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : ''))}</div></div>
       </div>
-      ${isAdmin() ? (mode === 'level' ? `<div class="break-col">
+      ${canDeal() ? (mode === 'level' ? `<div class="break-col">
         <button class="break-btn" onclick="ckPause()" title="${g.timer.running ? 'השהיית השעון' : 'המשך השעון'}">${g.timer.running ? '⏸' : '▶️'}<b>${g.timer.running ? 'השהיה' : 'המשך'}</b></button>
         <button class="break-btn" onclick="breakUI(15)" title="הפסקת אוכל">☕<b>15</b></button>
         <button class="break-btn" onclick="breakUI(5)" title="הפסקת סיגריה">🚬<b>5</b></button>
@@ -1333,12 +1645,12 @@ function gameView() {
         <div class="name" style="cursor:pointer" onclick="openGamePlayer('${pid}')"><div class="nick">${esc(pname(pid))}${mvpBadge(pid)}${pl && pl.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
           ${nickLine(pid)}
           <div class="meta">${shk(cnt * g.config.entryPrice)} ${maxed ? '<span class="capped">· בתקרה</span>' : ''}</div></div>
-        ${isAdmin() ? `<button class="btn-minus" onclick="addEntry('${pid}',-1)" ${cnt <= 0 ? 'disabled' : ''}>−</button>` : ''}
+        ${canDeal() ? `<button class="btn-minus" onclick="addEntry('${pid}',-1)" ${cnt <= 0 ? 'disabled' : ''} aria-label="ביטול כניסה">−</button>` : ''}
         <div class="cnt num">${cnt}</div>
-        ${isAdmin() ? `<button class="btn-plus" onclick="addEntry('${pid}',1)">+</button>` : ''}
+        ${canDeal() ? `<button class="btn-plus" onclick="addEntry('${pid}',1)" aria-label="הוספת כניסה">+</button>` : ''}
       </div>`;
     }).join('')}
-    ${isAdmin() ? `<button class="btn-ghost" style="width:100%;margin:4px 0 12px" onclick="openAddPlayerToGame()">+ הוספת שחקן באיחור</button>` : ''}
+    ${canDeal() ? `<button class="btn-ghost" style="width:100%;margin:4px 0 12px" onclick="openAddPlayerToGame()">+ הוספת שחקן באיחור</button>` : ''}
     <div class="pool-bar">
       <div><div class="pool">${isCash(g) ? 'על השולחן' : 'קופה'}: ${shk(p.pool)}</div>
       <div class="amounts">${isCash(g)
@@ -1349,19 +1661,31 @@ function gameView() {
   startTick();
 }
 function addEntry(pid, delta) {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const g = activeGame(); if (!g) return;
   const cnt = entriesOf(g, pid);
   if (delta > 0 && g.config.maxRebuys > 0 && cnt >= g.config.maxRebuys + 1) {
     confirmDlg(`⚠️ ${esc(pname(pid))} הגיע לתקרת הרי-באי (${g.config.maxRebuys}).<br>לחרוג מהתקרה?`, () => {
-      g.entries.push({ id: uid(), pid, delta: 1, ts: Date.now(), override: true }); touchGame(g); save(); playClick(); render();
+      pushEntry(g, { id: uid(), pid, delta: 1, ts: Date.now(), override: true });
     });
     return;
   }
   if (delta < 0 && cnt <= 0) return;
-  g.entries.push({ id: uid(), pid, delta, ts: Date.now() }); touchGame(g); save(); playClick();
-  if (delta < 0) toast('כניסה בוטלה ↩');
+  pushEntry(g, { id: uid(), pid, delta, ts: Date.now() });
+}
+// every entry can be taken straight back — a misplaced tap costs one press
+function pushEntry(g, entry) {
+  g.entries.push(entry);
+  touchGame(g); save(); playClick(); vibe(entry.delta > 0 ? 25 : [18, 40, 18]);
   render();
+  const name = pname(entry.pid);
+  toastAction(entry.delta > 0 ? `כניסה נוספה ל${name}` : `כניסה בוטלה ל${name}`, 'ביטול', () => {
+    const cur = activeGame();
+    if (!cur) return;
+    cur.entries = cur.entries.filter(e => e.id !== entry.id);
+    touchGame(cur); save(); render();
+    toast('בוטל ↩');
+  });
 }
 function openGamePlayer(pid) {
   const g = activeGame(); if (!g) return;
@@ -1373,7 +1697,7 @@ function openGamePlayer(pid) {
     <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
 }
 function removeFromGame(pid) {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const g = activeGame(); if (!g) return;
   if (g.playerIds.length <= 2) { toast('צריך לפחות 2 שחקנים במשחק'); return; }
   confirmDlg(`להסיר את ${esc(pname(pid))} מהמשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">כל הכניסות שלו במשחק הזה יימחקו.</span>`, () => {
@@ -1387,7 +1711,7 @@ function removeFromGame(pid) {
   });
 }
 function openAddPlayerToGame() {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const g = activeGame(); if (!g) return;
   const avail = S.players.filter(p => p.active !== false && !g.playerIds.includes(p.id));
   sheet(`<h3>הוספת שחקן</h3>
@@ -1395,7 +1719,7 @@ function openAddPlayerToGame() {
     <div class="chip" onclick="quickAddPlayer('game')">+ שחקן חדש</div></div>`);
 }
 function lateAdd(pid) {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const g = activeGame(); if (!g || g.playerIds.includes(pid)) return;
   g.playerIds.push(pid);
   g.entries.push({ id: uid(), pid, delta: 1, ts: Date.now() });
@@ -1610,6 +1934,7 @@ function finishGame() {
   touchGame(g);
   rememberFinished(g.id);
   saveLocal();
+  playFanfare(); vibe([60, 50, 60, 50, 120]);
   pushState();            // ending a game syncs immediately, no debounce
   closeSheet(); stopTick(); releaseWake();
   go('summary', g.id);
@@ -1676,7 +2001,8 @@ function deleteGame(id) {
     delete g.restoredAt;
     touchGame(g);
     saveLocal(); pushState();
-    go('history'); toast('המשחק נמחק — ניתן לשחזור');
+    go('history');
+    toastAction('המשחק נמחק', 'ביטול', () => restoreGame(id));
   });
 }
 function restoreGame(id) {
@@ -1757,9 +2083,17 @@ async function shareGame(id) {
 /* ---- clock ---- */
 function clockView() {
   const g = activeGame();
-  if (!g) { go('home'); return; }
+  if (!g) {
+    if (!TV_MODE) { go('home'); return; }
+    document.getElementById('clock-root').innerHTML = `<div id="clock" class="tv">
+      <div class="lvl">ערב פוקר</div>
+      <div class="blinds">אין משחק פעיל</div>
+      <div class="next">המסך יתעדכן מעצמו כשהמשחק ייפתח</div></div>`;
+    acquireWake();
+    return;
+  }
   const app = document.getElementById('clock-root');
-  app.innerHTML = `<div id="clock" onclick="toggleCtrls(event)">
+  app.innerHTML = `<div id="clock" class="${TV_MODE ? 'tv' : ''}" onclick="toggleCtrls(event)">
     <div class="flash" id="clock-flash"></div>
     <button class="exit btn-ghost" onclick="event.stopPropagation();go('game')">→ חזרה</button>
     <button class="exit refresh-btn" style="inset-inline-start:auto;inset-inline-end:14px" onclick="event.stopPropagation();doRefresh(event)" title="רענון">${ICONS.refresh}</button>
@@ -1767,13 +2101,16 @@ function clockView() {
     <div class="time num" id="ck-time">--:--</div>
     <div class="blinds" id="ck-blinds"></div>
     <div class="next" id="ck-next"></div>
+    <div class="upnext" id="ck-upnext"></div>
     <div class="roster" id="ck-roster"></div>
     <div class="stats">
       <div><div class="v num" id="ck-players"></div><div class="k">שחקנים</div></div>
       <div><div class="v num" id="ck-entries"></div><div class="k">כניסות</div></div>
       <div><div class="v num" id="ck-pool"></div><div class="k">קופה</div></div>
-      <div><div class="v num" id="ck-chips"></div><div class="k">צ'יפים במשחק</div></div>
+      <div><div class="v num" id="ck-avg"></div><div class="k">צ'יפ ממוצע</div></div>
+      <div><div class="v num" id="ck-elapsed"></div><div class="k">זמן משחק</div></div>
     </div>
+    <div class="panel" id="ck-panel"></div>
     <div class="ctrls" id="ck-ctrls"></div>
   </div>`;
   acquireWake();
@@ -1785,7 +2122,7 @@ function toggleCtrls(e) {
   if (c) { c.classList.toggle('show-ctrls'); ac(); }
 }
 function ckCtrlsHtml(g) {
-  if (!isAdmin()) return '';
+  if (!canDeal() || TV_MODE) return '';
   const m = timerMode(g);
   if (m === 'break' || m === 'awaiting') {
     return `<button class="btn-primary" onclick="event.stopPropagation();resumeUI()">▶️ המשך משחק</button>`;
@@ -1800,7 +2137,7 @@ function ckCtrlsHtml(g) {
     <button onclick="event.stopPropagation();ckJump(1)">רמה הבאה ⏭</button>`;
 }
 function ckPause() {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const g = activeGame(); if (!g) return;
   if (timerMode(g) !== 'level') return;
   g.timer.running ? timerPause(g) : timerResume(g);
@@ -1809,14 +2146,14 @@ function ckPause() {
   if (view === 'clock') updateClock(); else render();
 }
 function breakUI(min) {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const g = activeGame(); if (!g) return;
   startBreak(g, min);
   toast(min === 15 ? 'הפסקת אוכל — 15 דקות ☕' : 'הפסקת סיגריה — 5 דקות 🚬');
   render();
 }
 function resumeUI() {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const g = activeGame(); if (!g) return;
   const tl = buildTimeline(g.config), lvl = levelAt(tl, g.timer.resumeIdx ?? g.timer.idx);
   resumeFromBreak(g);
@@ -1824,9 +2161,9 @@ function resumeUI() {
   render();
 }
 function ckAddMin(delta) {
-  if (!requireAdmin()) return; const g = activeGame(); if (g) { timerAddMinute(g, delta); warned = {}; updateClock(); } }
+  if (!requireDeal()) return; const g = activeGame(); if (g) { timerAddMinute(g, delta); warned = {}; updateClock(); } }
 function ckJump(d) {
-  if (!requireAdmin()) return; const g = activeGame(); if (g) { timerJump(g, d); warned = {}; updateClock(); } }
+  if (!requireDeal()) return; const g = activeGame(); if (g) { timerJump(g, d); warned = {}; updateClock(); } }
 function flashClock() {
   const f = document.getElementById('clock-flash');
   if (f) { f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
@@ -1853,7 +2190,7 @@ function updateClock() {
   } else if (mode === 'awaiting') {
     el('ck-lvl').innerHTML = '<span class="paused-tag">ההפסקה הסתיימה</span>';
     el('ck-blinds').textContent = cur.type === 'level' ? `${cur.sb} / ${cur.bb}` : '☕';
-    el('ck-next').textContent = isAdmin() ? 'ממתין לאישור המנהל — הקישו על המסך' : 'ממתין לאישור המנהל';
+    el('ck-next').textContent = canDeal() && !TV_MODE ? 'ממתין לאישור — הקישו על המסך' : 'ממתין לאישור המנהל';
   } else if (isCash(g)) {
     el('ck-lvl').innerHTML = `💵 קאש · סבב ${t.round || 1}` + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
     el('ck-blinds').textContent = `${CASH_BLINDS[0]} / ${CASH_BLINDS[1]}`;
@@ -1879,12 +2216,67 @@ function updateClock() {
   el('ck-players').textContent = g.playerIds.length;
   el('ck-entries').textContent = totalEntries(g);
   el('ck-pool').textContent = '₪' + poolOf(g).toLocaleString('he-IL');
-  el('ck-chips').textContent = (totalEntries(g) * chipsOf(g)).toLocaleString('he-IL');
+  const avg = g.playerIds.length ? Math.round(totalEntries(g) * chipsOf(g) / g.playerIds.length) : 0;
+  el('ck-avg').textContent = avg.toLocaleString('he-IL');
+  const mins = g.startAt ? Math.max(0, Math.floor((Date.now() - g.startAt) / 60000)) : 0;
+  el('ck-elapsed').textContent = `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')}`;
   const poolLabel = document.querySelector('#clock .stats div:nth-child(3) .k');
   if (poolLabel) poolLabel.textContent = isCash(g) ? 'על השולחן' : 'קופה';
+  // the two levels after this one, so the table can plan a hand ahead
+  const up = el('ck-upnext');
+  if (up) {
+    const rows = isCash(g) ? [] : [tl[lvlIdx + 1], tl[lvlIdx + 2]].filter(Boolean).map((lv, i) =>
+      lv.type === 'break' ? `<span>${i ? 'ואז' : 'הבא'}: <b>הפסקה</b></span>`
+        : `<span>${i ? 'ואז' : 'הבא'}: <b>${lv.sb}/${lv.bb}</b></span>`);
+    const html = rows.join('');
+    if (up.dataset.h !== html) { up.dataset.h = html; up.innerHTML = html; }
+  }
+  updateTvPanel(g);
   // one-minute warning (per round on a cash night)
   const warnKey = isCash(g) ? 'r' + (t.round || 1) : t.idx;
   if (mode === 'level' && t.running && rem <= 60000 && rem > 0 && !warned[warnKey]) { warned[warnKey] = true; playWarn(); }
+}
+
+/* ---- the rotating panel: dead screen time turned into something to read ---- */
+const TV_PANEL_MS = 12000;
+function tvPanels(g) {
+  const out = [];
+  const p = payouts(g);
+  if (!isCash(g)) out.push(`🥇 <b>₪${p.first.toLocaleString('he-IL')}</b> &nbsp; 🥈 <b>₪${p.second.toLocaleString('he-IL')}</b>`);
+  else out.push(`🏠 דמי בית: <b>₪${p.houseFees.toLocaleString('he-IL')}</b>`);
+  // these hold from the first night, so the panel always has somewhere to go
+  out.push(`🎲 <b>${(totalEntries(g) * chipsOf(g)).toLocaleString('he-IL')}</b> צ'יפים על השולחן`);
+  out.push(isCash(g)
+    ? `⏱ סבב של <b>${g.config.levelMinutes}</b> דקות · בליינדים קבועים <b>10/20</b>`
+    : `⏱ <b>${g.config.levelMinutes}</b> דקות לרמה · <b>${(g.config.ladder || LADDER).length}</b> רמות בסולם`);
+  const lead = g.playerIds.map(pid => ({ pid, n: entriesOf(g, pid) })).sort((a, b) => b.n - a.n)[0];
+  if (lead && lead.n > 1) out.push(`הכי הרבה כניסות הערב: <b>${esc(pname(lead.pid))}</b> (${lead.n})`);
+  const mvp = currentMvp();
+  if (mvp) out.push(`👑 MVP ${esc(heMonth(mvp.month))}: <b>${esc(pname(mvp.pid))}</b>`);
+  const lastBubble = liveGames()
+    .filter(x => x.status === 'done' && !isCash(x) && x.results && x.results.bubble)
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id))[0];
+  if (lastBubble) out.push(`🎈 הבאבל בוי האחרון: <b>${esc(pname(lastBubble.results.bubble))}</b>`);
+  const top = leaderboard(seasonGames())[0];
+  if (top) {
+    const label = S.settings.seasonName ? esc(S.settings.seasonName) : 'הטבלה';
+    out.push(`🏆 מוביל ${label} — <b>${esc(pname(top.pid))}</b> &nbsp; <bdi>${top.net > 0 ? '‎+' : top.net < 0 ? '‎−' : ''}₪${Math.abs(top.net).toLocaleString('he-IL')}</bdi>`);
+  }
+  return out;
+}
+function updateTvPanel(g) {
+  const el = document.getElementById('ck-panel');
+  if (!el) return;
+  const panels = tvPanels(g);
+  if (!panels.length) { el.innerHTML = ''; return; }
+  const i = Math.floor(Date.now() / TV_PANEL_MS) % panels.length;
+  if (el.dataset.i === String(i)) return;
+  el.dataset.i = String(i);
+  el.classList.add('fade');
+  setTimeout(() => {
+    el.innerHTML = panels[i];
+    el.classList.remove('fade');
+  }, el.innerHTML ? 320 : 0);
 }
 
 /* tick loop */
@@ -1893,7 +2285,7 @@ function startTick() {
   if (tickId) return;
   tickId = setInterval(() => {
     const g = activeGame();
-    if (!g) { stopTick(); return; }
+    if (!g) { if (!TV_MODE) stopTick(); return; }
     if (view === 'clock') {
       const wasMode = timerMode(g);
       updateClock();
@@ -1924,12 +2316,14 @@ function playersView() {
     <div class="topbar"><h1>שחקנים</h1>${isAdmin() ? `<button class="btn-primary" onclick="quickAddPlayer()">+ שחקן</button>` : ''}</div>
     ${act.length ? `<div class="card">` + act.map(p => {
       const s = st[p.id];
-      return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p)}
+      const sk = streakOf(p.id);
+      return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p, isAdmin() && !p.avatar ? 'no-photo' : '')}
       <div class="who"><div>${esc(p.name)}${mvpBadge(p.id)}</div>
       ${nickLine(p.id)}
-      <div class="meta">${s ? s.games + ' משחקים' : 'עוד לא שיחק'}</div></div>
+      <div class="meta">${s ? s.games + ' משחקים' : 'עוד לא שיחק'}${sk && sk.n >= 2 ? (sk.hot ? ` · 🔥 ${sk.n} ברצף בכסף` : ` · ${sk.n} ברצף בלי כסף`) : ''}</div></div>
       ${s ? money(s.net) : ''}</div>`;
     }).join('') + `</div>` : `<div class="empty empty-lg">אין שחקנים עדיין — הוסיפו את החברים</div>`}
+    ${isAdmin() && act.some(p => !p.avatar) ? `<div class="empty" style="padding:8px 0 0;font-size:.76rem">📷 הקישו על שחקן כדי להוסיף לו תמונה — הטבלה נראית הרבה יותר טוב עם פרצופים.</div>` : ''}
     ${guests.length ? `<h2>אורחים</h2><div class="card">` + guests.map(p => {
       const s = st[p.id];
       return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p)}
@@ -1942,7 +2336,7 @@ function playersView() {
       `<div class="lb" style="cursor:pointer;opacity:.55" onclick="openProfile('${p.id}')">${avatarHtml(p)}<div class="who"><div>${esc(p.name)}</div>${nickLine(p.id)}</div></div>`).join('') + `</div>` : ''}`;
 }
 function quickAddPlayer(ctx) {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   npGuest = false;
   sheet(`<h3>שחקן חדש</h3>
     <label class="field"><span>שם</span><input type="text" id="np-name" autocomplete="off"></label>
@@ -1963,7 +2357,7 @@ function setNpGuest(v) {
   chips[1].classList.toggle('on', v);
 }
 function saveNewPlayer(ctx) {
-  if (!requireAdmin()) return;
+  if (!requireDeal()) return;
   const name = document.getElementById('np-name').value.trim();
   const nick = document.getElementById('np-nick').value.trim();
   if (!name) { toast('צריך שם 🙂'); return; }
@@ -2001,6 +2395,25 @@ function openProfile(pid) {
       <tr><td><b>רווח / הפסד כולל</b></td><td>${money(s.net)}</td></tr>
       ${mvpTitles(pid) ? `<tr><td>👑 תארי MVP חודשיים</td><td class="num">${mvpTitles(pid)}</td></tr>` : ''}
     </table></div>` : '<div class="empty">עוד לא שיחק</div>';
+  const itm = s ? s.firsts + s.seconds : 0;
+  const kpiHtml = s ? `<div class="card kpis" style="margin-bottom:14px">
+      <div><div class="v num">${s.games}</div><div class="k">משחקים</div></div>
+      <div><div class="v num">${Math.round(itm / s.games * 100)}%</div><div class="k">סיומים בכסף</div></div>
+      <div><div class="v">${money(Math.round(s.net / s.games))}</div><div class="k">ממוצע לערב</div></div>
+    </div>` : '';
+  const st = streakTag(pid);
+  const streakHtml = st ? `<div style="text-align:center;margin-bottom:14px">${st}</div>` : '';
+  const cum = hist.slice().reverse().reduce((a, h) => { a.push((a[a.length - 1] || 0) + h.net); return a; }, []);
+  const chartHtml = cum.length >= 2 ? `<h2>רווח מצטבר</h2>
+    <div class="card" style="margin-bottom:14px">
+      ${sparkHtml(cum)}
+      <div class="row" style="direction:ltr;justify-content:space-between;font-size:.68rem;color:var(--ink-dim);margin-top:2px">
+        <span>${heDateShort(hist[hist.length - 1].date)}</span>
+        <span>${money(cum[cum.length - 1])}</span>
+        <span>${heDateShort(hist[0].date)}</span>
+      </div>
+    </div>` : '';
+  const h2hHtml = s && s.games ? `<button class="btn-ghost" style="width:100%;margin-bottom:14px" onclick="openH2H('${pid}')">⚔️ השוואה מול שחקן אחר</button>` : '';
   const cs = cashStats(pid);
   const cashHtml = cs.games ? `<div class="card" style="margin-bottom:14px"><table class="sheet">
       <tr><td>💵 ערבי קאש</td><td class="num">${cs.games}</td></tr>
@@ -2034,7 +2447,11 @@ function openProfile(pid) {
         <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(p.name)}${mvpBadge(p.id)}${p.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
         ${nickLine(p.id)}</div></div>
       ${mvpHtml}
+      ${streakHtml}
+      ${kpiHtml}
       ${statsHtml}
+      ${chartHtml}
+      ${h2hHtml}
       ${cashHtml}
       ${histHtml}
       ${wallHtml}`);
@@ -2055,7 +2472,11 @@ function openProfile(pid) {
       <div class="chip ${p.guest ? 'on' : ''}" onclick="setPlayerGuest('${pid}',true)">אורח</div>
     </div>
     ${mvpHtml}
+    ${streakHtml}
+    ${kpiHtml}
     ${statsHtml}
+    ${chartHtml}
+    ${h2hHtml}
     ${cashHtml}
     ${histHtml}
     ${wallHtml}
@@ -2063,6 +2484,36 @@ function openProfile(pid) {
     <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="togglePlayerActive('${pid}')">${p.active !== false ? 'העברה ללא פעילים' : 'החזרה לפעילים'}</button>
     ${!s ? `<button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deletePlayer('${pid}')">מחיקת השחקן</button>` : ''}`);
   renderWall(pid); pullComments(pid);
+}
+function openH2H(pid) {
+  const others = S.players.filter(p => p.id !== pid && allStats()[p.id]);
+  sheet(`<h3>⚔️ ${esc(pname(pid))} מול…</h3>
+    <div class="chips">${others.map(p => `<div class="chip" onclick="showH2H('${pid}','${p.id}')">${chipLabel(p)}</div>`).join('')
+      || '<div class="empty">אין עדיין שחקנים אחרים עם משחקים</div>'}</div>
+    <button class="btn-ghost" style="width:100%;margin-top:12px" onclick="closeSheet();openProfile('${pid}')">חזרה לפרופיל</button>`);
+}
+function showH2H(a, b) {
+  const h = headToHead(a, b);
+  const lead = h.aWins === h.bWins ? 'תיקו' : `${pname(h.aWins > h.bWins ? a : b)} מוביל`;
+  sheet(`<h3>⚔️ ראש בראש</h3>
+    <div class="card felt" style="margin-bottom:14px">
+      <div class="row" style="align-items:center">
+        <div style="flex:1;text-align:center">${avatarHtml(player(a), 'big')}
+          <div style="font-weight:700;margin-top:6px">${esc(pname(a))}</div></div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--gold);direction:ltr">${h.aWins} : ${h.bWins}</div>
+        <div style="flex:1;text-align:center">${avatarHtml(player(b), 'big')}
+          <div style="font-weight:700;margin-top:6px">${esc(pname(b))}</div></div>
+      </div>
+      <div style="text-align:center;color:var(--ink-dim);font-size:.8rem;margin-top:10px">
+        ${h.games ? `${h.games} ערבים משותפים · ${esc(lead)}` : 'עוד לא שיחקו יחד'}</div>
+    </div>
+    ${h.games ? `<div class="card"><table class="sheet">
+      <tr><th>&nbsp;</th><th>${esc(pname(a))}</th><th>${esc(pname(b))}</th></tr>
+      <tr><td>ערבים שסיים לפני השני</td><td class="num">${h.aWins}</td><td class="num">${h.bWins}</td></tr>
+      <tr><td>מאזן בערבים המשותפים</td><td>${money(h.aNet)}</td><td>${money(h.bNet)}</td></tr>
+    </table></div>` : ''}
+    <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="openH2H('${a}')">שחקן אחר</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet();openProfile('${a}')">חזרה לפרופיל</button>`);
 }
 function setPlayerGuest(pid, v) {
   if (!requireAdmin()) return;
@@ -2112,10 +2563,72 @@ function pickAvatar(pid) {
   inp.click();
 }
 
+/* ---- seasons ----
+   A season is just a start date: everything played on or after it counts. When
+   a new one opens the old one is archived with its champion, so the all-time
+   table keeps growing while the league still gets a fresh race. ---- */
+const seasonStart = () => S.settings.seasonStart || null;
+const seasonName = () => S.settings.seasonName || 'העונה הנוכחית';
+const inSeason = g => !seasonStart() || (g.date || '') >= seasonStart();
+const seasonGames = () => liveGames().filter(inSeason);
+const seasonsDone = () => (S.seasons || []).slice().sort((a, b) => (b.start || '').localeCompare(a.start || ''));
+function closeSeason(name, nextName) {
+  const games = seasonGames().filter(g => g.status === 'done' && !isCash(g));
+  const lb = leaderboard(seasonGames());
+  const champ = lb[0] || null;
+  const rec = {
+    id: uid(), name: name || seasonName(),
+    start: seasonStart() || (games[0] && games[0].date) || new Date().toISOString().slice(0, 10),
+    end: new Date().toISOString().slice(0, 10),
+    championPid: champ ? champ.pid : null, net: champ ? champ.net : 0,
+    games: games.length, updatedAt: Date.now(),
+  };
+  S.seasons = (S.seasons || []).concat([rec]);
+  S.settings.seasonStart = new Date().toISOString().slice(0, 10);
+  S.settings.seasonName = nextName || '';
+  S.settings.updatedAt = Date.now();
+  save();
+  return rec;
+}
+
+/* ---- streaks: how the last few nights went, newest first ---- */
+function streakOf(pid) {
+  const gs = liveGames()
+    .filter(g => g.status === 'done' && !isCash(g) && g.playerIds.includes(pid) && g.results)
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  if (!gs.length) return null;
+  const itm = g => g.results.first === pid || g.results.second === pid;
+  const hot = itm(gs[0]);
+  let n = 0;
+  for (const g of gs) { if (itm(g) === hot) n++; else break; }
+  return { hot, n };
+}
+const streakTag = pid => {
+  const s = streakOf(pid);
+  if (!s || s.n < 2) return '';
+  return s.hot
+    ? `<span class="streak-tag">🔥 ${s.n} ערבים ברצף בכסף</span>`
+    : `<span class="streak-tag cold">${s.n} ערבים ברצף בלי כסף</span>`;
+};
+
+/* ---- head to head ---- */
+function headToHead(a, b) {
+  const shared = liveGames().filter(g => g.status === 'done' && !isCash(g)
+    && g.playerIds.includes(a) && g.playerIds.includes(b));
+  let aWins = 0, bWins = 0, aNet = 0, bNet = 0;
+  for (const g of shared) {
+    const p = payouts(g);
+    aNet += p.nets[a]; bNet += p.nets[b];
+    if (p.nets[a] > p.nets[b]) aWins++;
+    else if (p.nets[b] > p.nets[a]) bWins++;
+  }
+  return { games: shared.length, aWins, bWins, aNet, bNet };
+}
+
 /* ---- stats ---- */
-function allStats() {
+function allStats(list) {
   const st = {};
-  for (const g of liveGames()) {
+  for (const g of (list || liveGames())) {
     if (g.status !== 'done' || isCash(g)) continue;   // cash nights stay out of the table
     const p = payouts(g);
     for (const pid of g.playerIds) {
@@ -2130,13 +2643,42 @@ function allStats() {
   }
   return st;
 }
-function leaderboard() { return Object.values(allStats()).sort((a, b) => b.net - a.net); }
+function leaderboard(list) { return Object.values(allStats(list)).sort((a, b) => b.net - a.net); }
+
+/* ---- cumulative profit sparkline ---- */
+function sparkHtml(vals) {
+  if (!vals || vals.length < 2) return '';
+  const W = 300, H = 92, PAD = 8;
+  const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
+  const span = (max - min) || 1;
+  const x = i => PAD + i * (W - 2 * PAD) / (vals.length - 1);
+  const y = v => PAD + (max - v) / span * (H - 2 * PAD);
+  const d = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const zy = y(0).toFixed(1);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <line class="zero" x1="0" y1="${zy}" x2="${W}" y2="${zy}" vector-effect="non-scaling-stroke"/>
+    <path class="line" d="${d}" vector-effect="non-scaling-stroke"/>
+    <circle class="dot" cx="${x(vals.length - 1).toFixed(1)}" cy="${y(vals[vals.length - 1]).toFixed(1)}" r="3.6"/>
+  </svg>`;
+}
+let statsMode = null;   // 'season' | 'all'
 function statsView() {
   const app = document.getElementById('app');
-  const lb = leaderboard();
-  const gamesCount = liveGames().filter(g => g.status === 'done').length;
+  const hasSeason = !!seasonStart();
+  if (statsMode === null) statsMode = hasSeason ? 'season' : 'all';
+  if (!hasSeason) statsMode = 'all';
+  const list = statsMode === 'season' ? seasonGames() : liveGames();
+  const lb = leaderboard(list);
+  const gamesCount = list.filter(g => g.status === 'done' && !isCash(g)).length;
+  const past = seasonsDone();
   app.innerHTML = `
-    <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.stats}</span> טבלת כל הזמנים</h1><div class="sub">${gamesCount} משחקים</div></div>
+    <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.stats}</span> טבלה</h1>
+      <div class="sub">${gamesCount} משחקים</div></div>
+    ${hasSeason ? `<div class="tabs">
+      <div class="tab ${statsMode === 'season' ? 'on' : ''}" onclick="setStatsMode('season')">${esc(seasonName())}</div>
+      <div class="tab ${statsMode === 'all' ? 'on' : ''}" onclick="setStatsMode('all')">כל הזמנים</div>
+    </div>
+    ${statsMode === 'season' ? `<div class="empty" style="padding:0 0 10px;font-size:.74rem;text-align:right">מ-${heDateShort(seasonStart())} והלאה.</div>` : ''}` : ''}
     ${lb.length ? `<div class="card">` + lb.map((r, i) =>
       `<div class="lb" style="cursor:pointer" onclick="openProfile('${r.pid}')">
         <div class="rank">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</div>
@@ -2145,8 +2687,14 @@ function statsView() {
         ${nickLine(r.pid)}
         <div class="meta">${r.games} משחקים · ${r.firsts}🥇 ${r.seconds}🥈${r.bubbles ? ' ' + r.bubbles + '🎈' : ''} · שיא ${money(r.best === -Infinity ? 0 : r.best)}</div></div>
         ${money(r.net)}</div>`).join('') + `</div>`
-      : `<div class="empty empty-lg">אין עדיין נתונים.<br>שחקו משחק או הוסיפו משחקים ישנים בהיסטוריה 📜</div>`}`;
+      : `<div class="empty empty-lg">אין עדיין נתונים${statsMode === 'season' ? ' בעונה הזאת' : ''}.<br>שחקו משחק או הוסיפו משחקים ישנים בהיסטוריה 📜</div>`}
+    ${past.length ? `<h2>אלופי העונות</h2><div class="card">` + past.map(s =>
+      `<div class="lb">${s.championPid ? avatarHtml(player(s.championPid)) : '<div class="rank">🏆</div>'}
+        <div class="who"><div>${esc(s.name || 'עונה')} 🏆</div>
+        <div class="meta">${s.championPid ? esc(pname(s.championPid)) : 'ללא אלוף'} · ${s.games} משחקים · ${heDateShort(s.start)}–${heDateShort(s.end)}</div></div>
+        ${money(s.net || 0)}</div>`).join('') + `</div>` : ''}`;
 }
+function setStatsMode(m) { statsMode = m; render(); }
 
 /* ---- history + manual ---- */
 function historyView() {
@@ -2392,7 +2940,7 @@ function settingsView() {
     <h2>חשבון</h2>
     <div class="card">
       <div class="row">
-        <div class="grow">מחובר: <b>${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name)}</b>
+        <div class="grow">מחובר: <b>${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : isDealer() ? `🃏 ${esc(SESSION.name)} · דילר` : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name)}</b>
         <div id="sync-badge" style="font-size:.75rem;color:var(--ink-dim);margin-top:2px">${syncBadgeText()}</div></div>
         <button onclick="logout()">התנתקות</button>
       </div>
@@ -2401,7 +2949,9 @@ function settingsView() {
     app.innerHTML = `
       <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.settings}</span> הגדרות</h1></div>
       ${sessionCard}
-      <div class="empty">שינוי הגדרות, פתיחת משחקים והוספת משחקים —<br>למנהל בלבד 🔒<br><br>כדי להתחבר כמנהל, התנתקו ובחרו «מנהל» במסך הכניסה.</div>`;
+      <div class="empty">${isDealer()
+        ? 'כדילר אפשר להוסיף כניסות, לצרף שחקנים ולהפעיל את השעון.<br>סיום משחק, עריכה, מחיקה והגדרות — למנהל בלבד 🔒'
+        : 'שינוי הגדרות, פתיחת משחקים והוספת משחקים —<br>למנהל בלבד 🔒<br><br>כדי להתחבר כמנהל, התנתקו ובחרו «מנהל» במסך הכניסה.'}</div>`;
     return;
   }
   app.innerHTML = `
@@ -2448,6 +2998,7 @@ function settingsView() {
       <div class="row" style="margin-top:4px">
         <div class="chip ${s.sound ? 'on' : ''}" onclick="S.settings.sound=!S.settings.sound;save();render()">🔔 צלילים</div>
         <div class="chip ${s.voice ? 'on' : ''}" onclick="S.settings.voice=!S.settings.voice;save();render()">🗣 הכרזה קולית</div>
+        <div class="chip ${s.haptics !== false ? 'on' : ''}" onclick="S.settings.haptics=!(S.settings.haptics!==false);save();render()">📳 רטט</div>
       </div>
       <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
         סולם בליינדים: 10/20 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← 200/400 ← 300/600 ← 400/800 ← 500/1000 ← 750/1500 ← 1000/2000 ← 1500/3000 ← 2000/4000 ← 3000/6000 ← 4000/8000 ← 5000/10000 (אחרונה). כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
@@ -2461,13 +3012,36 @@ function settingsView() {
       <div class="empty" style="padding:8px 0 0;font-size:.76rem;text-align:right">נצבר מכל המשחקים — ${shk(s.savingsFee)} מכל שחקן בערב, לציוד, בלאי ותיקונים.<br>כסף החיסכון נפרד לחלוטין מכספי הבית.</div>
     </div>
 
-    <h2>גיבוי</h2>
+    <h2>🃏 קוד דילר</h2>
+    <div class="card">
+      <div id="dealer-code" style="font-size:1.35rem;font-weight:700;color:var(--gold);direction:ltr;text-align:center;letter-spacing:.14em;font-family:'Frank Ruhl Libre',serif">·····</div>
+      <div class="row" style="margin-top:12px">
+        <button class="grow" onclick="copyDealerCode()">📋 העתקה</button>
+        <button class="grow" onclick="shareDealerCode()">שיתוף</button>
+      </div>
+      <div class="empty" style="padding:10px 0 0;font-size:.76rem;text-align:right">מי שנכנס עם הקוד הזה יכול להוסיף כניסות, לצרף שחקנים ולהפעיל את השעון — ותו לא. הוא לא יכול לסיים משחק, למחוק, לערוך או לשנות הגדרות, והשרת חוסם אותו גם אם ינסה.<br>הקוד נגזר מהסיסמה שלכם: שינוי הסיסמה מחליף אותו.</div>
+    </div>
+
+    <h2>🏆 עונה</h2>
+    <div class="card">
+      <div class="row"><div class="grow">
+        <div style="font-weight:700">${seasonStart() ? esc(seasonName()) : 'אין עונה פתוחה'}</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.78rem">${seasonStart()
+          ? `מ-${heDateShort(seasonStart())} · ${seasonGames().filter(g => g.status === 'done' && !isCash(g)).length} משחקים`
+          : 'הטבלה מציגה כרגע רק את כל הזמנים'}</div>
+      </div></div>
+      <button class="btn-ghost" style="width:100%;margin-top:12px" onclick="newSeasonDlg()">${seasonStart() ? 'סגירת העונה ופתיחת חדשה' : 'פתיחת עונה חדשה'}</button>
+      ${seasonsDone().length ? `<div class="empty" style="padding:10px 0 0;font-size:.76rem;text-align:right">${seasonsDone().length} עונות סגורות — האלופים מוצגים בתחתית הטבלה.</div>` : ''}
+    </div>
+
+    <h2>גיבוי וייצוא</h2>
     <div class="card">
       <div class="row">
         <button class="grow" onclick="exportBackup()">⬇️ ייצוא גיבוי</button>
         <button class="grow" onclick="importBackup()">⬆️ שחזור מגיבוי</button>
       </div>
-      <div class="empty" style="padding:10px 0 0;font-size:.78rem">הנתונים נשמרים במכשיר הזה. מומלץ לייצא גיבוי מדי פעם.</div>
+      <button style="width:100%;margin-top:8px" onclick="exportCsv()">📊 ייצוא לאקסל (CSV)</button>
+      <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">גיבוי JSON מחזיר את הכול בדיוק כפי שהוא. קובץ ה-CSV נותן שורה לכל שחקן בכל משחק — נוח לגיליון.<br>הנתונים נשמרים במכשיר ובענן; כדאי לייצא גיבוי מדי פעם.</div>
     </div>
     <div class="card">
       <button class="btn-ghost btn-danger" style="width:100%" onclick="wipeAll()">🗑 מחיקת כל הנתונים</button>
@@ -2490,6 +3064,83 @@ function saveSettings() {
   });
   S.settings.updatedAt = Date.now();
   save(); toast('ההגדרות נשמרו ✔ (יחולו ממשחק חדש)');
+}
+function settingsExtras() {
+  const el = document.getElementById('dealer-code');
+  if (!el || !isAdmin() || !SESSION.key) return;
+  dealerCodeFor(SESSION.key).then(c => { el.textContent = prettyCode(c); }).catch(() => {});
+}
+async function copyDealerCode() {
+  if (!requireAdmin()) return;
+  const code = prettyCode(await dealerCodeFor(SESSION.key));
+  try { await navigator.clipboard.writeText(code); toast('הקוד הועתק 📋'); }
+  catch (e) { toast(code); }
+}
+async function shareDealerCode() {
+  if (!requireAdmin()) return;
+  const code = prettyCode(await dealerCodeFor(SESSION.key));
+  const text = `קוד דילר לערב פוקר: ${code}\nנכנסים באפליקציה דרך «דילר» במסך הכניסה.`;
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+function newSeasonDlg() {
+  if (!requireAdmin()) return;
+  const open = !!seasonStart();
+  sheet(`<h3>🏆 ${open ? 'סגירת עונה ופתיחת חדשה' : 'פתיחת עונה'}</h3>
+    ${open ? `<label class="field"><span>שם העונה שנסגרת</span><input type="text" id="se-old" value="${esc(seasonName())}"></label>` : ''}
+    <label class="field"><span>שם העונה החדשה</span><input type="text" id="se-new" placeholder="לדוגמה: עונה 2026"></label>
+    <div class="empty" style="padding:0 0 12px;font-size:.78rem;text-align:right">${open
+      ? 'העונה הנוכחית נסגרת עם האלוף שלה ונשמרת ברשימת האלופים. מהיום מתחילה ספירה חדשה.'
+      : 'מהיום מתחילה ספירת עונה. טבלת כל הזמנים לא משתנה — פשוט נוספת לה לשונית.'}</div>
+    <button class="btn-primary btn-big" onclick="startSeason()">${open ? 'סגירה ופתיחה' : 'פתיחת עונה'}</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+  setTimeout(() => document.getElementById('se-new')?.focus(), 60);
+}
+function startSeason() {
+  if (!requireAdmin()) return;
+  const newName = (document.getElementById('se-new').value || '').trim();
+  const oldEl = document.getElementById('se-old');
+  if (seasonStart()) {
+    const rec = closeSeason((oldEl && oldEl.value.trim()) || seasonName(), newName);
+    closeSheet(); statsMode = 'season'; render();
+    toast(rec.championPid ? `אלוף ${rec.name}: ${pname(rec.championPid)} 🏆` : 'העונה נסגרה');
+    return;
+  }
+  S.settings.seasonStart = new Date().toISOString().slice(0, 10);
+  S.settings.seasonName = newName || 'עונה חדשה';
+  S.settings.updatedAt = Date.now();
+  save(); closeSheet(); statsMode = 'season'; render(); toast('העונה נפתחה 🏆');
+}
+function downloadFile(name, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+// one row per player per night — the shape a spreadsheet actually wants
+function exportCsv() {
+  const rows = [['תאריך', 'סוג', 'שחקן', 'כינוי', 'כניסות', 'שולם', 'זכייה', 'מאזן', 'סיום']];
+  const games = liveGames().filter(g => g.status === 'done')
+    .sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+  for (const g of games) {
+    const p = payouts(g);
+    for (const pid of g.playerIds) {
+      const cash = isCash(g);
+      const place = cash ? ''
+        : g.results.first === pid ? (g.results.chop ? 'צ׳ופ' : '1')
+        : g.results.second === pid ? (g.results.chop ? 'צ׳ופ' : '2')
+        : g.results.bubble === pid ? 'באבל בוי' : '';
+      const win = cash ? (Number((g.results.cashouts || {})[pid]) || 0)
+        : ((g.results.first === pid ? p.first : 0) + (g.results.second === pid ? p.second : 0));
+      const paid = entriesOf(g, pid) * g.config.entryPrice + (g.config.houseFee || 0) + (cash ? 0 : savingsFeeOf(g.config));
+      rows.push([g.date, cash ? 'קאש' : 'טורניר', pname(pid), pnick(pid) || '',
+                 entriesOf(g, pid), paid, win, p.nets[pid], place]);
+    }
+  }
+  const csv = '\ufeff' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  downloadFile(`pokernight-${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv;charset=utf-8');
+  toast(`יוצאו ${rows.length - 1} שורות ✔`);
 }
 function exportBackup() {
   const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
@@ -2555,7 +3206,17 @@ function confirmDlg(msg, onYes) {
 
 /* ================= boot ================= */
 window.addEventListener('load', () => {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('service-worker.js').then(reg => {
+    if (!reg) return;
+    // a build already sitting in the wings, or one that lands while we watch
+    const watch = w => w && w.addEventListener('statechange', () => {
+      if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdateBar('יש גרסה חדשה של האפליקציה');
+    });
+    if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar('יש גרסה חדשה של האפליקציה');
+    reg.addEventListener('updatefound', () => watch(reg.installing));
+    setInterval(() => reg.update().catch(() => {}), 300000);
+  }).catch(() => {});
 });
 const _g = activeGame();
 if (_g) {
@@ -2566,8 +3227,9 @@ if (_g) {
     if (last && (last.v === 'clock' || last.v === 'game')) { view = last.v; viewParam = last.param ?? null; }
   } catch (e) {}
 }
+if (TV_MODE) { view = 'clock'; viewParam = null; document.getElementById('nav').hidden = true; }
 render();
-if (_g) startTick();
+if (_g || TV_MODE) startTick();
 acquireWake();
 if (SESSION) pullState();
 </script>

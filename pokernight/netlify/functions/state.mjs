@@ -1,14 +1,20 @@
 import { getStore } from '@netlify/blobs';
 import { timingSafeEqual } from 'node:crypto';
+import { applyDealerWrite, dealerCode } from '../lib/dealer.mjs';
 
 const KEY = 'state';
+function eq(a, b) {
+  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && timingSafeEqual(x, y);
+}
 
-function keyOk(req) {
+function roleOf(req) {
   const given = req.headers.get('x-admin-key') || '';
   const expected = process.env.ADMIN_PASSWORD || '';
-  if (!expected) return false;
-  const a = Buffer.from(given), b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  if (!expected) return null;
+  if (eq(given, expected)) return 'admin';
+  if (eq(given.toLowerCase(), dealerCode(expected))) return 'dealer';
+  return null;
 }
 
 export default async (req) => {
@@ -16,20 +22,21 @@ export default async (req) => {
 
   if (req.method === 'GET') {
     const raw = await store.get(KEY);
-    const state = raw ? JSON.parse(raw) : { version: 0, updatedAt: null, data: null };
+    const state = raw ? JSON.parse(raw) : { version: 0, updatedAt: null, build: 0, data: null };
     return Response.json(state, { headers: { 'cache-control': 'no-store' } });
   }
 
   if (req.method === 'POST') {
-    if (!keyOk(req)) return new Response('unauthorized', { status: 401 });
+    const role = roleOf(req);
+    if (!role) return new Response('unauthorized', { status: 401 });
     const body = await req.json();
-    if (body.verify) return Response.json({ ok: true });
+    if (body.verify) return Response.json({ ok: true, role });
     if (!body.data || !Array.isArray(body.data.players) || !Array.isArray(body.data.games)) {
       return new Response('bad request', { status: 400 });
     }
 
     const raw = await store.get(KEY);
-    const cur = raw ? JSON.parse(raw) : { version: 0, updatedAt: null, data: null };
+    const cur = raw ? JSON.parse(raw) : { version: 0, updatedAt: null, build: 0, data: null };
 
     // A client that does not declare which version it edited cannot be trusted
     // not to clobber newer work — that is how a finished game lost its results.
@@ -51,13 +58,29 @@ export default async (req) => {
       );
     }
 
+    let data;
+    if (role === 'dealer') {
+      // nothing to run the table on yet — a dealer cannot seed the cloud
+      if (!cur.data) return new Response('forbidden', { status: 403 });
+      data = applyDealerWrite(cur.data, body.data);
+    } else {
+      data = {
+        players: body.data.players,
+        games: body.data.games,
+        seasons: Array.isArray(body.data.seasons) ? body.data.seasons : (cur.data && cur.data.seasons) || [],
+        settings: body.data.settings || {},
+      };
+    }
+
     const next = {
       version: (cur.version || 0) + 1,
       updatedAt: Date.now(),
-      data: { players: body.data.players, games: body.data.games, settings: body.data.settings || {} },
+      // highest build seen, so a device on an older one knows to refresh
+      build: Math.max(cur.build || 0, Number(body.build) || 0),
+      data,
     };
     await store.set(KEY, JSON.stringify(next));
-    return Response.json({ version: next.version }, { headers: { 'cache-control': 'no-store' } });
+    return Response.json({ version: next.version, role }, { headers: { 'cache-control': 'no-store' } });
   }
 
   return new Response('method not allowed', { status: 405 });
