@@ -52,8 +52,8 @@ const EXPECTED = [
   });
   await p.locator('nav button', { hasText: 'בית' }).click();
   await p.locator('button', { hasText: 'משחק חדש' }).click(); await p.waitForTimeout(200);
-  for (const n of ['א','ב','ג']) await p.locator('.chip', { hasText: n }).click();
-  await p.locator('button', { hasText: 'התחלת משחק' }).click(); await p.waitForTimeout(300);
+  for (const n of ['א','ב','ג']) await p.locator('#ng-chips .chip', { hasText: n }).click();
+  await p.locator('button', { hasText: 'התחלת' }).click(); await p.waitForTimeout(300);
 
   ok('a new game pins the full ladder',
      await p.evaluate(n => activeGame().config.ladder.length === n, EXPECTED.length));
