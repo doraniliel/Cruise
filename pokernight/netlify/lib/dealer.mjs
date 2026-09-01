@@ -1,6 +1,6 @@
 // Shared between the state function and its tests, so what the tests prove is
 // the same code the server runs.
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const DEALER_CODE_LEN = 12;
 
@@ -8,6 +8,21 @@ export const DEALER_CODE_LEN = 12;
 // can hand one out without ever revealing the password itself.
 export const dealerCode = pass =>
   createHash('sha256').update('pn-dealer|' + pass).digest('hex').slice(0, DEALER_CODE_LEN);
+
+// constant-time compare that tolerates different lengths
+export function eq(a, b) {
+  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && timingSafeEqual(x, y);
+}
+
+export function roleOfKey(given) {
+  const expected = process.env.ADMIN_PASSWORD || '';
+  if (!expected) return null;
+  if (eq(given, expected)) return 'admin';
+  if (eq(String(given || '').toLowerCase(), dealerCode(expected))) return 'dealer';
+  return null;
+}
+export const roleOf = req => roleOfKey(req.headers.get('x-admin-key') || '');
 
 /* ---- what a dealer is allowed to change ----
    Running the table: entries, who is sitting, and the clock — on a game that

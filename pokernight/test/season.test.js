@@ -147,6 +147,59 @@ const mk = (id, date, first, second, third) => ({
 
   ok('seasons reached the cloud', ((cloud.data.seasons || []).length) === 1);
 
+  /* ---- backdating, so nights already played can count ---- */
+  await p.evaluate(() => {
+    S.settings.seasonStart = null; S.settings.seasonName = ''; S.seasons = [];
+    S.settings.updatedAt = Date.now(); save(); statsMode = null; go('settings');
+  });
+  await p.waitForTimeout(600);
+  await p.locator('button', { hasText: 'פתיחת עונה חדשה' }).click(); await p.waitForTimeout(400);
+  ok('the dialog asks for a start date', await p.locator('#se-date').count() === 1);
+  ok('it suggests the first night already played', (await p.inputValue('#se-date')) === '2025-01-10');
+  ok('the preview counts every night from that date', (await p.textContent('#se-preview')).includes('4'));
+  await p.fill('#se-date', '2025-06-01'); await p.waitForTimeout(250);
+  ok('moving the date updates the count live', (await p.textContent('#se-preview')).includes('2'));
+  await p.fill('#se-new', 'עונת קיץ');
+  await p.locator('.sheet-modal button', { hasText: 'פתיחת עונה' }).click(); await p.waitForTimeout(700);
+  ok('the season starts on the date that was chosen',
+     (await p.evaluate(() => S.settings.seasonStart)) === '2025-06-01');
+  ok('a backdated season picks up the nights already played',
+     (await p.evaluate(() => seasonGames().filter(g => g.status === 'done').length)) === 2);
+  ok('the backdated season is led by ליאל with +56',
+     (await p.evaluate(() => leaderboard(seasonGames())[0].net)) === 56);
+
+  /* ---- and the next one can be backdated too ---- */
+  await p.evaluate(() => go('settings')); await p.waitForTimeout(600);
+  await p.locator('button', { hasText: 'סגירת העונה' }).click(); await p.waitForTimeout(400);
+  await p.fill('#se-date', '2025-07-01');
+  await p.fill('#se-new', 'עונת סתיו');
+  await p.locator('.sheet-modal button', { hasText: 'סגירה ופתיחה' }).click(); await p.waitForTimeout(700);
+  const closed = await p.evaluate(() => S.seasons[S.seasons.length - 1]);
+  ok('the closed season ends the day before the next begins', closed.end === '2025-06-30');
+  ok('the closed season kept its champion', closed.championPid === 'liel' && closed.net === 56);
+  ok('the next season starts on its chosen date',
+     (await p.evaluate(() => S.settings.seasonStart)) === '2025-07-01');
+  ok('the next season holds only the night after that',
+     (await p.evaluate(() => seasonGames().filter(g => g.status === 'done').length)) === 1);
+
+  /* ---- a season cannot start before the one it replaces ---- */
+  await p.evaluate(() => go('settings')); await p.waitForTimeout(600);
+  await p.locator('button', { hasText: 'סגירת העונה' }).click(); await p.waitForTimeout(400);
+  await p.fill('#se-date', '2025-01-01');
+  await p.locator('.sheet-modal button', { hasText: 'סגירה ופתיחה' }).click(); await p.waitForTimeout(500);
+  ok('a season starting before the previous one is refused',
+     (await p.evaluate(() => S.settings.seasonStart)) === '2025-07-01');
+  ok('and nothing was archived by the refused attempt',
+     (await p.evaluate(() => S.seasons.length)) === 1);
+  await p.evaluate(() => closeSheet());
+
+  // put the season state back so the rest of the file reads the whole history
+  await p.evaluate(() => {
+    S.settings.seasonStart = '2025-06-01'; S.settings.seasonName = 'עונת קיץ';
+    S.settings.updatedAt = Date.now(); save();
+  });
+  await p.waitForTimeout(300);
+
   /* ---- streaks ---- */
   const streaks = await p.evaluate(() => ({
     liel: streakOf('liel'), ron: streakOf('ron'), dor: streakOf('dor'),

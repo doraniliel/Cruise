@@ -1,21 +1,7 @@
 import { getStore } from '@netlify/blobs';
-import { timingSafeEqual } from 'node:crypto';
-import { applyDealerWrite, dealerCode } from '../lib/dealer.mjs';
+import { applyDealerWrite, roleOf } from '../lib/dealer.mjs';
 
 const KEY = 'state';
-function eq(a, b) {
-  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
-function roleOf(req) {
-  const given = req.headers.get('x-admin-key') || '';
-  const expected = process.env.ADMIN_PASSWORD || '';
-  if (!expected) return null;
-  if (eq(given, expected)) return 'admin';
-  if (eq(given.toLowerCase(), dealerCode(expected))) return 'dealer';
-  return null;
-}
 
 export default async (req) => {
   const store = getStore('pokernight');
