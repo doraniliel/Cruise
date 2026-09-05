@@ -98,10 +98,14 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
   const errs = [];
   for (const [nm, pg] of [['admin', admin], ['mate', mate], ['dealer', deal]]) pg.on('pageerror', e => errs.push(nm + ': ' + e.message));
 
+  // returns the value of the input's capture attribute, so we can prove the
+  // camera button really asks the phone for the camera
   const attach = async (page, clicker) => {
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), clicker()]);
+    const capture = await chooser.element().getAttribute('capture');
     await chooser.setFiles(PIC);
     await page.waitForTimeout(1500);
+    return capture;
   };
 
   /* ---- admin sets up a finished night ---- */
@@ -128,9 +132,12 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
 
   /* ---- attaching ---- */
   await admin.evaluate(() => go('summary', 'night1')); await admin.waitForTimeout(400);
-  ok('a night with no photo invites one',
-     await admin.locator('button', { hasText: 'הוספת תמונה מהערב' }).count() === 1);
-  await attach(admin, () => admin.locator('button', { hasText: 'הוספת תמונה מהערב' }).click());
+  ok('a night with no photo offers the camera',
+     await admin.locator('button', { hasText: 'צילום עכשיו' }).count() === 1);
+  ok('a night with no photo also offers the gallery',
+     await admin.locator('button', { hasText: 'מהגלריה' }).count() === 1);
+  const galleryCapture = await attach(admin, () => admin.locator('button', { hasText: 'מהגלריה' }).click());
+  ok('the gallery button does not force the camera', galleryCapture === null);
   ok('the photo reached the server', !!photos.night1);
   ok('the photo was stored as a JPEG', /^data:image\/jpeg;base64,/.test(photos.night1.photo));
   ok('the photo was compressed under 400KB', photos.night1.photo.length < 400000);
@@ -150,8 +157,12 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
      await admin.locator('.night-photo').count() === 1);
   ok('the picture actually loaded',
      await admin.evaluate(() => { const i = document.querySelector('.night-photo'); return !!i && i.src.startsWith('data:image'); }));
-  ok('the admin can replace it', await admin.locator('.night-photo-wrap button', { hasText: 'החלפה' }).count() === 1);
+  ok('the admin can reshoot it', await admin.locator('.night-photo-wrap button', { hasText: 'צילום' }).count() === 1);
+  ok('the admin can pick another from the gallery', await admin.locator('.night-photo-wrap button', { hasText: 'גלריה' }).count() === 1);
   ok('the admin can remove it', await admin.locator('.night-photo-wrap button', { hasText: 'מחיקה' }).count() === 1);
+  // the camera button must tell the phone to open the camera, not the picker
+  const camCapture = await attach(admin, () => admin.locator('.night-photo-wrap button', { hasText: 'צילום' }).click());
+  ok('the camera button asks the phone for the rear camera', camCapture === 'environment');
 
   await admin.evaluate(() => go('history')); await admin.waitForTimeout(700);
   ok('history shows a thumbnail', await admin.locator('.photo-thumb').count() === 1);
@@ -166,7 +177,9 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
   await mate.evaluate(() => go('summary', 'night1')); await mate.waitForTimeout(700);
   ok('a player sees the picture on the summary', await mate.locator('.night-photo').count() === 1);
   ok('a player is not offered the camera',
-     await mate.locator('button', { hasText: 'הוספת תמונה מהערב' }).count() === 0);
+     await mate.locator('button', { hasText: 'צילום' }).count() === 0);
+  ok('a player is not offered the gallery',
+     await mate.locator('button', { hasText: 'גלריה' }).count() === 0);
   ok('a player gets no replace or remove buttons',
      await mate.locator('.night-photo-wrap .tools button').count() === 0);
 
@@ -177,8 +190,8 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
   await deal.fill('#lg-code', (CODE.toUpperCase().match(/.{1,4}/g) || []).join('-'));
   await deal.locator('#lg-dbtn').click(); await deal.waitForTimeout(1200);
   await deal.evaluate(() => go('summary', 'night1')); await deal.waitForTimeout(800);
-  ok('a dealer may replace the picture',
-     await deal.locator('.night-photo-wrap button', { hasText: 'החלפה' }).count() === 1);
+  ok('a dealer may reshoot the picture',
+     await deal.locator('.night-photo-wrap button', { hasText: 'צילום' }).count() === 1);
   ok('a dealer is not offered removal',
      await deal.locator('.night-photo-wrap button', { hasText: 'מחיקה' }).count() === 0);
   const delAsDealer = await deal.evaluate(async () => {
@@ -222,10 +235,48 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
   await admin.locator('#cd-yes').click(); await admin.waitForTimeout(1200);
   ok('the photo is gone from the server', !photos.night1);
   ok('the summary offers the camera again',
-     await admin.locator('button', { hasText: 'הוספת תמונה מהערב' }).count() === 1);
+     await admin.locator('button', { hasText: 'צילום עכשיו' }).count() === 1);
   await mate.evaluate(() => { pullPhotoIndex(true); }); await mate.waitForTimeout(1200);
   await mate.evaluate(() => go('home')); await mate.waitForTimeout(600);
   ok('the picture disappears for everyone else too', await mate.locator('.photo-banner').count() === 0);
+
+  /* ---- the picture goes out with the summary message ---- */
+  await admin.evaluate(() => go('summary', 'night1')); await admin.waitForTimeout(500);
+  const [c2] = await Promise.all([admin.waitForEvent('filechooser'),
+                                  admin.locator('button', { hasText: 'צילום עכשיו' }).click()]);
+  await c2.setFiles(PIC); await admin.waitForTimeout(1800);
+  await admin.evaluate(() => go('summary', 'night1')); await admin.waitForTimeout(900);
+  ok('the share button says the picture is included',
+     (await admin.textContent('#app')).includes('עם התמונה'));
+
+  const shared = await admin.evaluate(async () => {
+    let got = null;
+    navigator.canShare = d => !!(d && d.files);
+    navigator.share = d => { got = { text: d.text, files: (d.files || []).map(f => ({ name: f.name, type: f.type, size: f.size })) }; return Promise.resolve(); };
+    await shareGame('night1');
+    return got;
+  });
+  ok('the share carried a file', !!shared && shared.files.length === 1);
+  ok('the shared file is a JPEG', shared.files[0].type === 'image/jpeg');
+  ok('the shared file is named for the night', shared.files[0].name === 'poker-2026-08-28.jpg');
+  ok('the shared file is not empty', shared.files[0].size > 5000);
+  ok('the summary text went with it', shared.text.includes('🃏 ערב פוקר'));
+  ok('the summary text carries the balance beside the placing',
+     /🥇 רון — ₪\d+ \(/.test(shared.text));
+
+  // a phone that cannot share files still sends the text
+  const textOnly = await admin.evaluate(async () => {
+    let got = null;
+    navigator.canShare = () => false;
+    navigator.share = d => { got = { text: d.text, files: d.files || null }; return Promise.resolve(); };
+    await shareGame('night1');
+    return got;
+  });
+  ok('a phone with no file sharing still sends the summary', !!textOnly && !textOnly.files);
+  ok('and the text is the full summary', textOnly.text.includes('מאזן סופי:'));
+
+  // clean up so the removal checks below start from a known place
+  await admin.evaluate(() => go('summary', 'night1')); await admin.waitForTimeout(500);
 
   console.log(errs.length ? 'JS errors:\n' + errs.join('\n') : 'No JS errors.');
   if (errs.length) failures += errs.length;

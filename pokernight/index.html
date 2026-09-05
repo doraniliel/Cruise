@@ -505,7 +505,7 @@
 /* ================= state ================= */
 const LS_KEY = 'pokernight_v1';
 // bumped on every deploy; a device holding an older build is told to refresh
-const APP_BUILD = 36;
+const APP_BUILD = 37;
 const CHIPS_PER_ENTRY = 1500;
 const LADDER = [
   [10, 20], [20, 40], [30, 60], [40, 80],
@@ -791,10 +791,20 @@ async function loadPhoto(id) {
   } catch (e) { return null; }
 }
 // a phone photo is 3-6 MB; this puts it on a diet before it ever leaves the device
+// a phone can hand us a file two ways: shoot one now, or pick one already taken
 function pickGamePhoto(gameId) {
+  if (!requireDeal()) return;
+  sheet(`<h3>📷 תמונה מהערב</h3>
+    <button class="btn-primary btn-big" onclick="closeSheet();takeGamePhoto('${gameId}',true)">📸 צילום עכשיו</button>
+    <button class="btn-ghost btn-big" style="margin-top:8px" onclick="closeSheet();takeGamePhoto('${gameId}',false)">📁 בחירה מהגלריה</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function takeGamePhoto(gameId, useCamera) {
   if (!requireDeal()) return;
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*';
+  // tells a phone to open the camera straight away; desktop browsers ignore it
+  if (useCamera) inp.setAttribute('capture', 'environment');
   inp.onchange = () => {
     const f = inp.files[0]; if (!f) return;
     toast('מכינה את התמונה…');
@@ -2055,9 +2065,9 @@ function showEndConfirm() {
   sheet(`<h3>סיכום ואישור</h3>
     <table class="sheet">
       ${chop ? `<tr><td>🤝 צ׳ופ ${endPick.pctFirst}/${100 - endPick.pctFirst}</td><td></td></tr>` : ''}
-      <tr><td>🥇 ${esc(pname(endPick.first))}</td><td>${shk(p.first)}</td></tr>
-      <tr><td>${chop ? '🥇' : '🥈'} ${esc(pname(endPick.second))}</td><td>${shk(p.second)}</td></tr>
-      ${endPick.bubble ? `<tr><td>🎈 ${esc(pname(endPick.bubble))} — באבל בוי</td><td>—</td></tr>` : ''}
+      <tr><td>🥇 ${esc(pname(endPick.first))}</td><td>${shk(p.first)} <span style="color:var(--ink-dim)">(${money(p.nets[endPick.first])})</span></td></tr>
+      <tr><td>${chop ? '🥇' : '🥈'} ${esc(pname(endPick.second))}</td><td>${shk(p.second)} <span style="color:var(--ink-dim)">(${money(p.nets[endPick.second])})</span></td></tr>
+      ${endPick.bubble ? `<tr><td>🎈 ${esc(pname(endPick.bubble))} — באבל בוי</td><td>${money(p.nets[endPick.bubble])}</td></tr>` : ''}
       <tr><td>🏠 הבית (10% מהקופה)</td><td>${shk(p.house10)}</td></tr>
       <tr><td>🧰 חיסכון</td><td>${shk(p.savings)}</td></tr>
       <tr><td>🏠 דמי בית</td><td>${shk(p.houseFees)}</td></tr>
@@ -2088,14 +2098,17 @@ function photoBlock(g) {
     return `<div class="night-photo-wrap" data-photo-slot>
       <img class="night-photo" data-photo="${g.id}" alt="תמונה מהערב">
       ${canDeal() ? `<div class="tools">
-        <button onclick="pickGamePhoto('${g.id}')">החלפה</button>
+        <button onclick="takeGamePhoto('${g.id}',true)">📸 צילום</button>
+        <button onclick="takeGamePhoto('${g.id}',false)">📁 גלריה</button>
         ${isAdmin() ? `<button onclick="removeGamePhoto('${g.id}')">מחיקה</button>` : ''}
       </div>` : ''}
     </div>`;
   }
-  return canDeal()
-    ? `<button class="btn-ghost photo-add" onclick="pickGamePhoto('${g.id}')">📷 הוספת תמונה מהערב</button>`
-    : '';
+  if (!canDeal()) return '';
+  return `<div class="row" style="margin-bottom:12px">
+    <button class="btn-ghost photo-add grow" style="margin:0" onclick="takeGamePhoto('${g.id}',true)">📸 צילום עכשיו</button>
+    <button class="btn-ghost photo-add grow" style="margin:0" onclick="takeGamePhoto('${g.id}',false)">📁 מהגלריה</button>
+  </div>`;
 }
 
 /* ---- summary ---- */
@@ -2143,7 +2156,7 @@ function summaryView() {
         <tr><td>🏠 דמי בית (${shk(g.config.houseFee || 0)} לשחקן)</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
       </table>
     </div>`}
-    <button class="btn-primary btn-big" onclick="shareGame('${g.id}')"><span class="gi">${ICONS.share}</span> שיתוף בוואטסאפ</button>
+    <button class="btn-primary btn-big" onclick="shareGame('${g.id}')"><span class="gi">${ICONS.share}</span> שיתוף בוואטסאפ${hasPhoto(g.id) ? ' (עם התמונה)' : ''}</button>
     ${isAdmin() && !g.deleted ? `<button class="btn-ghost" style="width:100%;margin-top:10px" onclick="editGame('${g.id}')">✏️ עריכת המשחק</button>
     <button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deleteGame('${g.id}')">מחיקת המשחק</button>` : ''}`;
 }
@@ -2186,6 +2199,7 @@ function purgeGame(id) {
 function buildWhatsApp(g) {
   const p = payouts(g);
   const L = '‎'; // keep +/− readable in RTL
+  const net = n => n > 0 ? `${L}+₪${n}` : n < 0 ? `${L}-₪${Math.abs(n)}` : `₪0`;
   if (isCash(g)) {
     return [
       `💵 ערב קאש — ${heDate(g.date)}`,
@@ -2197,9 +2211,8 @@ function buildWhatsApp(g) {
       `➖➖➖➖➖➖`,
       `מאזן סופי:`,
       ...g.playerIds.map(pid => {
-        const n = p.nets[pid], e = entriesOf(g, pid);
-        const s = n > 0 ? `${L}+₪${n}` : n < 0 ? `${L}-₪${Math.abs(n)}` : `₪0`;
-        return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${s}`;
+        const e = entriesOf(g, pid);
+        return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${net(p.nets[pid])}`;
       }),
     ].join('\n');
   }
@@ -2208,30 +2221,55 @@ function buildWhatsApp(g) {
     g.startAt && g.endAt ? `🕗 ${hhmm(g.startAt)}–${hhmm(g.endAt)} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות` : `👥 ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`,
     `💰 קופה: ₪${p.pool}`,
     ``,
+    // each placing shows what it paid and what the night came to, so nobody
+    // has to scroll to the balance list to see how they actually did
     ...(g.results.chop
       ? [`🤝 צ׳ופ ${g.results.pctFirst}/${100 - g.results.pctFirst} — מנצחים משותפים`,
-         `🥇 ${pname(g.results.first)} — ₪${p.first}`,
-         `🥇 ${pname(g.results.second)} — ₪${p.second}`]
-      : [`🥇 ${pname(g.results.first)} — ₪${p.first}`,
-         `🥈 ${pname(g.results.second)} — ₪${p.second}`]),
-    ...(g.results.bubble ? [`🎈 ${pname(g.results.bubble)} — הבאבל בוי`] : []),
+         `🥇 ${pname(g.results.first)} — ₪${p.first} (${net(p.nets[g.results.first])})`,
+         `🥇 ${pname(g.results.second)} — ₪${p.second} (${net(p.nets[g.results.second])})`]
+      : [`🥇 ${pname(g.results.first)} — ₪${p.first} (${net(p.nets[g.results.first])})`,
+         `🥈 ${pname(g.results.second)} — ₪${p.second} (${net(p.nets[g.results.second])})`]),
+    ...(g.results.bubble ? [`🎈 ${pname(g.results.bubble)} — הבאבל בוי (${net(p.nets[g.results.bubble])})`] : []),
     `🏠 הבית (10%) — ₪${p.house10}`,
     `🧰 חיסכון — ₪${p.savings}`,
     `🏠 דמי בית — ₪${p.houseFees}`,
     `➖➖➖➖➖➖`,
     `מאזן סופי:`,
     ...g.playerIds.map(pid => {
-      const n = p.nets[pid];
-      const s = n > 0 ? `${L}+₪${n}` : n < 0 ? `${L}-₪${Math.abs(n)}` : `₪0`;
       const e = entriesOf(g, pid);
-      return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${s}`;
+      return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${net(p.nets[pid])}`;
     }),
   ];
   return lines.join('\n');
 }
+// base64 -> File without an await, so the share still counts as a user gesture
+function dataUriToFile(uri, name) {
+  const comma = uri.indexOf(',');
+  const mime = (uri.slice(0, comma).match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  const bin = atob(uri.slice(comma + 1));
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new File([arr], name, { type: mime });
+}
 async function shareGame(id) {
   const g = S.games.find(x => x.id === id); if (!g) return;
   const text = buildWhatsApp(g);
+  // the night's picture goes out with the summary when the phone allows it.
+  // It comes from the cache the screen already filled, so nothing is awaited
+  // before the share call and the gesture stays valid.
+  const photo = photoCache.get(id);
+  if (photo && navigator.share && navigator.canShare) {
+    try {
+      const file = dataUriToFile(photo, `poker-${g.date}.jpg`);
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+        return;
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      // fall through to sharing the text on its own
+    }
+  }
   if (navigator.share) {
     try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }

@@ -101,6 +101,15 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
   ok('WhatsApp shows all three money lines',
      r.wa.includes('🏠 הבית (10%)') && r.wa.includes('🧰 חיסכון') && r.wa.includes('🏠 דמי בית'));
   ok('WhatsApp shows medals and entry counts', r.wa.includes('🥇') && /דניאל \(2 כניסות\)/.test(r.wa));
+  // דניאל won ₪97 and finished the night +7; יוסי took ₪38 and still lost ₪52
+  ok('the winning line shows the prize and the night’s balance',
+     /🥇 דניאל — ₪97 \(\u200e\+₪7\)/.test(r.wa));
+  ok('the runner-up line shows the prize and a losing balance',
+     /🥈 יוסי — ₪38 \(\u200e-₪52\)/.test(r.wa));
+  ok('the bubble boy line carries a balance too',
+     /🎈 טל — הבאבל בוי \(\u200e-₪60\)/.test(r.wa));
+  ok('the balance list at the end is still there',
+     r.wa.includes('מאזן סופי:') && /דניאל \(2 כניסות\): \u200e\+₪7/.test(r.wa));
 
   // a chop pays the two winners out of the pot minus the house cut
   ok('chop math: 60/40 of a ₪150 pot pays 81 / 54', await p.evaluate(() => {
