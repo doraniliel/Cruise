@@ -1,0 +1,3468 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="מנהל ערבי פוקר — כניסות, חישוב פרסים, שעון בליינדים וסיכום לוואטסאפ.">
+<meta name="theme-color" content="#0b120e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ערב פוקר">
+<title>ערב פוקר 🃏</title>
+<style>
+  @font-face { font-family: 'Rubik'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/rubik-var-hebrew.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: 'Rubik'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(fonts/rubik-var-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: 'Frank Ruhl Libre'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/frank-ruhl-libre-700-hebrew.woff2) format('woff2'); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: 'Frank Ruhl Libre'; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/frank-ruhl-libre-700-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+  :root {
+    --bg: #0b120e;
+    --felt: #12281c;
+    --felt-hi: #1a3a28;
+    --card: rgba(17, 27, 21, .93);
+    --card-hi: rgba(24, 38, 30, .95);
+    --line: #24382c;
+    --gold: #d4af37;
+    --gold-dim: #a8892b;
+    --ink: #f2efe6;
+    --ink-dim: #9fb0a5;
+    --pos: #4caf7d;
+    --neg: #e05252;
+    --danger: #b03434;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Rubik", "Heebo", "Assistant", "Arial Hebrew", -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    direction: rtl;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  bdi, .num { font-variant-numeric: tabular-nums; }
+
+  #bgimg {
+    position: fixed; inset: 0; z-index: -1;
+    background: url(bg.jpg) center / cover no-repeat var(--bg);
+    transition: background-image .3s ease;
+  }
+  #bgimg.table { background-image: url(table.jpg); background-position: center top; }
+  #bgimg::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(rgba(7, 12, 9, .68), rgba(7, 12, 9, .84));
+  }
+  #bgimg.table::after {
+    background: linear-gradient(rgba(7, 12, 9, .55) 0%, rgba(7, 12, 9, .74) 45%, rgba(7, 12, 9, .88) 100%);
+  }
+
+  #app {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 14px 14px calc(84px + env(safe-area-inset-bottom));
+    min-height: 100dvh;
+  }
+  h1 { font-size: 1.35rem; font-weight: 700; font-family: 'Frank Ruhl Libre', 'Rubik', serif; letter-spacing: .01em; }
+  h2 { font-size: .82rem; font-weight: 600; color: var(--gold-dim); margin: 18px 0 8px; letter-spacing: .14em; text-transform: uppercase; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .topbar .sub { color: var(--ink-dim); font-size: .85rem; }
+
+  .card {
+    background: linear-gradient(rgba(255, 255, 255, .025), rgba(255, 255, 255, 0) 40%), var(--card);
+    border: 1px solid rgba(212, 175, 55, .13);
+    border-radius: 18px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .35);
+  }
+  .card.felt {
+    background: linear-gradient(160deg, var(--felt-hi), var(--felt));
+    border-color: rgba(212, 175, 55, .3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .05);
+  }
+
+  button {
+    font: inherit; color: inherit; background: var(--card-hi);
+    border: 1px solid rgba(212, 175, 55, .16); border-radius: 12px;
+    padding: 10px 14px; cursor: pointer; touch-action: manipulation;
+    transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  button:active { transform: scale(.96); }
+  button:disabled { opacity: .4; }
+  .btn-primary {
+    background: linear-gradient(165deg, #efd77c 0%, #d4af37 45%, #a8892b 100%);
+    color: #17130a; font-weight: 700; border: none;
+    box-shadow: 0 4px 18px rgba(212, 175, 55, .22), inset 0 1px 0 rgba(255, 255, 255, .35);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .25);
+  }
+  .btn-big { width: 100%; padding: 16px; font-size: 1.12rem; border-radius: 15px; letter-spacing: .02em; }
+  .btn-ghost { background: transparent; }
+  .btn-danger { color: #ff9c9c; border-color: rgba(224, 82, 82, .35); }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, .2); border-radius: 4px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .grow { flex: 1; }
+
+  /* bottom nav */
+  nav {
+    position: fixed; bottom: 0; right: 0; left: 0; z-index: 30;
+    background: rgba(11, 18, 14, .92); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-around;
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav button {
+    background: none; border: none; color: var(--ink-dim);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: .7rem; padding: 4px 8px; min-width: 58px;
+  }
+  nav button .ico svg { width: 22px; height: 22px; display: block; }
+  nav button.active { color: var(--gold); }
+  nav button.active .ico svg { filter: drop-shadow(0 0 7px rgba(212, 175, 55, .65)); }
+  .gi svg { width: 18px; height: 18px; vertical-align: -4px; }
+
+  /* player rows in active game */
+  .prow {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .12);
+    border-radius: 16px; padding: 10px 12px; margin-bottom: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+  }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--felt-hi); color: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; overflow: hidden; flex-shrink: 0;
+    border: 2px solid var(--gold-dim);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+    font-family: 'Frank Ruhl Libre', serif;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar.big { width: 84px; height: 84px; font-size: 1.6rem; }
+  .prow .name { flex: 1; min-width: 0; }
+  .prow .name .nick { font-weight: 600; }
+  .prow .name .meta { font-size: .78rem; color: var(--ink-dim); }
+  .nickname { color: var(--gold-dim); font-size: .72rem; font-weight: 500; line-height: 1.3; opacity: .9; }
+  .prow .name .nick, .lb .who > div:first-child { font-size: 1rem; font-weight: 600; }
+  .cnt { font-size: 1.3rem; font-weight: 700; min-width: 34px; text-align: center; }
+  .btn-plus, .btn-minus {
+    width: 46px; height: 46px; border-radius: 50%; font-size: 1.5rem;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .btn-plus {
+    background: radial-gradient(circle at 35% 28%, #f4de85, #d4af37 55%, #967922);
+    color: #17130a; font-weight: 700;
+    border: 3px dashed rgba(255, 255, 255, .6);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .5), inset 0 0 0 2px rgba(0, 0, 0, .18);
+  }
+  .btn-minus { background: transparent; color: var(--ink-dim); width: 38px; height: 38px; font-size: 1.2rem; border-color: rgba(212, 175, 55, .18); }
+  .capped { font-size: .68rem; color: var(--neg); }
+
+  /* timer strip */
+  .strip {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: linear-gradient(160deg, var(--felt-hi), var(--felt));
+    border: 1px solid rgba(212, 175, 55, .3); border-radius: 18px;
+    padding: 12px 14px; margin-bottom: 12px; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .05);
+  }
+  .strip .lvl, #clock .lvl { letter-spacing: .12em; }
+  .strip .t { font-size: 1.7rem; font-weight: 700; }
+  .strip .b { font-size: 1.05rem; font-weight: 600; color: var(--gold); }
+  .strip .lvl { font-size: .75rem; color: var(--ink-dim); }
+
+  /* fullscreen clock */
+  #clock {
+    position: fixed; inset: 0; z-index: 50; width: 100vw; height: 100dvh;
+    background: linear-gradient(rgba(7, 12, 9, .78), rgba(7, 12, 9, .9)), url(bg.jpg) center / cover no-repeat var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(4px, 1.5vh, 14px); padding: 20px; user-select: none;
+  }
+  #clock .lvl { color: var(--ink-dim); font-size: max(1rem, 3.4vmin); letter-spacing: .12em; }
+  #clock .time { font-size: max(3.5rem, 27vmin); font-weight: 700; line-height: .98; direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; }
+  #clock .blinds { font-size: max(2rem, 11.5vmin); font-weight: 700; color: var(--gold); direction: ltr; font-family: 'Frank Ruhl Libre', 'Rubik', serif; text-shadow: 0 0 .35em rgba(212, 175, 55, .3); }
+  #clock .next { color: var(--ink-dim); font-size: max(.95rem, 3.2vmin); }
+  #clock .roster {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    margin-top: 2vh; max-width: 94vw;
+  }
+  #clock .roster .pl {
+    display: inline-flex; align-items: center;
+    background: rgba(0, 0, 0, .34); border: 1px solid rgba(212, 175, 55, .28);
+    border-radius: 999px; padding: .34em 1.05em;
+    margin: max(5px, 1vmin);
+    font-size: max(.95rem, 3.4vmin);
+  }
+  #clock .roster .pl b { margin-inline-start: .55em; }
+  #clock .roster .pl b { color: var(--gold); font-variant-numeric: tabular-nums; font-weight: 700; }
+  #clock .roster .pl .out { opacity: .45; }
+  #clock .stats {
+    display: flex; margin-top: 3.2vh;
+    flex-wrap: wrap; justify-content: center; max-width: 96vw;
+  }
+  #clock .stats > div { text-align: center; margin: .6vh max(18px, 6vmin); }
+  #clock .stats .v { font-size: max(1.15rem, 4.6vmin); font-weight: 700; line-height: 1.1; }
+  #clock .stats .k { font-size: max(.72rem, 1.9vmin); color: var(--ink-dim); margin-top: .35em; letter-spacing: .04em; }
+  #clock.break-mode { background: linear-gradient(rgba(46, 37, 15, .8), rgba(10, 8, 2, .92)), url(bg.jpg) center / cover no-repeat var(--bg); }
+  #clock .ctrls {
+    position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); right: 0; left: 0;
+    display: flex; justify-content: center; flex-wrap: wrap;
+    font-size: max(1rem, 2.1vmin);
+    transition: opacity .25s; opacity: 0; pointer-events: none;
+  }
+  #clock.show-ctrls .ctrls { opacity: 1; pointer-events: auto; }
+  #clock .ctrls > button { margin: max(5px, .7vmin); }
+  #clock .exit { position: absolute; top: calc(14px + env(safe-area-inset-top)); inset-inline-start: 14px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #clock.show-ctrls .exit { opacity: 1; pointer-events: auto; }
+  #clock .paused-tag { color: var(--neg); font-weight: 700; letter-spacing: .1em; }
+  @keyframes pulse { 0% { opacity: .85; } 100% { opacity: 0; } }
+  #clock .flash { position: absolute; inset: 0; background: var(--gold); opacity: 0; pointer-events: none; }
+  #clock .flash.on { animation: pulse 1.1s ease-out; }
+
+  /* stats / tables */
+  .lb { display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+  .lb:last-child { border-bottom: none; }
+  .lb .rank { width: 26px; text-align: center; color: var(--ink-dim); font-weight: 700; }
+  .lb .who { flex: 1; min-width: 0; }
+  .lb .who .meta { font-size: .74rem; color: var(--ink-dim); }
+  .money-pos { color: var(--pos); font-weight: 700; }
+  .money-neg { color: var(--neg); font-weight: 700; }
+  .money-zero { color: var(--ink-dim); font-weight: 700; }
+
+  table.sheet { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  table.sheet th { color: var(--ink-dim); font-weight: 500; font-size: .76rem; text-align: right; padding: 6px 4px; }
+  table.sheet td { padding: 8px 4px; border-top: 1px solid var(--line); }
+  table.sheet td:last-child, table.sheet th:last-child { text-align: left; }
+
+  /* forms */
+  input[type=text], input[type=number], input[type=date], input[type=time], input[type=password], select {
+    font: inherit; font-size: 16px; color: var(--ink); background: var(--bg);
+    border: 1px solid rgba(212, 175, 55, .18); border-radius: 12px;
+    padding: 10px 12px; width: 100%;
+    -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(212, 175, 55, .14); }
+  label.field { display: block; margin-bottom: 10px; font-size: .85rem; color: var(--ink-dim); }
+  label.field span { display: block; margin-bottom: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1px solid rgba(212, 175, 55, .18); border-radius: 999px; padding: 8px 14px;
+    background: var(--card); cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .chip.on { border-color: var(--gold); color: var(--gold); background: rgba(212, 175, 55, .08); box-shadow: 0 0 12px rgba(212, 175, 55, .18); }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button { width: 38px; height: 38px; border-radius: 50%; padding: 0; font-size: 1.2rem; }
+
+  /* overlays */
+  .overlay {
+    position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .6);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  @keyframes sheetUp { from { transform: translateY(26px); opacity: .5; } to { transform: none; opacity: 1; } }
+  .sheet-modal {
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .2); border-bottom: none;
+    animation: sheetUp .22s ease;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, .5);
+    border-radius: 22px 22px 0 0; width: 100%; max-width: 560px;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 88dvh; overflow-y: auto;
+  }
+  .sheet-modal::before { content: ''; display: block; width: 38px; height: 4px; border-radius: 2px; background: rgba(212, 175, 55, .35); margin: 0 auto 12px; }
+  .sheet-modal h3 { margin-bottom: 12px; font-family: 'Frank Ruhl Libre', serif; }
+
+  #toast {
+    position: fixed; bottom: calc(96px + env(safe-area-inset-bottom)); right: 50%;
+    transform: translateX(50%); z-index: 70;
+    background: var(--card-hi); border: 1px solid rgba(212, 175, 55, .3);
+    padding: 10px 18px; border-radius: 999px; font-size: .88rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .5);
+    transition: opacity .3s; opacity: 0; pointer-events: none; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+
+  .pool-bar {
+    position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 20;
+    background: linear-gradient(160deg, var(--felt-hi), var(--felt));
+    border: 1px solid var(--gold-dim); border-radius: 16px;
+    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .55), 0 0 22px rgba(212, 175, 55, .12);
+  }
+  .live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #e05252; animation: livePulse 1.6s infinite; margin-inline-end: 2px; }
+  @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(224, 82, 82, .45); } 70% { box-shadow: 0 0 0 8px rgba(224, 82, 82, 0); } 100% { box-shadow: 0 0 0 0 rgba(224, 82, 82, 0); } }
+  .empty-lg::before { content: '\2660'; display: block; font-size: 1.7rem; color: var(--gold-dim); opacity: .55; margin-bottom: 4px; }
+  .avatar.huge { width: 112px; height: 112px; font-size: 2.4rem; border-width: 3px; }
+  .balloon { display: inline-block; font-size: 1.7rem; animation: floaty 2.6s ease-in-out infinite; }
+  .balloon.b2 { animation-delay: 1.3s; }
+  @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  /* edges are faded to true black inside the file itself, so `screen` leaves
+     no rectangle on any browser (iOS Safari ignored the CSS mask) */
+  .neon-hero {
+    display: block; width: 100%; max-width: 335px; margin: -10px auto 2px;
+    mix-blend-mode: screen;
+    filter: saturate(1.08) contrast(1.04);
+    pointer-events: none;
+  }
+  .refresh-btn {
+    width: 34px; height: 34px; border-radius: 50%; padding: 0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .25); color: var(--gold-dim);
+  }
+  .refresh-btn svg { width: 17px; height: 17px; }
+  .refresh-btn.spin svg { animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(-360deg); } }
+  #clock .refresh-btn { background: rgba(0, 0, 0, .3); }
+  .topbar { gap: 10px; }
+  .avatar-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+  .crown {
+    position: absolute; top: -11px; left: 50%; z-index: 2;
+    transform: translateX(-50%) rotate(-14deg); font-size: .95rem; line-height: 1;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .7));
+  }
+  .avatar-wrap.big .crown { font-size: 1.45rem; top: -15px; }
+  .avatar-wrap.huge .crown { font-size: 1.95rem; top: -20px; }
+  .mvp-badge {
+    font-size: .58rem; font-weight: 700; letter-spacing: .07em; color: #17130a;
+    background: linear-gradient(160deg, #efd77c, #d4af37); border-radius: 999px;
+    padding: 1px 6px; vertical-align: 2px; white-space: nowrap;
+  }
+  .break-col { display: flex; flex-direction: column; gap: 6px; }
+  .break-btn {
+    width: 58px; height: 100%; min-height: 30px; padding: 3px 0; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    font-size: 1rem; line-height: 1; background: var(--card-hi);
+  }
+  .break-btn b { font-size: .62rem; font-weight: 600; color: var(--ink-dim); }
+  .break-btn.resume { background: linear-gradient(165deg, #efd77c, #d4af37 45%, #a8892b); color: #17130a; border: none; }
+  .break-btn.resume b { color: #17130a; }
+  .guest-tag {
+    font-size: .6rem; color: var(--gold-dim); border: 1px solid rgba(212,175,55,.35);
+    border-radius: 999px; padding: 1px 6px; vertical-align: 2px;
+  }
+  .wall-item { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .wall-item:last-child { border-bottom: none; }
+  .wall-item .who { font-size: .78rem; color: var(--gold-dim); font-weight: 600; }
+  .wall-item .txt { font-size: .92rem; margin-top: 2px; word-break: break-word; }
+  .wall-item .when { font-size: .68rem; color: var(--ink-dim); }
+  .wall-del { float: left; background: none; border: none; color: var(--ink-dim); padding: 0 4px; font-size: .9rem; }
+  .hist-row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .hist-row:last-child { border-bottom: none; }
+  .bubble-card { text-align: center; }
+  .bubble-card .who { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .pool-bar .amounts { font-size: .78rem; color: var(--ink-dim); }
+  .pool-bar .pool { font-size: 1.25rem; font-weight: 700; color: var(--gold); }
+  .empty { text-align: center; color: var(--ink-dim); padding: 30px 10px; font-size: .9rem; }
+  .winner-pick .prow { cursor: pointer; }
+  .winner-pick .prow:active { border-color: var(--gold); }
+  a { color: var(--gold); }
+
+  /* ---- build / staleness banner ---- */
+  #update-bar {
+    position: fixed; top: 0; right: 0; left: 0; z-index: 90;
+    background: linear-gradient(165deg, #efd77c, #d4af37 55%, #a8892b);
+    color: #17130a; font-weight: 700; font-size: .88rem;
+    padding: calc(9px + env(safe-area-inset-top)) 14px 9px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .5);
+  }
+  #update-bar button {
+    background: rgba(0, 0, 0, .82); color: #f6e9b8; border: none;
+    border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: .82rem;
+  }
+
+  /* ---- sync dot ---- */
+  .sync-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: var(--ink-dim); box-shadow: 0 0 6px currentColor;
+  }
+  .sync-dot.ok { background: var(--pos); }
+  .sync-dot.wait { background: #e0a93f; animation: livePulse 1.6s infinite; }
+  .sync-dot.bad { background: var(--neg); }
+  .sync-pill {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .18);
+    border-radius: 999px; padding: 5px 11px 5px 9px; font-size: .7rem;
+    color: var(--ink-dim); cursor: pointer;
+  }
+
+  /* ---- toast with an action ---- */
+  #toast.wide { white-space: normal; max-width: 92vw; }
+  #toast .undo {
+    background: var(--gold); color: #17130a; border: none; font-weight: 700;
+    border-radius: 999px; padding: 4px 12px; font-size: .8rem; margin-inline-start: 10px;
+  }
+  #toast.show { pointer-events: auto; }
+
+  /* ---- profile chart ---- */
+  .spark { width: 100%; height: 92px; display: block; }
+  .spark .zero { stroke: rgba(212, 175, 55, .28); stroke-dasharray: 3 4; }
+  .spark .line { fill: none; stroke: var(--gold); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+  .spark .dot { fill: var(--gold); }
+  .kpis { display: flex; flex-wrap: wrap; }
+  .kpis > div { flex: 1 1 33%; text-align: center; padding: 6px 2px; }
+  .kpis .v { font-size: 1.12rem; font-weight: 700; }
+  .kpis .k { font-size: .68rem; color: var(--ink-dim); margin-top: 2px; }
+  .streak-tag {
+    display: inline-block; border-radius: 999px; padding: 3px 11px; font-size: .74rem;
+    font-weight: 600; border: 1px solid rgba(212, 175, 55, .3); color: var(--gold);
+  }
+  .streak-tag.cold { color: var(--ink-dim); border-color: var(--line); }
+
+  /* ---- season tabs ---- */
+  .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tabs .tab {
+    flex: 1; text-align: center; padding: 9px 6px; border-radius: 12px; cursor: pointer;
+    background: var(--card); border: 1px solid rgba(212, 175, 55, .14);
+    font-size: .84rem; color: var(--ink-dim);
+  }
+  .tabs .tab.on { color: var(--gold); border-color: var(--gold-dim); background: rgba(212, 175, 55, .09); }
+
+  /* ---- bigger touch targets ---- */
+  .btn-plus { width: 54px; height: 54px; font-size: 1.7rem; }
+  .btn-minus { width: 44px; height: 44px; font-size: 1.3rem; }
+  nav button { min-height: 50px; justify-content: center; }
+  .prow { padding: 12px; }
+  .chip { min-height: 42px; }
+  .stepper button { width: 44px; height: 44px; }
+
+  /* ---- avatar tint for players with no photo ---- */
+  .avatar.tint { background: var(--tint, var(--felt-hi)); }
+  .no-photo::after {
+    content: '📷'; position: absolute; bottom: -2px; inset-inline-start: -2px;
+    background: var(--card-hi); border: 1px solid var(--gold-dim); border-radius: 50%;
+    width: 19px; height: 19px; font-size: .6rem; line-height: 17px; text-align: center;
+  }
+
+  /* ---- home hero cards ---- */
+  .hero-card { text-align: center; }
+  .hero-card .who { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .hero-card .title { font-weight: 700; font-size: 1.2rem; margin-top: 8px; font-family: 'Frank Ruhl Libre', serif; }
+  .hero-card .sub2 { color: var(--ink-dim); font-size: .8rem; margin-top: 2px; }
+
+  /* ---- TV clock extras ---- */
+  #clock .upnext {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    margin-top: 1.2vh; font-size: max(.8rem, 2.4vmin); color: var(--ink-dim);
+  }
+  #clock .upnext span { margin: .3vh max(8px, 2.4vmin); }
+  #clock .upnext b { color: var(--gold-dim); font-weight: 700; }
+  #clock .panel {
+    margin-top: 2.4vh; min-height: max(2.6rem, 7vmin);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; max-width: 92vw;
+    font-size: max(1rem, 3.2vmin); color: var(--ink);
+    transition: opacity .45s ease; opacity: 1;
+  }
+  #clock .panel.fade { opacity: 0; }
+  #clock .panel b { color: var(--gold); }
+  #clock.tv .exit { display: none; }
+
+  /* ---- photo of the night ---- */
+  .night-photo {
+    display: block; width: 100%; max-height: 320px; object-fit: cover;
+    border-radius: 14px; background: var(--felt);
+  }
+  .night-photo-wrap { position: relative; margin-bottom: 12px; }
+  .night-photo-wrap .tools {
+    position: absolute; bottom: 8px; inset-inline-start: 8px;
+    display: flex; gap: 6px;
+  }
+  .night-photo-wrap .tools button {
+    background: rgba(0, 0, 0, .62); border: 1px solid rgba(212, 175, 55, .3);
+    color: var(--ink); font-size: .74rem; padding: 5px 11px; border-radius: 999px;
+    backdrop-filter: blur(6px);
+  }
+  .photo-thumb {
+    width: 54px; height: 54px; border-radius: 12px; object-fit: cover;
+    flex-shrink: 0; border: 1px solid rgba(212, 175, 55, .22); background: var(--felt);
+  }
+  .photo-banner {
+    display: block; width: 100%; height: 104px; object-fit: cover;
+    border-radius: 12px; margin-bottom: 10px; background: var(--felt);
+  }
+  .photo-add {
+    width: 100%; margin-bottom: 12px; border-style: dashed;
+    border-color: rgba(212, 175, 55, .3); color: var(--gold-dim);
+  }
+</style>
+</head>
+<body>
+<div id="bgimg"></div>
+<div id="app"></div>
+<div id="clock-root"></div>
+<nav id="nav"></nav>
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ================= state ================= */
+const LS_KEY = 'pokernight_v1';
+// bumped on every deploy; a device holding an older build is told to refresh
+const APP_BUILD = 37;
+const CHIPS_PER_ENTRY = 1500;
+const LADDER = [
+  [10, 20], [20, 40], [30, 60], [40, 80],
+  [50, 100], [75, 150], [100, 200], [150, 300], [200, 400],
+  [300, 600], [400, 800], [500, 1000], [750, 1500], [1000, 2000],
+  [1500, 3000], [2000, 4000], [3000, 6000], [4000, 8000], [5000, 10000],
+];
+const DEFAULT_SETTINGS = {
+  entryPrice: 30, houseFee: 10, savingsFee: 20,
+  splitFirst: 65, splitSecond: 25, splitHouse: 10,
+  maxRebuys: 12,
+  levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
+  cashEntryPrice: 20, cashHouseFee: 10, cashChips: 1000, cashRoundMinutes: 15,
+  sound: true, voice: true, haptics: true,
+  seasonStart: null, seasonName: '',
+};
+
+let S = loadState();
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings || {});
+      s.players = s.players || [];
+      s.games = s.games || [];
+      s.seasons = s.seasons || [];
+      dropScheduledBreak(s);
+      clampTimers(s);
+      return s;
+    }
+  } catch (e) { console.error(e); }
+  return { players: [], games: [], seasons: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
+}
+function saveLocal() { mvpDirty = true; localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+function save() { saveLocal(); schedulePush(); }
+// stamp what changed so a merge can tell newer from older
+function touchGame(g) {
+  if (!g) return;
+  g.updatedAt = Date.now();
+  // who last touched this game, so a table full of phones can tell whose
+  // count is on screen
+  if (SESSION) g.updatedBy = isAdmin() ? (SESSION.name || 'מנהל') : (SESSION.name || '');
+}
+function uid() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)); }
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+/* ---- TV mode: ?tv=1 boots straight into a read-only clock for a big screen,
+   with no login, no nav and no controls ---- */
+const TV_MODE = /(^|[?&])tv=1(&|$)/.test(location.search);
+
+/* ================= auth ================= */
+const ADMIN_USER = 'pitboss';
+const ADMIN_HASH = '4a25821c2a1389c33ea72d492e616f0c2fcc56e274ca2070b0964494eadb547f';
+const SESSION_KEY = 'pokernight_session';
+let SESSION = null;
+try { SESSION = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) {}
+// a wall screen never signs in; it just watches
+if (TV_MODE) SESSION = { role: 'user', name: 'מסך', tv: true, ts: Date.now() };
+const isAdmin = () => !!SESSION && SESSION.role === 'admin';
+// a dealer runs the table — entries, late joins and the clock — but cannot
+// finish, delete or edit a game, and the server enforces that too
+const isDealer = () => !!SESSION && SESSION.role === 'dealer';
+const canDeal = () => isAdmin() || isDealer();
+const syncKey = () => (SESSION && SESSION.key) || '';
+function requireAdmin() {
+  if (isAdmin()) return true;
+  toast(isDealer() ? 'רק המנהל יכול לעשות את זה 🔒' : 'פעולה למנהל בלבד 🔒');
+  return false;
+}
+function requireDeal() {
+  if (canDeal()) return true;
+  toast('פעולה למנהל בלבד 🔒');
+  return false;
+}
+async function sha256hex(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+/* ---- dealer code ----
+   Derived from the admin password on the admin's own device, so a dealer can
+   be handed a code without ever learning the master password. The server
+   derives the same value from its env var and accepts it for a narrow set of
+   writes only. ---- */
+const DEALER_CODE_LEN = 12;
+const normalizeCode = c => String(c || '').replace(/[^0-9a-fA-F]/g, '').toLowerCase().slice(0, DEALER_CODE_LEN);
+const prettyCode = c => (normalizeCode(c).toUpperCase().match(/.{1,4}/g) || []).join('-');
+async function dealerCodeFor(pass) {
+  return (await sha256hex('pn-dealer|' + pass)).slice(0, DEALER_CODE_LEN);
+}
+let loginMode = 'user';
+function renderLogin() {
+  document.getElementById('nav').hidden = true;
+  setTimeout(injectRefresh, 0);
+  document.getElementById('app').innerHTML = `
+    <div style="min-height:88dvh;display:flex;flex-direction:column;justify-content:center">
+      <div style="text-align:center;margin-bottom:26px">
+        <img src="icon-192.png" alt="" style="width:84px;height:84px;border-radius:20px">
+        <h1 style="margin-top:12px;font-size:1.9rem;background:linear-gradient(160deg,#e8cd6a,#a8892b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">ערב פוקר</h1>
+      </div>
+      <div class="card felt">
+        <div class="chips" style="justify-content:center;margin-bottom:16px">
+          <div class="chip ${loginMode === 'user' ? 'on' : ''}" onclick="loginMode='user';renderLogin()"><span class="gi">${ICONS.user}</span> שחקן</div>
+          <div class="chip ${loginMode === 'dealer' ? 'on' : ''}" onclick="loginMode='dealer';renderLogin()">🃏 דילר</div>
+          <div class="chip ${loginMode === 'admin' ? 'on' : ''}" onclick="loginMode='admin';renderLogin()"><span class="gi">${ICONS.key}</span> מנהל</div>
+        </div>
+        ${loginMode === 'user' ? `
+          <label class="field"><span>איך קוראים לך?</span><input type="text" id="lg-name" autocomplete="off"></label>
+          <button class="btn-primary btn-big" onclick="userLogin()">כניסה</button>
+          <div class="login-actions row" style="justify-content:center;margin-top:12px"></div>
+        ` : loginMode === 'dealer' ? `
+          <label class="field"><span>איך קוראים לך?</span><input type="text" id="lg-dname" autocomplete="off"></label>
+          <label class="field"><span>קוד דילר</span><input type="text" id="lg-code" autocomplete="off" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX" style="direction:ltr;text-align:center;letter-spacing:.12em"></label>
+          <button class="btn-primary btn-big" id="lg-dbtn" onclick="dealerLogin()">כניסת דילר</button>
+          <div class="empty" style="padding:12px 0 0;font-size:.76rem">דילר יכול להוסיף כניסות, לצרף שחקנים ולהפעיל את השעון — אבל לא לסיים, למחוק או לערוך משחק. את הקוד מקבלים מהמנהל (הגדרות ← קוד דילר).</div>
+          <div class="login-actions row" style="justify-content:center;margin-top:12px"></div>
+        ` : `
+          <label class="field"><span>שם משתמש</span><input type="text" id="lg-user" autocomplete="off" autocapitalize="off"></label>
+          <label class="field"><span>סיסמה</span><input type="password" id="lg-pass"></label>
+          <button class="btn-primary btn-big" onclick="adminLogin()">כניסת מנהל</button>
+          <div class="login-actions row" style="justify-content:center;margin-top:12px"></div>
+        `}
+      </div>
+    </div>`;
+  setTimeout(() => document.getElementById(loginMode === 'user' ? 'lg-name' : loginMode === 'dealer' ? 'lg-dname' : 'lg-user')?.focus(), 60);
+}
+function setSession(sess) {
+  SESSION = sess;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+}
+function userLogin() {
+  const name = document.getElementById('lg-name').value.trim();
+  if (!name) { toast('צריך שם 🙂'); return; }
+  setSession({ role: 'user', name, ts: Date.now() });
+  playLoginChime();
+  render();
+  pullState(true);
+}
+async function dealerLogin() {
+  const name = document.getElementById('lg-dname').value.trim();
+  const code = normalizeCode(document.getElementById('lg-code').value);
+  if (!name) { toast('צריך שם 🙂'); return; }
+  if (code.length !== DEALER_CODE_LEN) { toast('הקוד לא שלם'); return; }
+  const btn = document.getElementById('lg-dbtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'בודק…'; }
+  let role = null;
+  try {
+    const r = await fetch(API, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': code },
+      body: JSON.stringify({ verify: true }),
+    });
+    if (r.ok) role = (await r.json()).role || null;
+  } catch (e) { toast('אין חיבור לרשת'); }
+  if (role !== 'dealer') {
+    if (btn) { btn.disabled = false; btn.textContent = 'כניסת דילר'; }
+    if (role === null) toast('קוד דילר שגוי');
+    return;
+  }
+  setSession({ role: 'dealer', name, key: code, ts: Date.now() });
+  playLoginChime();
+  toast(`ברוך הבא, ${name} 🃏`);
+  render();
+  pullState(true);
+}
+async function adminLogin() {
+  const u = document.getElementById('lg-user').value.trim();
+  const p = document.getElementById('lg-pass').value;
+  if (u === ADMIN_USER && await sha256hex(`pn|${u}|${p}`) === ADMIN_HASH) {
+    setSession({ role: 'admin', name: 'מנהל', key: p, ts: Date.now() });
+    playLoginChime();
+    toast('ברוך הבא, מנהל 🔑');
+    render();
+    pullState();
+  } else {
+    toast('שם משתמש או סיסמה שגויים');
+    const el = document.getElementById('lg-pass'); if (el) el.value = '';
+  }
+}
+function logout() {
+  localStorage.removeItem(SESSION_KEY);
+  SESSION = null;
+  render();
+}
+
+/* ================= wall comments ================= */
+const COMMENTS_API = '/api/comments';
+let COMMENTS = {};
+try { COMMENTS = JSON.parse(localStorage.getItem('pokernight_comments')) || {}; } catch (e) {}
+async function pullComments(rerender) {
+  try {
+    const r = await fetch(COMMENTS_API, { cache: 'no-store' });
+    if (!r.ok) return;
+    COMMENTS = await r.json();
+    localStorage.setItem('pokernight_comments', JSON.stringify(COMMENTS));
+    if (rerender && document.getElementById('wall-list')) renderWall(rerender);
+  } catch (e) {}
+}
+function wallOf(pid) { return (COMMENTS[pid] || []).slice().sort((a, b) => b.ts - a.ts); }
+async function postComment(pid) {
+  const inp = document.getElementById('wall-input');
+  const text = (inp.value || '').trim();
+  if (!text) return;
+  const author = isAdmin() ? 'מנהל' : SESSION.name;
+  inp.value = '';
+  (COMMENTS[pid] = COMMENTS[pid] || []).push({ id: 'tmp' + Date.now(), author, text, ts: Date.now() });
+  renderWall(pid);
+  try {
+    await fetch(COMMENTS_API, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ playerId: pid, author, text }),
+    });
+  } catch (e) { toast('הפרסום יסונכרן כשתהיה רשת'); }
+  pullComments(pid);
+}
+async function deleteComment(pid, id) {
+  if (!requireAdmin()) return;
+  COMMENTS[pid] = (COMMENTS[pid] || []).filter(c => c.id !== id);
+  renderWall(pid);
+  try {
+    await fetch(COMMENTS_API, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-key': SESSION.key },
+      body: JSON.stringify({ playerId: pid, id, action: 'delete' }),
+    });
+  } catch (e) {}
+  pullComments(pid);
+}
+function renderWall(pid) {
+  const box = document.getElementById('wall-list');
+  if (!box) return;
+  const list = wallOf(pid);
+  box.innerHTML = list.length ? list.map(c => `<div class="wall-item">
+      ${isAdmin() ? `<button class="wall-del" onclick="deleteComment('${pid}','${c.id}')">✕</button>` : ''}
+      <div class="who">${esc(c.author)} <span class="when">· ${heDateShort(new Date(c.ts).toISOString().slice(0, 10))}</span></div>
+      <div class="txt">${esc(c.text)}</div>
+    </div>`).join('') : '<div class="empty" style="padding:12px">אין עדיין הודעות — תהיו הראשונים 💬</div>';
+}
+
+/* ================= photo of the night =================
+   Kept out of the synced state document on purpose: that document is pushed
+   in full on every rebuy, and a few hundred kilobytes of photo per night
+   would make the whole evening crawl. The index is tiny; the picture itself
+   is fetched only when someone opens that night. */
+const PHOTO_API = '/api/photos';
+let PHOTO_INDEX = {};
+try { PHOTO_INDEX = JSON.parse(localStorage.getItem('pokernight_photoindex')) || {}; } catch (e) {}
+const photoCache = new Map();
+const hasPhoto = id => !!PHOTO_INDEX[id];
+
+let photoIndexAt = 0;
+async function pullPhotoIndex(rerender) {
+  photoIndexAt = Date.now();
+  try {
+    const r = await fetch(PHOTO_API, { cache: 'no-store' });
+    if (!r.ok) return;
+    const next = await r.json();
+    const changed = JSON.stringify(next) !== JSON.stringify(PHOTO_INDEX);
+    PHOTO_INDEX = next;
+    localStorage.setItem('pokernight_photoindex', JSON.stringify(next));
+    if (changed && rerender && SESSION) render();
+  } catch (e) {}
+}
+// fill in every <img data-photo="gameId"> the current screen put on the page
+async function paintPhotos() {
+  for (const img of document.querySelectorAll('img[data-photo]')) {
+    const id = img.dataset.photo;
+    if (img.dataset.done === id) continue;
+    img.dataset.done = id;
+    const src = await loadPhoto(id);
+    if (src && img.isConnected) img.src = src;
+    else if (!src && img.isConnected) img.closest('[data-photo-slot]')?.remove();
+  }
+}
+async function loadPhoto(id) {
+  if (photoCache.has(id)) return photoCache.get(id);
+  if (!hasPhoto(id)) return null;
+  try {
+    const r = await fetch(`${PHOTO_API}?id=${encodeURIComponent(id)}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j.photo) return null;
+    photoCache.set(id, j.photo);
+    return j.photo;
+  } catch (e) { return null; }
+}
+// a phone photo is 3-6 MB; this puts it on a diet before it ever leaves the device
+// a phone can hand us a file two ways: shoot one now, or pick one already taken
+function pickGamePhoto(gameId) {
+  if (!requireDeal()) return;
+  sheet(`<h3>📷 תמונה מהערב</h3>
+    <button class="btn-primary btn-big" onclick="closeSheet();takeGamePhoto('${gameId}',true)">📸 צילום עכשיו</button>
+    <button class="btn-ghost btn-big" style="margin-top:8px" onclick="closeSheet();takeGamePhoto('${gameId}',false)">📁 בחירה מהגלריה</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function takeGamePhoto(gameId, useCamera) {
+  if (!requireDeal()) return;
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  // tells a phone to open the camera straight away; desktop browsers ignore it
+  if (useCamera) inp.setAttribute('capture', 'environment');
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    toast('מכינה את התמונה…');
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1280;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      uploadGamePhoto(gameId, c.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = () => toast('לא הצלחתי לקרוא את התמונה');
+    img.src = URL.createObjectURL(f);
+  };
+  inp.click();
+}
+async function uploadGamePhoto(gameId, dataUri) {
+  try {
+    const r = await fetch(PHOTO_API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-admin-key': syncKey() },
+      body: JSON.stringify({ gameId, photo: dataUri, by: (SESSION && SESSION.name) || '' }),
+    });
+    if (r.status === 413) { toast('התמונה גדולה מדי'); return; }
+    if (!r.ok) { toast('ההעלאה נכשלה — ננסה שוב מאוחר יותר'); return; }
+    photoCache.set(gameId, dataUri);
+    PHOTO_INDEX[gameId] = { ts: Date.now(), by: (SESSION && SESSION.name) || '' };
+    localStorage.setItem('pokernight_photoindex', JSON.stringify(PHOTO_INDEX));
+    render();
+    toast('התמונה נשמרה 📷');
+  } catch (e) { toast('אין חיבור לרשת'); }
+}
+function removeGamePhoto(gameId) {
+  if (!requireAdmin()) return;
+  confirmDlg('למחוק את התמונה של הערב הזה?', async () => {
+    photoCache.delete(gameId);
+    delete PHOTO_INDEX[gameId];
+    localStorage.setItem('pokernight_photoindex', JSON.stringify(PHOTO_INDEX));
+    render();
+    try {
+      await fetch(PHOTO_API, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-admin-key': syncKey() },
+        body: JSON.stringify({ gameId, action: 'delete' }),
+      });
+    } catch (e) {}
+    toast('התמונה נמחקה');
+  });
+}
+
+/* ================= cloud sync (Netlify Functions + Blobs) ================= */
+const API = '/api/state';
+const SYNCMETA_KEY = 'pokernight_syncmeta';
+let SYNC = { version: 0, dirty: false, pushing: false, status: 'idle' };
+try { Object.assign(SYNC, JSON.parse(localStorage.getItem(SYNCMETA_KEY)) || {}); } catch (e) {}
+SYNC.pushing = false;
+function syncMetaSave() { localStorage.setItem(SYNCMETA_KEY, JSON.stringify({ version: SYNC.version, dirty: SYNC.dirty })); }
+
+/* ---- merging two copies of the data, newest-wins per record ----
+   Devices each hold a full copy, so a plain overwrite lets an old copy undo
+   newer work. Everything below merges record by record instead. ---- */
+const FINISHED_KEY = 'pokernight_finished';
+let FINISHED = [];
+try { FINISHED = JSON.parse(localStorage.getItem(FINISHED_KEY)) || []; } catch (e) {}
+function rememberFinished(id) {
+  if (!FINISHED.includes(id)) FINISHED.push(id);
+  if (FINISHED.length > 200) FINISHED = FINISHED.slice(-200);
+  localStorage.setItem(FINISHED_KEY, JSON.stringify(FINISHED));
+}
+const entryKey = e => e.id || (e.pid + '|' + e.ts + '|' + e.delta);
+function mergeById(a, b) {
+  const m = new Map();
+  for (const it of [...(a || []), ...(b || [])]) {
+    const prev = m.get(it.id);
+    if (!prev || (it.updatedAt || 0) > (prev.updatedAt || 0)) m.set(it.id, it);
+  }
+  return [...m.values()];
+}
+function mergeGame(a, b) {
+  // deletion travels with the data: whichever happened last, deleting or
+  // restoring, is what the merged game reflects
+  const lastDel = Math.max(a.deleted ? (a.deletedAt || 1) : 0, b.deleted ? (b.deletedAt || 1) : 0);
+  const lastRes = Math.max(a.restoredAt || 0, b.restoredAt || 0);
+  const purged = !!(a.purged || b.purged);
+  const stamp = out => {
+    if (purged || lastDel > lastRes) { out.deleted = true; out.deletedAt = lastDel || Date.now(); }
+    else { out.deleted = false; }
+    if (lastRes) out.restoredAt = lastRes;
+    if (purged) { out.purged = true; out.entries = []; out.playerIds = []; }
+    return out;
+  };
+  // a finished game can never go back to being active
+  const aDone = a.status === 'done' || FINISHED.includes(a.id);
+  const bDone = b.status === 'done' || FINISHED.includes(b.id);
+  let base;
+  if (aDone && !bDone) base = a;
+  else if (bDone && !aDone) base = b;
+  else base = (a.updatedAt || 0) >= (b.updatedAt || 0) ? a : b;
+  const other = base === a ? b : a;
+  const out = Object.assign({}, base);
+  if (FINISHED.includes(out.id) && out.status !== 'done' && other.status === 'done') return stamp(Object.assign({}, other));
+  // an edited game had its entry list rewritten — take that side as-is rather
+  // than unioning, or the old entries would come straight back
+  const aRev = a.entriesRev || 0, bRev = b.entriesRev || 0;
+  if (aRev !== bRev) {
+    const newer = aRev > bRev ? a : b;
+    out.entries = (newer.entries || []).filter(e => (out.playerIds || []).includes(e.pid));
+    return stamp(out);
+  }
+  // entries are append-only, so union them and drop anyone no longer in the game
+  const seen = new Set(), entries = [];
+  for (const e of [...(base.entries || []), ...(other.entries || [])]) {
+    const k = entryKey(e);
+    if (seen.has(k)) continue;
+    seen.add(k); entries.push(e);
+  }
+  out.entries = entries.filter(e => (out.playerIds || []).includes(e.pid));
+  return stamp(out);
+}
+function mergeGames(a, b) {
+  const m = new Map();
+  for (const g of [...(a || []), ...(b || [])]) {
+    const prev = m.get(g.id);
+    m.set(g.id, prev ? mergeGame(prev, g) : g);
+  }
+  return [...m.values()];
+}
+function mergeRemote(remote) {
+  const rd = remote.data || {};
+  const before = JSON.stringify([S.players, S.games, S.seasons, S.settings]);
+  S.players = mergeById(S.players, rd.players);
+  S.games = mergeGames(S.games, rd.games);
+  S.seasons = mergeById(S.seasons || [], rd.seasons);
+  const rs = rd.settings || {};
+  if ((rs.updatedAt || 0) > (S.settings.updatedAt || 0)) S.settings = Object.assign({}, DEFAULT_SETTINGS, rs);
+  for (const g of S.games) if (g.status === 'done') rememberFinished(g.id);
+  dropScheduledBreak(S);
+  clampTimers(S);
+  mvpDirty = true;
+  localStorage.setItem(LS_KEY, JSON.stringify(S));
+  SYNC.version = remote.version;
+  syncMetaSave();
+  return before !== JSON.stringify([S.players, S.games, S.seasons, S.settings]);
+}
+
+async function pullState(force) {
+  try {
+    const r = await fetch(API, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    const remote = await r.json();
+    // another device is already on a newer build — this one is behind
+    if (remote.build && remote.build > APP_BUILD) showUpdateBar('יש גרסה חדשה של האפליקציה');
+    if (remote.data && (remote.version !== SYNC.version || force)) {
+      const changed = mergeRemote(remote);
+      if (changed && SESSION) { render(); pullPhotoIndex(); }
+    } else if (remote.version === 0 && isAdmin() && (S.players.length || S.games.length)) {
+      schedulePush(); // seed the cloud from this device
+    }
+    SYNC.status = 'ok';
+    pullComments();
+  } catch (e) { SYNC.status = 'offline'; }
+  if (SYNC.dirty && canDeal()) pushState();
+  updateSyncBadge();
+}
+
+let pushTimer = null;
+function schedulePush() {
+  if (!canDeal() || !syncKey()) return;
+  SYNC.dirty = true; syncMetaSave();
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushState, 700);
+  updateSyncBadge();
+}
+async function pushState(attempt) {
+  if (!canDeal() || !syncKey() || SYNC.pushing) return;
+  clearTimeout(pushTimer);
+  SYNC.pushing = true;
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-admin-key': syncKey() },
+      body: JSON.stringify({
+        baseVersion: SYNC.version, build: APP_BUILD,
+        data: { players: S.players, games: S.games, seasons: S.seasons || [], settings: S.settings },
+      }),
+    });
+    if (r.status === 401) { SYNC.status = 'auth'; SYNC.pushing = false; updateSyncBadge(); return; }
+    if (r.status === 403) {
+      // the server refused a write this role is not allowed to make
+      SYNC.status = 'denied'; SYNC.dirty = false; syncMetaSave();
+      SYNC.pushing = false; updateSyncBadge();
+      toast('השינוי הזה מותר למנהל בלבד 🔒');
+      pullState(true);
+      return;
+    }
+    if (r.status === 426) {
+      // this build is too old for the server to trust — say so, loudly
+      SYNC.status = 'stale'; SYNC.pushing = false; updateSyncBadge();
+      showUpdateBar('הגרסה במכשיר ישנה — צריך לרענן כדי לשמור');
+      return;
+    }
+    if (r.status === 409) {
+      // someone else wrote first: merge their state in, then send the result
+      const remote = await r.json();
+      const changed = mergeRemote(remote);
+      if (changed && SESSION) render();
+      SYNC.pushing = false;
+      if ((attempt || 0) < 4) return pushState((attempt || 0) + 1);
+      updateSyncBadge();
+      return;
+    }
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    SYNC.version = j.version; SYNC.dirty = false; SYNC.status = 'ok';
+    syncMetaSave();
+  } catch (e) {
+    SYNC.status = 'offline';
+    setTimeout(() => { if (SYNC.dirty) pushState(); }, 15000);
+  }
+  SYNC.pushing = false;
+  updateSyncBadge();
+}
+function syncBadgeText() {
+  if (SYNC.status === 'stale') return '⚠️ גרסה ישנה — רעננו';
+  if (SYNC.status === 'auth') return '🔒 מפתח סנכרון שגוי';
+  if (SYNC.status === 'denied') return '🔒 אין הרשאה לשינוי הזה';
+  if (SYNC.dirty) return '⟳ ממתין לסנכרון';
+  if (SYNC.status === 'ok') return '☁️ מסונכרן';
+  if (SYNC.status === 'offline') return '📴 אופליין — הנתונים נשמרים במכשיר';
+  return '';
+}
+// one glance: green synced, amber pending, red offline or refused
+function syncDotClass() {
+  if (SYNC.status === 'stale' || SYNC.status === 'auth' || SYNC.status === 'denied') return 'bad';
+  if (SYNC.dirty || SYNC.pushing) return 'wait';
+  if (SYNC.status === 'offline') return 'bad';
+  if (SYNC.status === 'ok') return 'ok';
+  return '';
+}
+function syncDotLabel() {
+  const c = syncDotClass();
+  return c === 'ok' ? 'מסונכרן' : c === 'wait' ? 'שומר…' : c === 'bad' ? 'לא מסונכרן' : 'ממתין';
+}
+function updateSyncBadge() {
+  const el = document.getElementById('sync-badge');
+  if (el) el.textContent = syncBadgeText();
+  for (const d of document.querySelectorAll('.sync-dot')) d.className = 'sync-dot ' + syncDotClass();
+  for (const t of document.querySelectorAll('.sync-pill .lbl')) t.textContent = syncDotLabel();
+}
+function syncPillHtml() {
+  return `<span class="sync-pill" onclick="showSyncInfo()" title="מצב סנכרון">
+    <span class="sync-dot ${syncDotClass()}"></span><span class="lbl">${syncDotLabel()}</span></span>`;
+}
+function showSyncInfo() {
+  const rows = [
+    ['מצב', syncBadgeText() || '—'],
+    ['גרסת נתונים', String(SYNC.version || 0)],
+    ['גרסת אפליקציה', String(APP_BUILD)],
+    ['תפקיד', isAdmin() ? 'מנהל' : isDealer() ? 'דילר' : 'שחקן'],
+  ];
+  sheet(`<h3>סנכרון</h3>
+    <table class="sheet">${rows.map(([k, v]) => `<tr><td>${k}</td><td>${esc(v)}</td></tr>`).join('')}</table>
+    <div style="height:14px"></div>
+    <button class="btn-primary btn-big" onclick="doRefresh(event)">רענון עכשיו</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">סגירה</button>`);
+}
+
+/* ---- "this build is old" bar ---- */
+let updateBarShown = false;
+function showUpdateBar(msg) {
+  if (updateBarShown) return;
+  updateBarShown = true;
+  const bar = document.createElement('div');
+  bar.id = 'update-bar';
+  bar.innerHTML = `<span>${esc(msg || 'יש גרסה חדשה של האפליקציה')}</span>
+    <button type="button">רענון</button>`;
+  bar.querySelector('button').addEventListener('click', () => doRefresh());
+  document.body.appendChild(bar);
+  const app = document.getElementById('app');
+  if (app) app.style.paddingTop = '52px';
+}
+setInterval(() => { if (document.visibilityState === 'visible') pullState(); }, 3000);
+window.addEventListener('online', () => { SYNC.dirty ? pushState() : pullState(); });
+
+/* ================= helpers ================= */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const shk = n => `<bdi>₪${Math.abs(n).toLocaleString('he-IL')}</bdi>`;
+function money(n) {
+  if (n > 0) return `<span class="money-pos"><bdi>‎+₪${n.toLocaleString('he-IL')}</bdi></span>`;
+  if (n < 0) return `<span class="money-neg"><bdi>‎−₪${Math.abs(n).toLocaleString('he-IL')}</bdi></span>`;
+  return `<span class="money-zero"><bdi>₪0</bdi></span>`;
+}
+const heDate = iso => new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' }).format(new Date(iso + 'T12:00:00'));
+const heDateShort = iso => new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' }).format(new Date(iso + 'T12:00:00'));
+const hhmm = ts => new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
+const player = pid => S.players.find(p => p.id === pid);
+const pname = pid => { const p = player(pid); return p ? p.name : '?'; };
+const pnick = pid => { const p = player(pid); return p && p.nickname && p.nickname !== p.name ? p.nickname : null; };
+const nickLine = pid => pnick(pid) ? `<div class="nickname">\u05f4${esc(pnick(pid))}\u05f4</div>` : '';
+const chipLabel = p => `${esc(p.name)}${p.nickname && p.nickname !== p.name ? ` <span class="nickname">\u05f4${esc(p.nickname)}\u05f4</span>` : ''}`;
+// initials get a colour of their own so a photo-less roster still reads apart
+function tintFor(seed) {
+  const s = String(seed || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return `hsl(${h} 32% 24%)`;
+}
+function avatarHtml(p, cls) {
+  const photo = !!(p && p.avatar);
+  const c = 'avatar' + (cls ? ' ' + cls : '') + (photo ? '' : ' tint');
+  const style = photo ? '' : ` style="--tint:${tintFor(p ? (p.id || p.name) : '')}"`;
+  const inner = photo ? `<img src="${p.avatar}" alt="">`
+    : esc(p ? (p.name || p.nickname || '?').trim().charAt(0) : '?');
+  const crown = (p && isMvp(p.id)) ? '<span class="crown" title="MVP החודש">👑</span>' : '';
+  return `<div class="avatar-wrap${cls ? ' ' + cls : ''}">${crown}<div class="${c}"${style}>${inner}</div></div>`;
+}
+const vibe = ms => { try { if (S.settings.haptics !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  undoFn = null;
+  el.className = ''; el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+/* a toast you can take back, for the actions that are easy to hit by mistake */
+let undoFn = null;
+function toastAction(msg, label, fn, ms) {
+  const el = document.getElementById('toast');
+  undoFn = fn;
+  el.className = 'wide';
+  el.innerHTML = `<span>${esc(msg)}</span><button class="undo" type="button" onclick="runUndo()">${esc(label)}</button>`;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); el.className = ''; undoFn = null; }, ms || 7000);
+}
+function runUndo() {
+  const f = undoFn; undoFn = null;
+  const el = document.getElementById('toast');
+  el.classList.remove('show'); el.className = '';
+  if (f) f();
+}
+
+// who last changed this game, and when — settles "is this count current?"
+function lastTouchLine(g) {
+  if (!g || !g.updatedAt) return '';
+  const mins = Math.round((Date.now() - g.updatedAt) / 60000);
+  const when = mins < 1 ? 'עכשיו' : mins < 60 ? `לפני ${mins} דק'` : hhmm(g.updatedAt);
+  return g.updatedBy ? `עודכן ${when} · ${g.updatedBy}` : `עודכן ${when}`;
+}
+
+/* ================= MVP of the month ================= */
+let mvpDirty = true, mvpCache = null;
+const monthOf = iso => String(iso || '').slice(0, 7);
+const heMonth = ym => new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' })
+  .format(new Date(ym + '-15T12:00:00'));
+function mvpByMonth() {
+  if (!mvpDirty && mvpCache) return mvpCache;
+  const totals = {};
+  for (const g of liveGames()) {
+    if (g.status !== 'done' || !g.results || isCash(g)) continue;   // MVP is tournaments only
+    const m = monthOf(g.date), p = payouts(g);
+    const acc = totals[m] || (totals[m] = {});
+    for (const pid of g.playerIds) acc[pid] = (acc[pid] || 0) + p.nets[pid];
+  }
+  const out = {};
+  for (const [m, tot] of Object.entries(totals)) {
+    let best = null, bv = -Infinity;
+    for (const [pid, v] of Object.entries(tot)) if (v > bv) { bv = v; best = pid; }
+    if (best) out[m] = { pid: best, net: bv };
+  }
+  mvpCache = out; mvpDirty = false;
+  return out;
+}
+// the crown belongs to the winner of the last *finished* month
+function currentMvp() {
+  const all = mvpByMonth();
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const done = Object.keys(all).filter(m => m < thisMonth).sort();
+  const last = done[done.length - 1];
+  return last ? Object.assign({ month: last }, all[last]) : null;
+}
+function mvpTitles(pid) {
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  return Object.entries(mvpByMonth()).filter(([m, v]) => m < thisMonth && v.pid === pid).length;
+}
+const isMvp = pid => { const m = currentMvp(); return !!m && m.pid === pid; };
+const mvpBadge = pid => isMvp(pid) ? ' <span class="mvp-badge">MVP</span>' : '';
+
+/* ================= game math ================= */
+const isDeleted = g => !!g && g.deleted === true;
+const liveGames = () => S.games.filter(g => !g.deleted);
+const isCash = g => !!g && g.type === 'cash';
+const chipsOf = g => (g && g.config && g.config.chipsPerEntry) || CHIPS_PER_ENTRY;
+const CASH_BLINDS = [10, 20];
+const activeGame = () => S.games.find(g => g.status === 'active' && !g.deleted);
+const entriesOf = (g, pid) => g.entries.filter(e => e.pid === pid).reduce((s, e) => s + e.delta, 0);
+const totalEntries = g => g.entries.reduce((s, e) => s + e.delta, 0);
+const poolOf = g => totalEntries(g) * g.config.entryPrice;
+
+function payouts(g) {
+  if (isCash(g)) return cashPayouts(g);
+  const pool = poolOf(g);
+  const house10 = Math.round(pool * g.config.splitHouse / 100);
+  let first, second;
+  if (g.results && g.results.chop) {
+    // the two winners share everything that is not the house's cut
+    const prize = pool - house10;
+    const pct = Math.max(0, Math.min(100, g.results.pctFirst != null ? g.results.pctFirst : 50));
+    first = Math.round(prize * pct / 100);
+    second = prize - first;
+  } else {
+    second = Math.round(pool * g.config.splitSecond / 100);
+    first = pool - second - house10; // remainder to 1st
+  }
+  const n = g.playerIds.length;
+  const houseFee = g.config.houseFee || 0;                       // per player, to the house
+  const savingsFee = savingsFeeOf(g.config);                     // per player, for wear & tear
+  const houseFees = n * houseFee;
+  const savings = n * savingsFee;
+  const houseTotal = house10 + houseFees;                        // everything the house keeps
+  const nets = {};
+  for (const pid of g.playerIds) {
+    let win = 0;
+    if (g.results) {
+      if (g.results.first === pid) win += first;
+      if (g.results.second === pid) win += second;
+    }
+    nets[pid] = win - entriesOf(g, pid) * g.config.entryPrice - houseFee - savingsFee;
+  }
+  return { pool, first, second, house10, houseFees, houseTotal, savings, nets };
+}
+// a cash night: everyone buys chips and cashes out; the house takes a flat fee
+function cashPayouts(g) {
+  const onTable = poolOf(g);                       // entries x buy-in = money in play
+  const n = g.playerIds.length;
+  const houseFee = g.config.houseFee || 0;
+  const houseFees = n * houseFee;
+  const cashouts = (g.results && g.results.cashouts) || {};
+  const nets = {};
+  let cashedOut = 0;
+  for (const pid of g.playerIds) {
+    const out = Number(cashouts[pid]) || 0;
+    cashedOut += out;
+    nets[pid] = out - entriesOf(g, pid) * g.config.entryPrice - houseFee;
+  }
+  return {
+    cash: true, pool: onTable, onTable, cashedOut, diff: cashedOut - onTable,
+    first: 0, second: 0, house10: 0, savings: 0,
+    houseFees, houseTotal: houseFees, cashouts, nets,
+  };
+}
+// older games stored the whole per-player fee as vaultFee; keep their history exact
+const savingsFeeOf = cfg => (cfg && (cfg.savingsFee != null ? cfg.savingsFee : (cfg.vaultFee || 0))) || 0;
+const savingsBalance = () => liveGames().reduce((s, g) => s + (isCash(g) ? 0 : g.playerIds.length * savingsFeeOf(g.config)), 0);
+
+function buildTimeline(cfg) {
+  const t = [];
+  ((cfg && cfg.ladder) || LADDER).forEach(([sb, bb], i) => {
+    t.push({ type: 'level', n: i + 1, sb, bb, min: cfg.levelMinutes });
+    if (cfg.breakAfter && i + 1 === cfg.breakAfter) t.push({ type: 'break', min: cfg.breakMinutes });
+  });
+  return t;
+}
+// a timer may point past the end after the ladder is shortened — pull it back
+const levelAt = (tl, i) => tl[Math.max(0, Math.min(i | 0, tl.length - 1))] || tl[0];
+function clampTimers(s) {
+  for (const g of s.games || []) {
+    if (!g.timer || !g.config) continue;
+    const max = buildTimeline(g.config).length - 1;
+    if (!(g.timer.idx >= 0)) g.timer.idx = 0;
+    if (g.timer.idx > max) g.timer.idx = max;
+    if (g.timer.resumeIdx != null && g.timer.resumeIdx > max) g.timer.resumeIdx = max;
+  }
+}
+// the scheduled break after 40/80 is gone — breaks are called manually now
+function dropScheduledBreak(s) {
+  if (s.settings) s.settings.breakAfter = 0;
+  for (const g of s.games || []) {
+    if (!g.config || !g.config.breakAfter) continue;
+    if (g.status === 'active' && g.timer) {
+      const oldTl = buildTimeline(g.config);
+      const remap = i => {
+        const cur = oldTl[i];
+        if (!cur) return i;
+        const n = cur.type === 'level' ? cur.n : (oldTl[i + 1] && oldTl[i + 1].n) || 1;
+        g.config.breakAfter = 0;
+        const ni = buildTimeline(g.config).findIndex(x => x.type === 'level' && x.n === n);
+        return ni >= 0 ? ni : i;
+      };
+      const oldBreakAfter = g.config.breakAfter;
+      g.timer.idx = remap(g.timer.idx);
+      if (g.timer.resumeIdx != null) { g.config.breakAfter = oldBreakAfter; g.timer.resumeIdx = remap(g.timer.resumeIdx); }
+    }
+    g.config.breakAfter = 0;
+  }
+}
+
+/* ================= timer engine ================= */
+function timerInit(g) {
+  g.timer = { idx: 0, round: 1, running: true, endAt: Date.now() + buildTimeline(g.config)[0].min * 60000, remainingMs: null };
+}
+const timerMode = g => g.timer.mode || 'level';
+function timerRemaining(g) {
+  const t = g.timer;
+  if (timerMode(g) === 'break') return Math.max(0, t.breakEndAt - Date.now());
+  if (timerMode(g) === 'awaiting') return 0;
+  return t.running ? t.endAt - Date.now() : t.remainingMs;
+}
+function startBreak(g, min) {
+  touchGame(g);
+  const t = g.timer;
+  t.resumeIdx = t.idx;
+  t.resumeRemainingMs = Math.max(0, t.running ? t.endAt - Date.now() : (t.remainingMs ?? 0));
+  t.mode = 'break'; t.breakMin = min; t.breakEndAt = Date.now() + min * 60000;
+  t.running = false; t.remainingMs = null;
+  warned = {}; save();
+  playBreakStart(); vibe(60);
+}
+// break countdown finished: hold at 0:00 until the manager approves
+function breakFinished(g) {
+  g.timer.mode = 'awaiting'; saveLocal();
+  playGong();
+  if (S.settings.voice) speak('ההפסקה הסתיימה');
+  flashClock();
+}
+function resumeFromBreak(g) {
+  touchGame(g);
+  const t = g.timer;
+  if (t.resumeIdx != null) t.idx = t.resumeIdx;
+  const tl = buildTimeline(g.config);
+  t.endAt = Date.now() + (t.resumeRemainingMs ?? levelAt(tl, t.idx).min * 60000);
+  t.running = true; t.remainingMs = null; t.mode = 'level';
+  delete t.breakEndAt; delete t.breakMin; delete t.resumeIdx; delete t.resumeRemainingMs;
+  warned = {}; save();
+}
+function timerCatchUp(g, silent) {
+  const t = g.timer, tl = buildTimeline(g.config);
+  if (timerMode(g) === 'awaiting') return false;
+  if (timerMode(g) === 'break') {
+    if (Date.now() >= t.breakEndAt) { if (silent) { t.mode = 'awaiting'; save(); } else breakFinished(g); return true; }
+    return false;
+  }
+  if (isCash(g)) {
+    // blinds never move — the round simply starts over
+    const ms = (g.config.levelMinutes || 15) * 60000;
+    let rolled = false;
+    while (t.running && Date.now() >= t.endAt && ms > 0) {
+      t.round = (t.round || 1) + 1;
+      t.endAt += ms;
+      rolled = true;
+    }
+    if (rolled) { saveLocal(); warned = {}; if (!silent) flashClock(); }
+    return rolled;
+  }
+  let advanced = false;
+  while (t.running && Date.now() >= t.endAt && t.idx < tl.length - 1) {
+    t.idx++;
+    t.endAt += tl[t.idx].min * 60000;
+    advanced = true;
+  }
+  if (advanced) {
+    saveLocal();          // derived from timestamps on every device; never pushed
+    if (!silent) levelChanged(g);
+  }
+  return advanced;
+}
+function timerPause(g) {
+  touchGame(g);
+  const t = g.timer;
+  if (!t.running) return;
+  t.remainingMs = Math.max(0, t.endAt - Date.now());
+  t.running = false; save();
+}
+function timerResume(g) {
+  touchGame(g);
+  const t = g.timer;
+  if (t.running) return;
+  t.endAt = Date.now() + (t.remainingMs ?? 0);
+  t.running = true; t.remainingMs = null; save();
+}
+function timerAddMinute(g, delta) {
+  touchGame(g);
+  const t = g.timer, d = (delta || 1) * 60000, MIN = 10000;
+  if (t.running) t.endAt = Math.max(Date.now() + MIN, t.endAt + d);
+  else t.remainingMs = Math.max(MIN, (t.remainingMs || 0) + d);
+  save();
+}
+function timerJump(g, dir) {
+  touchGame(g);
+  const t = g.timer, tl = buildTimeline(g.config);
+  const ni = Math.min(tl.length - 1, Math.max(0, t.idx + dir));
+  t.idx = ni;
+  if (t.running) t.endAt = Date.now() + tl[ni].min * 60000;
+  else t.remainingMs = tl[ni].min * 60000;
+  save();
+}
+let warned = {};
+function levelChanged(g) {
+  const tl = buildTimeline(g.config), cur = levelAt(tl, g.timer.idx);
+  cur.type === 'break' ? playBreakStart() : playLevelUp();
+  vibe([80, 60, 80]);
+  if (S.settings.voice) {
+    if (cur.type === 'break') speak('הפסקה');
+    else speak(`הבליינדים עולים: ${cur.sb}, ${cur.bb}`);
+  }
+  flashClock();
+}
+
+/* sounds */
+let audioCtx;
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, dur, delay, vol) {
+  const ctx = ac(), o = ctx.createOscillator(), gn = ctx.createGain();
+  o.frequency.value = freq; o.type = 'sine';
+  gn.gain.setValueAtTime(0, ctx.currentTime + delay);
+  gn.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + 0.02);
+  gn.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+  o.connect(gn).connect(ctx.destination);
+  o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + dur + 0.05);
+}
+function playGong() { if (!S.settings.sound) return; try { tone(660, 1.2, 0, .5); tone(880, 1.4, 0.15, .35); tone(440, 1.6, 0.05, .3); } catch (e) {} }
+// blinds up: a rising figure, so the room can tell it from a break ending
+function playLevelUp() { if (!S.settings.sound) return; try { tone(523, .5, 0, .38); tone(659, .5, .14, .38); tone(880, 1.1, .28, .42); } catch (e) {} }
+// break called: a soft descending figure
+function playBreakStart() { if (!S.settings.sound) return; try { tone(784, .45, 0, .3); tone(587, .55, .16, .3); tone(392, .9, .32, .26); } catch (e) {} }
+// game over: a short fanfare
+function playFanfare() { if (!S.settings.sound) return; try { tone(523, .25, 0, .34); tone(659, .25, .16, .34); tone(784, .25, .32, .36); tone(1047, .9, .48, .4); } catch (e) {} }
+function playWarn() { if (!S.settings.sound) return; try { tone(880, .18, 0, .35); tone(880, .18, .28, .35); } catch (e) {} }
+function playClick() { if (!S.settings.sound) return; try { tone(1200, .06, 0, .18); } catch (e) {} }
+const loginAudio = new Audio('login.mp3');
+loginAudio.preload = 'auto';
+function playLoginChime() {
+  try {
+    loginAudio.currentTime = 0;
+    const p = loginAudio.play();
+    if (p && p.catch) p.catch(() => playChipSynth());
+  } catch (e) { playChipSynth(); }
+}
+function playChipSynth() {
+  // fallback: synthesized chip riffle
+  try {
+    const ctx = ac();
+    for (let i = 0; i < 7; i++) {
+      const t = ctx.currentTime + i * 0.055 + Math.random() * 0.012;
+      const dur = 0.035;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / d.length, 2);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+      bp.frequency.value = 2200 + Math.random() * 1800; bp.Q.value = 6;
+      const gn = ctx.createGain(); gn.gain.value = 0.45 + Math.random() * 0.25;
+      src.connect(bp); bp.connect(gn); gn.connect(ctx.destination);
+      src.start(t);
+    }
+    tone(1050, .05, 0.46, .28);
+    tone(680, .10, 0.52, .32);
+  } catch (e) {}
+}
+function speak(text) {
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'he-IL'; u.rate = 0.95;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* wake lock */
+let wakeLock = null;
+async function acquireWake() {
+  if (wakeLock || !('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) { wakeLock = null; }
+}
+function releaseWake() { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') acquireWake();
+});
+document.addEventListener('click', acquireWake, { passive: true });
+setInterval(acquireWake, 30000);
+
+/* ---- periodic refresh: reloads the app every 2 minutes so a display left
+   running all night stays on the newest build and re-arms the wake lock.
+   Skipped whenever a reload would interrupt something. ---- */
+const AUTO_REFRESH_MS = 120000;
+setInterval(() => {
+  if (document.visibilityState !== 'visible') return;
+  if (document.querySelector('.overlay')) return;                       // a dialog or sheet is open
+  if (SYNC.dirty || SYNC.pushing) return;                               // changes not yet in the cloud
+  const ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;       // someone is typing
+  const g = activeGame();
+  if (g && timerMode(g) === 'awaiting') return;                         // waiting for the manager's approval
+  location.reload();
+}, AUTO_REFRESH_MS);
+
+/* ================= router / render ================= */
+let view = 'home', viewParam = null;
+const VIEW_KEY = 'pokernight_view';
+function go(v, param) {
+  if (TV_MODE) { view = 'clock'; viewParam = null; render(); return; }
+  view = v; viewParam = param ?? null;
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ v, param: viewParam })); } catch (e) {}
+  window.scrollTo(0, 0);
+  render();
+}
+const SVG = (d, extra) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${extra || ''}<path d="${d}"/></svg>`;
+const ICONS = {
+  home: SVG('M3 11.2 12 3.5l9 7.7M5.3 10.2V20h4.9v-5.6h3.6V20h4.9v-9.8'),
+  players: SVG('M3.5 19.2c0-2.9 2.5-4.8 5.5-4.8s5.5 1.9 5.5 4.8M15.8 14.7c2.6.4 4.7 2 4.7 4.5', '<circle cx="9" cy="8.2" r="3.1"/><circle cx="16.3" cy="9.1" r="2.4"/>'),
+  stats: SVG('M7 4h10v2.2c0 3.6-2.1 6.3-5 6.3s-5-2.7-5-6.3V4zM7 5.2H4.2c.1 2.9 1.2 4.6 3.2 5.3M17 5.2h2.8c-.1 2.9-1.2 4.6-3.2 5.3M12 12.5v3.4M8.6 20h6.8M9.8 16h4.4v4H9.8z'),
+  history: SVG('M8 8.3h8M8 12h8M8 15.7h5', '<rect x="5" y="3.5" width="14" height="17" rx="2.2"/>'),
+  settings: SVG('M4 6.5h7.2M14.8 6.5H20M4 12h9.2M16.8 12H20M4 17.5h4.2M11.8 17.5H20', '<circle cx="13" cy="6.5" r="1.9"/><circle cx="15" cy="12" r="1.9"/><circle cx="10" cy="17.5" r="1.9"/>'),
+  user: SVG('M4.5 20c0-3.4 3.2-5.6 7.5-5.6s7.5 2.2 7.5 5.6', '<circle cx="12" cy="7.8" r="3.8"/>'),
+  key: SVG('M11.2 12H20m-2.6 0v3.4m-3.4-3.4v2.6', '<circle cx="7.2" cy="12" r="3.6"/>'),
+  refresh: SVG('M19.6 12a7.6 7.6 0 1 1-2.2-5.4', '<path d="M20 4.1v4.2h-4.2"/>'),
+  share: SVG('M12 15.5V4.5m0 0 3.8 3.8M12 4.5 8.2 8.3M5 12.5v6A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-6'),
+  spade: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C9.5 6 4.5 9 4.5 13a4 4 0 0 0 6.6 3c-.3 1.9-1 3.3-2.1 4.5v1h6v-1c-1.1-1.2-1.8-2.6-2.1-4.5a4 4 0 0 0 6.6-3c0-4-5-7-7.5-10.5z"/></svg>`,
+};
+const NAV = [
+  ['home', 'home', 'בית'],
+  ['players', 'players', 'שחקנים'],
+  ['stats', 'stats', 'טבלה'],
+  ['history', 'history', 'היסטוריה'],
+  ['settings', 'settings', 'הגדרות'],
+];
+function renderNav() {
+  const nav = document.getElementById('nav');
+  if (view === 'clock') { nav.hidden = true; return; }
+  nav.hidden = false;
+  nav.innerHTML = NAV.filter(([v]) => isAdmin() || v === 'home' || v === 'stats' || v === 'players').map(([v, ico, lbl]) =>
+    `<button class="${(view === v || (view === 'game' && v === 'home') || (view === 'summary' && v === 'history')) ? 'active' : ''}" onclick="go('${v}')"><span class="ico">${ICONS[ico]}</span>${lbl}</button>`
+  ).join('');
+}
+function doRefresh(e) {
+  const b = e && e.currentTarget && e.currentTarget.classList ? e.currentTarget : null;
+  if (b && b.classList) b.classList.add('spin');
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ v: view, param: viewParam })); } catch (err) {}
+  try { navigator.serviceWorker && navigator.serviceWorker.getRegistration().then(r => r && r.update()); } catch (err) {}
+  setTimeout(() => location.reload(), 220);
+}
+function injectRefresh() {
+  const host = document.querySelector('#app .topbar') || document.querySelector('#app .login-actions');
+  if (!host) return;
+  // a sync light on every screen, so "did that save?" is never a guess
+  if (SESSION && !host.querySelector('.sync-pill')) {
+    const holder = document.createElement('div');
+    holder.innerHTML = syncPillHtml();
+    host.appendChild(holder.firstElementChild);
+  }
+  if (host.querySelector('.refresh-btn')) return;
+  const b = document.createElement('button');
+  b.className = 'refresh-btn';
+  b.type = 'button';
+  b.title = 'רענון';
+  b.setAttribute('aria-label', 'רענון');
+  b.innerHTML = ICONS.refresh;
+  b.addEventListener('click', doRefresh);
+  host.appendChild(b);
+}
+
+const ADMIN_VIEWS = ['history', 'settings', 'newgame', 'manual'];
+const TABLE_BG_VIEWS = ['home', 'newgame'];
+function setBackdrop(v) {
+  const el = document.getElementById('bgimg');
+  if (el) el.classList.toggle('table', TABLE_BG_VIEWS.includes(v));
+}
+function render() {
+  if (!SESSION) { setBackdrop('login'); renderLogin(); return; }
+  if (TV_MODE) { view = 'clock'; viewParam = null; }
+  if (!isAdmin() && ADMIN_VIEWS.includes(view)) { view = 'home'; viewParam = null; }
+  setBackdrop(view);
+  renderNav();
+  const app = document.getElementById('app');
+  const views = { home, game: gameView, clock: clockView, players: playersView, stats: statsView, history: historyView, settings: settingsView, newgame: newGameView, manual: manualView, summary: summaryView };
+  const croot = document.getElementById('clock-root');
+  if (view !== 'clock' && croot.innerHTML) croot.innerHTML = '';
+  app.innerHTML = '';
+  try {
+    (views[view] || home)();
+  } catch (err) {
+    console.error(err);
+    app.innerHTML = `<div class="card" style="margin-top:20px">
+      <h2 style="color:var(--gold-dim)">אופס — משהו השתבש במסך הזה</h2>
+      <div class="empty" style="padding:6px 0 14px">${esc(err && err.message || '')}</div>
+      <button class="btn-primary btn-big" onclick="doRefresh(event)">רענון</button>
+      <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="go('home')">חזרה לדף הבית</button>
+    </div>`;
+  }
+  injectRefresh();
+  if (view === 'settings') settingsExtras();
+  paintPhotos();
+  // the index is a few bytes per night; refresh it when a screen that shows
+  // photos comes up, but not more than twice a minute
+  if (['home', 'history', 'summary', 'game'].includes(view) && Date.now() - photoIndexAt > 30000) pullPhotoIndex();
+}
+
+/* ================= views ================= */
+function home() {
+  const g = activeGame();
+  const app = document.getElementById('app');
+  let html = `<div class="topbar" style="margin-bottom:4px"><div class="sub" style="text-align:left;margin-inline-start:auto">${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : (isDealer() ? '🃏 ' + esc(SESSION.name) + ' · דילר' : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name)) + ' <button class="btn-ghost" style="font-size:.68rem;padding:2px 8px;margin-inline-start:4px" onclick="logout()">יציאה</button>'}</div></div>
+  <img src="neon.jpg" class="neon-hero" alt="ערב פוקר">`;
+
+  if (g) {
+    const tl = buildTimeline(g.config), cur = levelAt(tl, g.timer.idx);
+    html += `<div class="card felt" onclick="go('game')" style="cursor:pointer">
+      <div class="row"><div class="grow">
+        <div style="font-weight:700"><span class="live-dot"></span> משחק פעיל</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.85rem">${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות · קופה ${shk(poolOf(g))}</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.72rem;margin-top:2px">${esc(lastTouchLine(g))}</div>
+      </div>
+      <div style="text-align:left"><div style="color:var(--gold);font-weight:700;direction:ltr">${cur.type === 'break' ? 'הפסקה' : cur.sb + ' / ' + cur.bb}</div></div></div>
+      <button class="btn-primary btn-big" style="margin-top:12px">חזרה למשחק ←</button>
+    </div>`;
+  } else if (isAdmin()) {
+    html += `<button class="btn-primary btn-big" onclick="go('newgame')" style="margin-bottom:12px"><span class="gi">${ICONS.spade}</span> משחק חדש</button>`;
+  }
+
+  const done = liveGames().filter(x => x.status === 'done').sort((a, b) => b.date.localeCompare(a.date));
+  const bgame = done.find(x => !isCash(x) && x.results && x.results.bubble);
+  if (bgame) {
+    const bp = player(bgame.results.bubble);
+    html += `<h2>הבאבל בוי של השבוע</h2>
+    <div class="card felt bubble-card">
+      <div class="who"><span class="balloon">🎈</span>${avatarHtml(bp, 'huge')}<span class="balloon b2">🎈</span></div>
+      <div style="font-weight:700;font-size:1.2rem;margin-top:8px;font-family:'Frank Ruhl Libre',serif">${esc(pname(bgame.results.bubble))}</div>
+      ${pnick(bgame.results.bubble) ? `<div class="nickname">\u05f4${esc(pnick(bgame.results.bubble))}\u05f4</div>` : ''}
+      <div style="color:var(--ink-dim);font-size:.8rem;margin-top:2px">יצא שלישי, על סף הכסף · ${heDateShort(bgame.date)}</div>
+    </div>`;
+  }
+  const mvp = currentMvp();
+  if (mvp) {
+    html += `<h2>MVP של ${esc(heMonth(mvp.month))}</h2>
+    <div class="card felt" style="cursor:pointer" onclick="openProfile('${mvp.pid}')">
+      <div class="row">${avatarHtml(player(mvp.pid), 'big')}
+        <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(pname(mvp.pid))}</div>
+          ${nickLine(mvp.pid)}
+          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">הרווח הגדול של החודש</div></div>
+        <div style="text-align:left">${money(mvp.net)}</div></div>
+    </div>`;
+  }
+  if (done.length) {
+    const lg = done[0], p = payouts(lg);
+    const champ = !isCash(lg) && lg.results ? lg.results.first : null;
+    html += `<h2>המשחק האחרון</h2>
+    <div class="card" onclick="go('summary','${lg.id}')" style="cursor:pointer">
+      ${hasPhoto(lg.id) ? `<span data-photo-slot><img class="photo-banner" data-photo="${lg.id}" alt=""></span>` : ''}
+      <div class="row">${champ ? avatarHtml(player(champ)) : ''}<div class="grow">
+        <div style="font-weight:600">${heDate(lg.date)}</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.82rem">${isCash(lg) ? '💵 ערב קאש' : (lg.results.chop ? `🤝 ${esc(pname(lg.results.first))} + ${esc(pname(lg.results.second))}` : `🥇 ${esc(pname(lg.results.first))} · 🥈 ${esc(pname(lg.results.second))}`)}</div>
+      </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div>
+    </div>`;
+  }
+
+  const lb = leaderboard().slice(0, 3);
+  if (lb.length) {
+    html += `<h2>מובילים</h2><div class="card">` + lb.map((r, i) =>
+      `<div class="lb"><div class="rank">${['🥇', '🥈', '🥉'][i]}</div>${avatarHtml(player(r.pid))}
+       <div class="who"><div>${esc(pname(r.pid))}${mvpBadge(r.pid)}</div>${nickLine(r.pid)}<div class="meta">${r.games} משחקים</div></div>${money(r.net)}</div>`
+    ).join('') + `</div>`;
+  }
+  if (isAdmin()) {
+    const noPhoto = S.players.filter(p => p.active !== false && !p.guest && !p.avatar);
+    if (noPhoto.length) {
+      html += `<div class="card" style="cursor:pointer" onclick="go('players')">
+        <div class="row"><div class="grow"><div style="font-weight:600">📷 ${noPhoto.length} שחקנים בלי תמונה</div>
+          <div class="sub" style="color:var(--ink-dim);font-size:.78rem">${esc(noPhoto.slice(0, 4).map(p => p.name).join(', '))}${noPhoto.length > 4 ? ' ועוד' : ''}</div></div>
+          <div style="color:var(--gold)">←</div></div></div>`;
+    }
+  }
+  if (!done.length && !g) html += `<div class="empty empty-lg">ברוכים הבאים! התחילו משחק חדש,<br>או הוסיפו משחקים ישנים דרך ההיסטוריה 📜</div>`;
+  app.innerHTML = html;
+}
+
+/* ---- new game ---- */
+let ngSel = new Set();
+let ngType = 'tournament';
+let npGuest = false;
+function newGameView() {
+  const app = document.getElementById('app');
+  const act = S.players.filter(p => p.active !== false);
+  const cash = ngType === 'cash';
+  app.innerHTML = `
+    <div class="topbar"><h1>משחק חדש</h1><button class="btn-ghost" onclick="go('home')">ביטול</button></div>
+    <h2>סוג המשחק</h2>
+    <div class="chips" style="margin-bottom:6px">
+      <div class="chip ${!cash ? 'on' : ''}" onclick="setNgType('tournament')">🏆 טורניר</div>
+      <div class="chip ${cash ? 'on' : ''}" onclick="setNgType('cash')">💵 קאש</div>
+    </div>
+    <h2>מי משחק הערב? (כל שחקן מתחיל בכניסה אחת)</h2>
+    <div class="chips" id="ng-chips">${act.map(p =>
+      `<div class="chip ${ngSel.has(p.id) ? 'on' : ''}" onclick="ngToggle('${p.id}')">${chipLabel(p)}</div>`).join('')}
+      <div class="chip" onclick="quickAddPlayer('ng')">+ שחקן חדש</div>
+    </div>
+    <div style="height:18px"></div>
+    <button class="btn-primary btn-big" ${ngSel.size < 2 ? 'disabled' : ''} onclick="startGame()">התחלת ${cash ? 'קאש' : 'טורניר'} (${ngSel.size} שחקנים)</button>
+    <div class="empty" style="padding-top:14px">${cash
+      ? `בליינדים קבועים 10/20 · סבב ${S.settings.cashRoundMinutes} דק' · כל כניסה ${shk(S.settings.cashEntryPrice)} (${(S.settings.cashChips).toLocaleString()} צ'יפים) · דמי בית ${shk(S.settings.cashHouseFee)} לשחקן`
+      : `בליינדים עולים מ-10/20 · ${S.settings.levelMinutes} דק' לרמה · כל כניסה ${shk(S.settings.entryPrice)} (${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים)`}</div>`;
+}
+function setNgType(t) { ngType = t; render(); }
+function ngToggle(pid) { ngSel.has(pid) ? ngSel.delete(pid) : ngSel.add(pid); render(); }
+function startGame() {
+  if (!requireAdmin()) return;
+  if (activeGame()) { toast('יש כבר משחק פעיל'); return; }
+  if (ngSel.size < 2) return;
+  const now = Date.now();
+  const cash = ngType === 'cash';
+  const config = cash ? {
+    // cash: fixed blinds, no prize split, house fee only, no rebuy cap
+    entryPrice: S.settings.cashEntryPrice, houseFee: S.settings.cashHouseFee, savingsFee: 0,
+    ladder: [CASH_BLINDS.slice()],
+    splitFirst: 0, splitSecond: 0, splitHouse: 0,
+    maxRebuys: 0, levelMinutes: S.settings.cashRoundMinutes,
+    breakAfter: 0, breakMinutes: S.settings.breakMinutes,
+    chipsPerEntry: S.settings.cashChips,
+  } : {
+    entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
+    savingsFee: S.settings.savingsFee,
+    ladder: LADDER.map(l => l.slice()),
+    splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
+    maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
+    breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
+    chipsPerEntry: CHIPS_PER_ENTRY,
+  };
+  const g = {
+    id: uid(), date: new Date().toISOString().slice(0, 10),
+    type: cash ? 'cash' : 'tournament',
+    startAt: now, endAt: null, status: 'active', isManual: false,
+    config,
+    playerIds: [...ngSel],
+    entries: [...ngSel].map(pid => ({ id: uid(), pid, delta: 1, ts: now })),
+    updatedAt: now,
+    results: null, timer: null,
+  };
+  timerInit(g);
+  S.games.push(g); save();
+  ngSel = new Set();
+  go('game');
+}
+
+/* ---- active game ---- */
+function gameView() {
+  const g = activeGame();
+  if (!g) { go('home'); return; }
+  timerCatchUp(g, true);
+  const mode = timerMode(g);
+  const tl = buildTimeline(g.config);
+  const lvlIdx = Math.min(mode === 'level' ? g.timer.idx : (g.timer.resumeIdx ?? g.timer.idx), tl.length - 1);
+  const cur = levelAt(tl, lvlIdx), nxt = tl[lvlIdx + 1];
+  const p = payouts(g);
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="topbar"><h1>משחק פעיל</h1><div class="sub">התחיל ${hhmm(g.startAt)}<br><span style="font-size:.72rem">${esc(lastTouchLine(g))}</span></div></div>
+    <div class="row" style="align-items:stretch;gap:8px;margin-bottom:12px">
+      <div class="strip grow" style="margin:0" onclick="go('clock')">
+        <div><div class="lvl">${mode === 'break' ? (g.timer.breakMin === 5 ? 'הפסקת סיגריה 🚬' : 'הפסקת אוכל ☕') : mode === 'awaiting' ? 'ההפסקה הסתיימה' : (isCash(g) ? 'סבב ' + (g.timer.round || 1) : 'רמה ' + cur.n) + (g.timer.running ? '' : ' · מושהה ⏸')}</div>
+        <div class="b" style="direction:ltr;text-align:right">${cur.type === 'break' ? '' : cur.sb + ' / ' + cur.bb}</div></div>
+        <div style="text-align:left"><div class="t num" id="strip-time">--:--</div>
+        <div class="lvl">${mode === 'awaiting' ? 'ממתין לאישור' : mode === 'break' ? `נחזור ל${isCash(g) ? 'משחק' : 'רמה ' + cur.n}` : (isCash(g) ? 'בליינדים קבועים' : (nxt ? (nxt.type === 'break' ? 'הבא: הפסקה' : `הבא: <bdi>${nxt.sb}/${nxt.bb}</bdi>`) : ''))}</div></div>
+      </div>
+      ${canDeal() ? (mode === 'level' ? `<div class="break-col">
+        <button class="break-btn" onclick="ckPause()" title="${g.timer.running ? 'השהיית השעון' : 'המשך השעון'}">${g.timer.running ? '⏸' : '▶️'}<b>${g.timer.running ? 'השהיה' : 'המשך'}</b></button>
+        <button class="break-btn" onclick="breakUI(15)" title="הפסקת אוכל">☕<b>15</b></button>
+        <button class="break-btn" onclick="breakUI(5)" title="הפסקת סיגריה">🚬<b>5</b></button>
+      </div>` : `<div class="break-col">
+        <button class="break-btn resume" onclick="resumeUI()">▶️<b>המשך</b></button>
+      </div>`) : ''}
+    </div>
+    ${g.playerIds.map(pid => {
+      const pl = player(pid), cnt = entriesOf(g, pid);
+      const maxed = g.config.maxRebuys > 0 && cnt >= g.config.maxRebuys + 1;
+      return `<div class="prow">
+        ${avatarHtml(pl)}
+        <div class="name" style="cursor:pointer" onclick="openGamePlayer('${pid}')"><div class="nick">${esc(pname(pid))}${mvpBadge(pid)}${pl && pl.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
+          ${nickLine(pid)}
+          <div class="meta">${shk(cnt * g.config.entryPrice)} ${maxed ? '<span class="capped">· בתקרה</span>' : ''}</div></div>
+        ${canDeal() ? `<button class="btn-minus" onclick="addEntry('${pid}',-1)" ${cnt <= 0 ? 'disabled' : ''} aria-label="ביטול כניסה">−</button>` : ''}
+        <div class="cnt num">${cnt}</div>
+        ${canDeal() ? `<button class="btn-plus" onclick="addEntry('${pid}',1)" aria-label="הוספת כניסה">+</button>` : ''}
+      </div>`;
+    }).join('')}
+    ${canDeal() ? `<div class="row" style="margin:4px 0 12px">
+      <button class="btn-ghost grow" onclick="openAddPlayerToGame()">+ שחקן באיחור</button>
+      <button class="btn-ghost grow" onclick="pickGamePhoto('${g.id}')">📷 ${hasPhoto(g.id) ? 'החלפת תמונה' : 'תמונה מהערב'}</button>
+    </div>` : ''}
+    <div class="pool-bar">
+      <div><div class="pool">${isCash(g) ? 'על השולחן' : 'קופה'}: ${shk(p.pool)}</div>
+      <div class="amounts">${isCash(g)
+        ? `💵 קאש · 🏠 דמי בית ${shk(p.houseFees)}`
+        : `🥇 ${shk(p.first)} · 🥈 ${shk(p.second)} · 🏠 ${shk(p.house10)}`}</div></div>
+      ${isAdmin() ? `<button class="btn-danger" onclick="beginEndGame()">סיום משחק</button>` : ''}
+    </div>`;
+  startTick();
+}
+function addEntry(pid, delta) {
+  if (!requireDeal()) return;
+  const g = activeGame(); if (!g) return;
+  const cnt = entriesOf(g, pid);
+  if (delta > 0 && g.config.maxRebuys > 0 && cnt >= g.config.maxRebuys + 1) {
+    confirmDlg(`⚠️ ${esc(pname(pid))} הגיע לתקרת הרי-באי (${g.config.maxRebuys}).<br>לחרוג מהתקרה?`, () => {
+      pushEntry(g, { id: uid(), pid, delta: 1, ts: Date.now(), override: true });
+    });
+    return;
+  }
+  if (delta < 0 && cnt <= 0) return;
+  pushEntry(g, { id: uid(), pid, delta, ts: Date.now() });
+}
+// every entry can be taken straight back — a misplaced tap costs one press
+function pushEntry(g, entry) {
+  g.entries.push(entry);
+  touchGame(g); save(); playClick(); vibe(entry.delta > 0 ? 25 : [18, 40, 18]);
+  render();
+  const name = pname(entry.pid);
+  toastAction(entry.delta > 0 ? `כניסה נוספה ל${name}` : `כניסה בוטלה ל${name}`, 'ביטול', () => {
+    const cur = activeGame();
+    if (!cur) return;
+    cur.entries = cur.entries.filter(e => e.id !== entry.id);
+    touchGame(cur); save(); render();
+    toast('בוטל ↩');
+  });
+}
+function openGamePlayer(pid) {
+  const g = activeGame(); if (!g) return;
+  if (!isAdmin()) { openProfile(pid); return; }
+  const p = player(pid);
+  sheet(`<h3>${esc(pname(pid))}${p && p.guest ? ' <span class="guest-tag">אורח</span>' : ''}</h3>
+    <button class="btn-ghost btn-big" onclick="closeSheet();openProfile('${pid}')">צפייה בפרופיל</button>
+    <button class="btn-ghost btn-danger btn-big" style="margin-top:8px" onclick="removeFromGame('${pid}')">הסרה מהמשחק</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function removeFromGame(pid) {
+  if (!requireDeal()) return;
+  const g = activeGame(); if (!g) return;
+  if (g.playerIds.length <= 2) { toast('צריך לפחות 2 שחקנים במשחק'); return; }
+  confirmDlg(`להסיר את ${esc(pname(pid))} מהמשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">כל הכניסות שלו במשחק הזה יימחקו.</span>`, () => {
+    const p = player(pid);
+    g.playerIds = g.playerIds.filter(x => x !== pid);
+    g.entries = g.entries.filter(e => e.pid !== pid);
+    if (g.results) for (const k of ['first', 'second', 'bubble']) if (g.results[k] === pid) g.results[k] = null;
+    // a guest added by mistake, who never played anywhere else, leaves no trace
+    if (p && p.guest && !S.games.some(x => x.playerIds.includes(pid))) S.players = S.players.filter(x => x.id !== pid);
+    touchGame(g); save(); closeSheet(); render(); toast('השחקן הוסר מהמשחק');
+  });
+}
+function openAddPlayerToGame() {
+  if (!requireDeal()) return;
+  const g = activeGame(); if (!g) return;
+  const avail = S.players.filter(p => p.active !== false && !g.playerIds.includes(p.id));
+  sheet(`<h3>הוספת שחקן</h3>
+    <div class="chips">${avail.map(p => `<div class="chip" onclick="lateAdd('${p.id}')">${chipLabel(p)}</div>`).join('') || '<div class="empty">אין שחקנים פנויים ברשימה</div>'}
+    <div class="chip" onclick="quickAddPlayer('game')">+ שחקן חדש</div></div>`);
+}
+function lateAdd(pid) {
+  if (!requireDeal()) return;
+  const g = activeGame(); if (!g || g.playerIds.includes(pid)) return;
+  g.playerIds.push(pid);
+  g.entries.push({ id: uid(), pid, delta: 1, ts: Date.now() });
+  touchGame(g); save(); closeSheet(); render(); toast(`${pname(pid)} הצטרף למשחק 🎉`);
+}
+
+/* ---- end game flow ---- */
+let endPick = null;
+const endResults = () => ({
+  first: endPick.first, second: endPick.second,
+  chop: endPick.chop || false, pctFirst: endPick.pctFirst,
+});
+function beginEndGame() {
+  if (!requireAdmin()) return;
+  const g = activeGame(); if (!g) return;
+  const cash = isCash(g);
+  confirmDlg(`לסיים את המשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">${cash ? 'בשלב הבא רושמים כמה כל אחד לקח מהשולחן.' : 'בשלב הבא בוחרים איך הסתיים המשחק.'}</span>`, () => {
+    endPick = { chop: null, first: null, second: null, bubble: null, pctFirst: 50, cashouts: {} };
+    if (cash) { renderCashout(); return; }
+    renderEndMode();
+  });
+}
+// step 0 — a normal finish, or a deal between the last two players
+function renderEndMode() {
+  sheet(`<h3>איך הסתיים המשחק?</h3>
+    <button class="btn-ghost btn-big" onclick="setEndMode(false)">🥇🥈 מקום ראשון ושני</button>
+    <button class="btn-ghost btn-big" style="margin-top:8px" onclick="setEndMode(true)">🤝 צ׳ופ — חלוקה בין שניים</button>
+    <div class="empty" style="padding:12px 0 0;font-size:.76rem">בצ׳ופ שני השחקנים מתחלקים בכסף לפי אחוזים שתקבעו, ושניהם נרשמים כמנצחים.</div>
+    <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="closeSheet()">ביטול</button>`);
+}
+function setEndMode(isChop) {
+  endPick.chop = isChop;
+  renderEndPick();
+}
+function renderEndPick() {
+  const g = activeGame();
+  const step = endPick.first === null ? 'first' : endPick.second === null ? 'second' : 'bubble';
+  const title = endPick.chop
+    ? (step === 'first' ? '🤝 שחקן ראשון בצ׳ופ' : step === 'second' ? '🤝 שחקן שני בצ׳ופ' : '🎈 מי היה הבאבל בוי? (יצא שלישי)')
+    : (step === 'first' ? '🥇 מי לקח מקום ראשון?' : step === 'second' ? '🥈 מי לקח מקום שני?' : '🎈 מי היה הבאבל בוי? (יצא שלישי)');
+  const cands = g.playerIds.filter(pid => pid !== endPick.first && pid !== endPick.second);
+  sheet(`<h3>${title}</h3><div class="winner-pick">${cands.map(pid =>
+    `<div class="prow" onclick="pickWinner('${pid}')">${avatarHtml(player(pid))}
+     <div class="name"><div class="nick">${esc(pname(pid))}</div>
+     ${nickLine(pid)}
+     <div class="meta">${entriesOf(g, pid)} כניסות</div></div></div>`).join('')}</div>
+    ${step === 'bubble' ? `<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="endPick.bubble=null;showEndConfirm()">בלי באבל בוי</button>` : ''}
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function pickWinner(pid) {
+  const g = activeGame();
+  if (endPick.first === null) { endPick.first = pid; renderEndPick(); return; }
+  if (endPick.second === null) {
+    endPick.second = pid;
+    if (endPick.chop) { renderChopSplit(); return; }
+    afterWinners();
+    return;
+  }
+  endPick.bubble = pid; showEndConfirm();
+}
+function afterWinners() {
+  const g = activeGame();
+  const rest = g.playerIds.filter(x => x !== endPick.first && x !== endPick.second);
+  if (rest.length === 1) { endPick.bubble = rest[0]; showEndConfirm(); return; }
+  if (rest.length === 0) { endPick.bubble = null; showEndConfirm(); return; }
+  renderEndPick();
+}
+// step 2b — how the two of them split the money
+function renderChopSplit() {
+  const g = activeGame();
+  const p = payouts(Object.assign({}, g, { results: endResults() }));
+  const a = endPick.pctFirst, b = 100 - a;
+  sheet(`<h3>🤝 חלוקת הכסף</h3>
+    <div class="chips" style="justify-content:center;margin-bottom:14px">
+      ${[50, 60, 70].map(v => `<div class="chip ${a === v ? 'on' : ''}" onclick="setChop(${v})">${v}/${100 - v}</div>`).join('')}
+    </div>
+    <div class="row">
+      <label class="field grow"><span>${esc(pname(endPick.first))}</span>
+        <input type="number" inputmode="numeric" min="0" max="100" id="chop-a" value="${a}" oninput="setChop(this.value, true)"></label>
+      <label class="field grow"><span>${esc(pname(endPick.second))}</span>
+        <input type="number" id="chop-b" value="${b}" disabled></label>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <table class="sheet">
+        <tr><td>🥇 ${esc(pname(endPick.first))} (${a}%)</td><td>${shk(p.first)}</td></tr>
+        <tr><td>🥇 ${esc(pname(endPick.second))} (${b}%)</td><td>${shk(p.second)}</td></tr>
+        <tr><td>🏠 הבית (10% מהקופה)</td><td>${shk(p.house10)}</td></tr>
+      </table>
+    </div>
+    <button class="btn-primary btn-big" onclick="afterWinners()">המשך</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function setChop(v, typing) {
+  let n = Math.round(Number(v));
+  if (!isFinite(n)) n = 50;
+  endPick.pctFirst = Math.max(0, Math.min(100, n));
+  if (typing) {
+    // update the totals live without stealing focus from the field
+    const g = activeGame();
+    const p = payouts(Object.assign({}, g, { results: endResults() }));
+    const b = document.getElementById('chop-b');
+    if (b) b.value = 100 - endPick.pctFirst;
+    const rows = document.querySelectorAll('.sheet-modal table.sheet td');
+    if (rows.length >= 4) {
+      rows[0].innerHTML = `🥇 ${esc(pname(endPick.first))} (${endPick.pctFirst}%)`;
+      rows[1].innerHTML = shk(p.first);
+      rows[2].innerHTML = `🥇 ${esc(pname(endPick.second))} (${100 - endPick.pctFirst}%)`;
+      rows[3].innerHTML = shk(p.second);
+    }
+    return;
+  }
+  renderChopSplit();
+}
+// cash night: type what each player took off the table, and keep the books honest
+function renderCashout() {
+  const g = activeGame(); if (!g) return;
+  const co = endPick.cashouts;
+  const onTable = poolOf(g);
+  const out = g.playerIds.reduce((s, pid) => s + (Number(co[pid]) || 0), 0);
+  const diff = out - onTable;
+  const balanced = diff === 0;
+  sheet(`<h3>💵 כמה כל אחד לקח מהשולחן?</h3>
+    <div class="card" style="margin-bottom:12px">
+      <div class="row"><div class="grow">על השולחן</div><div style="font-weight:700;color:var(--gold)">${shk(onTable)}</div></div>
+      <div class="row" style="margin-top:4px"><div class="grow">נספר עד כה</div><div style="font-weight:700">${shk(out)}</div></div>
+      <div class="row" style="margin-top:4px"><div class="grow">${balanced ? '✔ מאוזן' : (diff < 0 ? 'חסר' : 'עודף')}</div>
+        <div style="font-weight:700;color:${balanced ? 'var(--pos)' : 'var(--neg)'}">${balanced ? '—' : shk(Math.abs(diff))}</div></div>
+    </div>
+    ${g.playerIds.map(pid => `
+      <div class="prow">${avatarHtml(player(pid))}
+        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+          <div class="meta">${entriesOf(g, pid)} כניסות · ${shk(entriesOf(g, pid) * g.config.entryPrice)}</div></div>
+        <input type="number" inputmode="numeric" style="width:96px;text-align:center"
+               value="${co[pid] != null ? co[pid] : ''}" placeholder="₪"
+               onchange="setCashout('${pid}', this.value)">
+      </div>`).join('')}
+    <div style="height:12px"></div>
+    <button class="btn-primary btn-big" onclick="cashoutNext()">${balanced ? 'המשך' : 'המשך בכל זאת'}</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+}
+function setCashout(pid, v) {
+  const n = Math.round(Number(v));
+  if (v === '' || !isFinite(n)) delete endPick.cashouts[pid];
+  else endPick.cashouts[pid] = Math.max(0, n);
+  renderCashout();
+}
+function cashoutNext() {
+  const g = activeGame(); if (!g) return;
+  const p = cashPayouts(Object.assign({}, g, { results: { cash: true, cashouts: endPick.cashouts } }));
+  const finish = () => showCashConfirm();
+  if (p.diff !== 0) {
+    confirmDlg(`הסכומים לא מאוזנים — ${p.diff < 0 ? 'חסר' : 'עודף'} ${shk(Math.abs(p.diff))}.<br>
+      <span style="color:var(--ink-dim);font-size:.85rem">לשמור בכל זאת?</span>`, finish);
+    return;
+  }
+  finish();
+}
+function showCashConfirm() {
+  const g = activeGame();
+  const p = cashPayouts(Object.assign({}, g, { results: { cash: true, cashouts: endPick.cashouts } }));
+  sheet(`<h3>סיכום ואישור</h3>
+    <table class="sheet">
+      <tr><th>שחקן</th><th>כניסות</th><th>לקח</th><th>מאזן</th></tr>
+      ${g.playerIds.map(pid => `<tr><td>${esc(pname(pid))}</td>
+        <td class="num">${entriesOf(g, pid)}</td>
+        <td>${shk(Number(endPick.cashouts[pid]) || 0)}</td>
+        <td>${money(p.nets[pid])}</td></tr>`).join('')}
+      <tr><td>🏠 דמי בית</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
+      <tr><td>💵 על השולחן</td><td></td><td>${shk(p.onTable)}</td><td></td></tr>
+    </table>
+    <div style="height:14px"></div>
+    <button class="btn-primary btn-big" onclick="finishCashGame()">אישור וסיום המשחק</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="renderCashout()">חזרה</button>`);
+}
+function finishCashGame() {
+  if (!requireAdmin()) return;
+  const g = activeGame(); if (!g) return;
+  g.results = { cash: true, cashouts: Object.assign({}, endPick.cashouts) };
+  g.status = 'done'; g.endAt = Date.now();
+  touchGame(g);
+  rememberFinished(g.id);
+  saveLocal();
+  pushState();
+  closeSheet(); stopTick(); releaseWake();
+  go('summary', g.id);
+  toast('ערב הקאש נשמר 💵');
+}
+function showEndConfirm() {
+  const g = activeGame();
+  const p = payouts(Object.assign({}, g, { results: endResults() }));
+  const chop = endPick.chop;
+  sheet(`<h3>סיכום ואישור</h3>
+    <table class="sheet">
+      ${chop ? `<tr><td>🤝 צ׳ופ ${endPick.pctFirst}/${100 - endPick.pctFirst}</td><td></td></tr>` : ''}
+      <tr><td>🥇 ${esc(pname(endPick.first))}</td><td>${shk(p.first)} <span style="color:var(--ink-dim)">(${money(p.nets[endPick.first])})</span></td></tr>
+      <tr><td>${chop ? '🥇' : '🥈'} ${esc(pname(endPick.second))}</td><td>${shk(p.second)} <span style="color:var(--ink-dim)">(${money(p.nets[endPick.second])})</span></td></tr>
+      ${endPick.bubble ? `<tr><td>🎈 ${esc(pname(endPick.bubble))} — באבל בוי</td><td>${money(p.nets[endPick.bubble])}</td></tr>` : ''}
+      <tr><td>🏠 הבית (10% מהקופה)</td><td>${shk(p.house10)}</td></tr>
+      <tr><td>🧰 חיסכון</td><td>${shk(p.savings)}</td></tr>
+      <tr><td>🏠 דמי בית</td><td>${shk(p.houseFees)}</td></tr>
+      <tr><td>💰 קופה</td><td>${shk(p.pool)}</td></tr>
+    </table>
+    <div style="height:14px"></div>
+    <button class="btn-primary btn-big" onclick="finishGame()">אישור וסיום המשחק</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">חזרה</button>`);
+}
+function finishGame() {
+  if (!requireAdmin()) return;
+  const g = activeGame(); if (!g) return;
+  g.results = Object.assign(endResults(), { bubble: endPick.bubble || null });
+  g.status = 'done'; g.endAt = Date.now();
+  touchGame(g);
+  rememberFinished(g.id);
+  saveLocal();
+  playFanfare(); vibe([60, 50, 60, 50, 120]);
+  pushState();            // ending a game syncs immediately, no debounce
+  closeSheet(); stopTick(); releaseWake();
+  go('summary', g.id);
+  toast('המשחק נשמר 🎉');
+}
+
+// the picture from that night, or an invitation to add one
+function photoBlock(g) {
+  if (hasPhoto(g.id)) {
+    return `<div class="night-photo-wrap" data-photo-slot>
+      <img class="night-photo" data-photo="${g.id}" alt="תמונה מהערב">
+      ${canDeal() ? `<div class="tools">
+        <button onclick="takeGamePhoto('${g.id}',true)">📸 צילום</button>
+        <button onclick="takeGamePhoto('${g.id}',false)">📁 גלריה</button>
+        ${isAdmin() ? `<button onclick="removeGamePhoto('${g.id}')">מחיקה</button>` : ''}
+      </div>` : ''}
+    </div>`;
+  }
+  if (!canDeal()) return '';
+  return `<div class="row" style="margin-bottom:12px">
+    <button class="btn-ghost photo-add grow" style="margin:0" onclick="takeGamePhoto('${g.id}',true)">📸 צילום עכשיו</button>
+    <button class="btn-ghost photo-add grow" style="margin:0" onclick="takeGamePhoto('${g.id}',false)">📁 מהגלריה</button>
+  </div>`;
+}
+
+/* ---- summary ---- */
+function summaryView() {
+  const g = S.games.find(x => x.id === viewParam);
+  if (!g || g.status !== 'done') { go('history'); return; }
+  if (g.deleted && !isAdmin()) { go('home'); return; }
+  const p = payouts(g);
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="topbar"><h1>סיכום משחק</h1>${isAdmin() ? `<button class="btn-ghost" onclick="go('history')">→ היסטוריה</button>` : `<button class="btn-ghost" onclick="go('home')">→ חזרה</button>`}</div>
+    ${photoBlock(g)}
+    ${g.deleted ? `<div class="card" style="border-color:var(--neg)">
+      <div style="font-weight:700">🗑 המשחק הזה נמחק</div>
+      <div class="empty" style="padding:6px 0 10px;font-size:.8rem;text-align:right">הוא לא מופיע בהיסטוריה, בטבלה או אצל השחקנים.</div>
+      <button class="btn-primary btn-big" onclick="restoreGame('${g.id}')">שחזור המשחק</button>
+    </div>` : ''}
+    <div class="card felt">
+      <div style="font-weight:700;font-size:1.05rem">${isCash(g) ? '💵 ' : '🏆 '}${heDate(g.date)}${g.isManual ? ' <span style="font-size:.7rem;color:var(--ink-dim)">(הוזן ידנית)</span>' : ''}</div>
+      ${g.startAt && g.endAt ? `<div class="sub" style="color:var(--ink-dim);font-size:.85rem">🕗 <bdi>${hhmm(g.startAt)}–${hhmm(g.endAt)}</bdi></div>` : ''}
+      <div style="margin-top:8px;color:var(--gold);font-weight:700;font-size:1.2rem">${isCash(g) ? `💵 על השולחן: ${shk(p.onTable)}` : `💰 קופה: ${shk(p.pool)}`}</div>
+      ${isCash(g) && p.diff ? `<div style="color:var(--neg);font-size:.8rem;margin-top:4px">${p.diff < 0 ? 'חסר' : 'עודף'} ${shk(Math.abs(p.diff))} בספירה</div>` : ''}
+      ${g.results.chop ? `<div style="margin-top:6px;font-weight:600">🤝 צ׳ופ ${g.results.pctFirst}/${100 - g.results.pctFirst} — ${esc(pname(g.results.first))} ו${esc(pname(g.results.second))} מנצחים משותפים</div>` : ''}
+    </div>
+    ${isCash(g) ? `<div class="card">
+      <table class="sheet">
+        <tr><th>שחקן</th><th>כניסות</th><th>לקח</th><th>מאזן</th></tr>
+        ${g.playerIds.map(pid => `<tr><td>${esc(pname(pid))}</td>
+          <td class="num">${entriesOf(g, pid)}</td>
+          <td>${shk(Number((g.results.cashouts || {})[pid]) || 0)}</td>
+          <td>${money(p.nets[pid])}</td></tr>`).join('')}
+        <tr><td>🏠 דמי בית (${shk(g.config.houseFee || 0)} לשחקן)</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
+      </table>
+    </div>` : `<div class="card">
+      <table class="sheet">
+        <tr><th>שחקן</th><th>כניסות</th><th>זכייה</th><th>מאזן</th></tr>
+        ${g.playerIds.map(pid => {
+          const win = (g.results.first === pid ? p.first : 0) + (g.results.second === pid ? p.second : 0);
+          const medal = g.results.first === pid ? '🥇 ' : g.results.second === pid ? (g.results.chop ? '🥇 ' : '🥈 ') : g.results.bubble === pid ? '🎈 ' : '';
+          return `<tr><td>${medal}${esc(pname(pid))}</td><td class="num">${entriesOf(g, pid)}</td>
+            <td>${win ? shk(win) : '—'}</td><td>${money(p.nets[pid])}</td></tr>`;
+        }).join('')}
+        <tr><td>🏠 הבית (10% מהקופה)</td><td></td><td>${shk(p.house10)}</td><td></td></tr>
+        <tr><td>🧰 חיסכון (${shk(savingsFeeOf(g.config))} לשחקן)</td><td></td><td>${shk(p.savings)}</td><td></td></tr>
+        <tr><td>🏠 דמי בית (${shk(g.config.houseFee || 0)} לשחקן)</td><td></td><td>${shk(p.houseFees)}</td><td></td></tr>
+      </table>
+    </div>`}
+    <button class="btn-primary btn-big" onclick="shareGame('${g.id}')"><span class="gi">${ICONS.share}</span> שיתוף בוואטסאפ${hasPhoto(g.id) ? ' (עם התמונה)' : ''}</button>
+    ${isAdmin() && !g.deleted ? `<button class="btn-ghost" style="width:100%;margin-top:10px" onclick="editGame('${g.id}')">✏️ עריכת המשחק</button>
+    <button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deleteGame('${g.id}')">מחיקת המשחק</button>` : ''}`;
+}
+// Deleting has to be recorded rather than simply dropped: every device holds a
+// full copy, so a game that merely vanishes locally is re-added by the next
+// merge. The game is kept as a tombstone and hidden everywhere instead.
+function deleteGame(id) {
+  if (!requireAdmin()) return;
+  const g = S.games.find(x => x.id === id); if (!g) return;
+  confirmDlg('למחוק את המשחק?<br><span style="color:var(--ink-dim);font-size:.85rem">אפשר לשחזר אותו אחר כך מרשימת המשחקים שנמחקו.</span>', () => {
+    g.deleted = true;
+    g.deletedAt = Date.now();
+    delete g.restoredAt;
+    touchGame(g);
+    saveLocal(); pushState();
+    go('history');
+    toastAction('המשחק נמחק', 'ביטול', () => restoreGame(id));
+  });
+}
+function restoreGame(id) {
+  if (!requireAdmin()) return;
+  const g = S.games.find(x => x.id === id); if (!g || g.purged) return;
+  g.deleted = false;
+  g.restoredAt = Date.now();
+  touchGame(g);
+  saveLocal(); pushState();
+  render(); toast('המשחק שוחזר ✔');
+}
+function purgeGame(id) {
+  if (!requireAdmin()) return;
+  const i = S.games.findIndex(x => x.id === id); if (i < 0) return;
+  confirmDlg('למחוק את המשחק לצמיתות?<br><span style="color:var(--neg);font-size:.85rem">אי אפשר לשחזר אותו אחרי זה.</span>', () => {
+    // keep a bare marker so the game cannot come back through another device
+    S.games[i] = { id, deleted: true, purged: true, deletedAt: S.games[i].deletedAt || Date.now(),
+                   updatedAt: Date.now(), playerIds: [], entries: [], status: 'done' };
+    saveLocal(); pushState();
+    render(); toast('נמחק לצמיתות');
+  });
+}
+function buildWhatsApp(g) {
+  const p = payouts(g);
+  const L = '‎'; // keep +/− readable in RTL
+  const net = n => n > 0 ? `${L}+₪${n}` : n < 0 ? `${L}-₪${Math.abs(n)}` : `₪0`;
+  if (isCash(g)) {
+    return [
+      `💵 ערב קאש — ${heDate(g.date)}`,
+      g.startAt && g.endAt
+        ? `🕗 ${hhmm(g.startAt)}–${hhmm(g.endAt)} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`
+        : `👥 ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`,
+      `💰 על השולחן: ₪${p.onTable}`,
+      `🏠 דמי בית — ₪${p.houseFees}`,
+      `➖➖➖➖➖➖`,
+      `מאזן סופי:`,
+      ...g.playerIds.map(pid => {
+        const e = entriesOf(g, pid);
+        return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${net(p.nets[pid])}`;
+      }),
+    ].join('\n');
+  }
+  const lines = [
+    `🃏 ערב פוקר — ${heDate(g.date)}`,
+    g.startAt && g.endAt ? `🕗 ${hhmm(g.startAt)}–${hhmm(g.endAt)} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות` : `👥 ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות`,
+    `💰 קופה: ₪${p.pool}`,
+    ``,
+    // each placing shows what it paid and what the night came to, so nobody
+    // has to scroll to the balance list to see how they actually did
+    ...(g.results.chop
+      ? [`🤝 צ׳ופ ${g.results.pctFirst}/${100 - g.results.pctFirst} — מנצחים משותפים`,
+         `🥇 ${pname(g.results.first)} — ₪${p.first} (${net(p.nets[g.results.first])})`,
+         `🥇 ${pname(g.results.second)} — ₪${p.second} (${net(p.nets[g.results.second])})`]
+      : [`🥇 ${pname(g.results.first)} — ₪${p.first} (${net(p.nets[g.results.first])})`,
+         `🥈 ${pname(g.results.second)} — ₪${p.second} (${net(p.nets[g.results.second])})`]),
+    ...(g.results.bubble ? [`🎈 ${pname(g.results.bubble)} — הבאבל בוי (${net(p.nets[g.results.bubble])})`] : []),
+    `🏠 הבית (10%) — ₪${p.house10}`,
+    `🧰 חיסכון — ₪${p.savings}`,
+    `🏠 דמי בית — ₪${p.houseFees}`,
+    `➖➖➖➖➖➖`,
+    `מאזן סופי:`,
+    ...g.playerIds.map(pid => {
+      const e = entriesOf(g, pid);
+      return `${pname(pid)} (${e} ${e === 1 ? 'כניסה' : 'כניסות'}): ${net(p.nets[pid])}`;
+    }),
+  ];
+  return lines.join('\n');
+}
+// base64 -> File without an await, so the share still counts as a user gesture
+function dataUriToFile(uri, name) {
+  const comma = uri.indexOf(',');
+  const mime = (uri.slice(0, comma).match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  const bin = atob(uri.slice(comma + 1));
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new File([arr], name, { type: mime });
+}
+async function shareGame(id) {
+  const g = S.games.find(x => x.id === id); if (!g) return;
+  const text = buildWhatsApp(g);
+  // the night's picture goes out with the summary when the phone allows it.
+  // It comes from the cache the screen already filled, so nothing is awaited
+  // before the share call and the gesture stays valid.
+  const photo = photoCache.get(id);
+  if (photo && navigator.share && navigator.canShare) {
+    try {
+      const file = dataUriToFile(photo, `poker-${g.date}.jpg`);
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+        return;
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      // fall through to sharing the text on its own
+    }
+  }
+  if (navigator.share) {
+    try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+/* ---- clock ---- */
+function clockView() {
+  const g = activeGame();
+  if (!g) {
+    if (!TV_MODE) { go('home'); return; }
+    document.getElementById('clock-root').innerHTML = `<div id="clock" class="tv">
+      <div class="lvl">ערב פוקר</div>
+      <div class="blinds">אין משחק פעיל</div>
+      <div class="next">המסך יתעדכן מעצמו כשהמשחק ייפתח</div></div>`;
+    acquireWake();
+    return;
+  }
+  const app = document.getElementById('clock-root');
+  app.innerHTML = `<div id="clock" class="${TV_MODE ? 'tv' : ''}" onclick="toggleCtrls(event)">
+    <div class="flash" id="clock-flash"></div>
+    <button class="exit btn-ghost" onclick="event.stopPropagation();go('game')">→ חזרה</button>
+    <button class="exit refresh-btn" style="inset-inline-start:auto;inset-inline-end:14px" onclick="event.stopPropagation();doRefresh(event)" title="רענון">${ICONS.refresh}</button>
+    <div class="lvl" id="ck-lvl"></div>
+    <div class="time num" id="ck-time">--:--</div>
+    <div class="blinds" id="ck-blinds"></div>
+    <div class="next" id="ck-next"></div>
+    <div class="upnext" id="ck-upnext"></div>
+    <div class="roster" id="ck-roster"></div>
+    <div class="stats">
+      <div><div class="v num" id="ck-players"></div><div class="k">שחקנים</div></div>
+      <div><div class="v num" id="ck-entries"></div><div class="k">כניסות</div></div>
+      <div><div class="v num" id="ck-pool"></div><div class="k">קופה</div></div>
+      <div><div class="v num" id="ck-avg"></div><div class="k">צ'יפ ממוצע</div></div>
+      <div><div class="v num" id="ck-elapsed"></div><div class="k">זמן משחק</div></div>
+    </div>
+    <div class="panel" id="ck-panel"></div>
+    <div class="ctrls" id="ck-ctrls"></div>
+  </div>`;
+  acquireWake();
+  startTick();
+  updateClock();
+}
+function toggleCtrls(e) {
+  const c = document.getElementById('clock');
+  if (c) { c.classList.toggle('show-ctrls'); ac(); }
+}
+function ckCtrlsHtml(g) {
+  if (!canDeal() || TV_MODE) return '';
+  const m = timerMode(g);
+  if (m === 'break' || m === 'awaiting') {
+    return `<button class="btn-primary" onclick="event.stopPropagation();resumeUI()">▶️ המשך משחק</button>`;
+  }
+  return `
+    <button onclick="event.stopPropagation();ckPause()" id="ck-pausebtn">${g.timer.running ? '⏸ השהיה' : '▶️ המשך'}</button>
+    <button onclick="event.stopPropagation();breakUI(15)">☕ הפסקה 15 דק'</button>
+    <button onclick="event.stopPropagation();breakUI(5)">🚬 הפסקה 5 דק'</button>
+    <button onclick="event.stopPropagation();ckAddMin(1)">+1 דק'</button>
+    <button onclick="event.stopPropagation();ckAddMin(-1)">−1 דק'</button>
+    <button onclick="event.stopPropagation();ckJump(-1)">⏮ רמה קודמת</button>
+    <button onclick="event.stopPropagation();ckJump(1)">רמה הבאה ⏭</button>`;
+}
+function ckPause() {
+  if (!requireDeal()) return;
+  const g = activeGame(); if (!g) return;
+  if (timerMode(g) !== 'level') return;
+  g.timer.running ? timerPause(g) : timerResume(g);
+  const ctrls = document.getElementById('ck-ctrls');
+  if (ctrls) ctrls.innerHTML = ckCtrlsHtml(g);
+  if (view === 'clock') updateClock(); else render();
+}
+function breakUI(min) {
+  if (!requireDeal()) return;
+  const g = activeGame(); if (!g) return;
+  startBreak(g, min);
+  toast(min === 15 ? 'הפסקת אוכל — 15 דקות ☕' : 'הפסקת סיגריה — 5 דקות 🚬');
+  render();
+}
+function resumeUI() {
+  if (!requireDeal()) return;
+  const g = activeGame(); if (!g) return;
+  const tl = buildTimeline(g.config), lvl = levelAt(tl, g.timer.resumeIdx ?? g.timer.idx);
+  resumeFromBreak(g);
+  toast(lvl && lvl.type === 'level' ? `חוזרים לרמה ${lvl.n} · ${lvl.sb}/${lvl.bb}` : 'המשחק ממשיך');
+  render();
+}
+function ckAddMin(delta) {
+  if (!requireDeal()) return; const g = activeGame(); if (g) { timerAddMinute(g, delta); warned = {}; updateClock(); } }
+function ckJump(d) {
+  if (!requireDeal()) return; const g = activeGame(); if (g) { timerJump(g, d); warned = {}; updateClock(); } }
+function flashClock() {
+  const f = document.getElementById('clock-flash');
+  if (f) { f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+}
+function updateClock() {
+  const g = activeGame(); if (!g || view !== 'clock') return;
+  timerCatchUp(g);
+  const tl = buildTimeline(g.config), t = g.timer, mode = timerMode(g);
+  const lvlIdx = Math.min((mode === 'level') ? t.idx : (t.resumeIdx ?? t.idx), tl.length - 1);
+  const cur = levelAt(tl, lvlIdx), nxt = tl[lvlIdx + 1];
+  const rem = Math.max(0, timerRemaining(g));
+  const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
+  const el = id => document.getElementById(id);
+  if (!el('ck-time')) return;
+  el('ck-time').textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+  const c = document.getElementById('clock');
+  c.classList.toggle('break-mode', mode !== 'level' || cur.type === 'break');
+  const ctrls = el('ck-ctrls');
+  if (ctrls && ctrls.dataset.mode !== mode) { ctrls.dataset.mode = mode; ctrls.innerHTML = ckCtrlsHtml(g); }
+  if (mode === 'break') {
+    el('ck-lvl').innerHTML = t.breakMin === 5 ? '🚬 הפסקת סיגריה' : '☕ הפסקת אוכל';
+    el('ck-blinds').textContent = cur.type === 'level' ? `${cur.sb} / ${cur.bb}` : '☕';
+    el('ck-next').textContent = isCash(g) ? 'נחזור למשחק' : (cur.type === 'level' ? `נחזור לרמה ${cur.n}` : 'הפסקה');
+  } else if (mode === 'awaiting') {
+    el('ck-lvl').innerHTML = '<span class="paused-tag">ההפסקה הסתיימה</span>';
+    el('ck-blinds').textContent = cur.type === 'level' ? `${cur.sb} / ${cur.bb}` : '☕';
+    el('ck-next').textContent = canDeal() && !TV_MODE ? 'ממתין לאישור — הקישו על המסך' : 'ממתין לאישור המנהל';
+  } else if (isCash(g)) {
+    el('ck-lvl').innerHTML = `💵 קאש · סבב ${t.round || 1}` + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
+    el('ck-blinds').textContent = `${CASH_BLINDS[0]} / ${CASH_BLINDS[1]}`;
+    const mins = g.startAt ? Math.floor((Date.now() - g.startAt) / 60000) : 0;
+    el('ck-next').textContent = `בליינדים קבועים · במשחק ${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')} שעות`;
+  } else {
+    el('ck-lvl').innerHTML = (cur.type === 'break' ? '☕ הפסקה' : `רמה ${cur.n}`) + (t.running ? '' : ' · <span class="paused-tag">מושהה</span>');
+    el('ck-blinds').textContent = cur.type === 'break' ? '☕' : `${cur.sb} / ${cur.bb}`;
+    el('ck-next').textContent = nxt ? (nxt.type === 'break' ? 'בהמשך: הפסקה' : `הבליינדים הבאים: ${nxt.sb} / ${nxt.bb}`) : 'רמה אחרונה';
+  }
+  const roster = el('ck-roster');
+  if (roster) {
+    const sig = g.playerIds.map(pid => pid + ':' + entriesOf(g, pid)).join('|');
+    if (roster.dataset.sig !== sig) {
+      roster.dataset.sig = sig;
+      roster.innerHTML = g.playerIds
+        .map(pid => ({ pid, n: entriesOf(g, pid) }))
+        .sort((a, b) => b.n - a.n)
+        .map(x => `<span class="pl">${esc(pname(x.pid))} <b>×${x.n}</b></span>`)
+        .join('');
+    }
+  }
+  el('ck-players').textContent = g.playerIds.length;
+  el('ck-entries').textContent = totalEntries(g);
+  el('ck-pool').textContent = '₪' + poolOf(g).toLocaleString('he-IL');
+  const avg = g.playerIds.length ? Math.round(totalEntries(g) * chipsOf(g) / g.playerIds.length) : 0;
+  el('ck-avg').textContent = avg.toLocaleString('he-IL');
+  const mins = g.startAt ? Math.max(0, Math.floor((Date.now() - g.startAt) / 60000)) : 0;
+  el('ck-elapsed').textContent = `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')}`;
+  const poolLabel = document.querySelector('#clock .stats div:nth-child(3) .k');
+  if (poolLabel) poolLabel.textContent = isCash(g) ? 'על השולחן' : 'קופה';
+  // the two levels after this one, so the table can plan a hand ahead
+  const up = el('ck-upnext');
+  if (up) {
+    const rows = isCash(g) ? [] : [tl[lvlIdx + 1], tl[lvlIdx + 2]].filter(Boolean).map((lv, i) =>
+      lv.type === 'break' ? `<span>${i ? 'ואז' : 'הבא'}: <b>הפסקה</b></span>`
+        : `<span>${i ? 'ואז' : 'הבא'}: <b>${lv.sb}/${lv.bb}</b></span>`);
+    const html = rows.join('');
+    if (up.dataset.h !== html) { up.dataset.h = html; up.innerHTML = html; }
+  }
+  updateTvPanel(g);
+  // one-minute warning (per round on a cash night)
+  const warnKey = isCash(g) ? 'r' + (t.round || 1) : t.idx;
+  if (mode === 'level' && t.running && rem <= 60000 && rem > 0 && !warned[warnKey]) { warned[warnKey] = true; playWarn(); }
+}
+
+/* ---- the rotating panel: dead screen time turned into something to read ---- */
+const TV_PANEL_MS = 12000;
+function tvPanels(g) {
+  const out = [];
+  const p = payouts(g);
+  if (!isCash(g)) out.push(`🥇 <b>₪${p.first.toLocaleString('he-IL')}</b> &nbsp; 🥈 <b>₪${p.second.toLocaleString('he-IL')}</b>`);
+  else out.push(`🏠 דמי בית: <b>₪${p.houseFees.toLocaleString('he-IL')}</b>`);
+  // these hold from the first night, so the panel always has somewhere to go
+  out.push(`🎲 <b>${(totalEntries(g) * chipsOf(g)).toLocaleString('he-IL')}</b> צ'יפים על השולחן`);
+  out.push(isCash(g)
+    ? `⏱ סבב של <b>${g.config.levelMinutes}</b> דקות · בליינדים קבועים <b>10/20</b>`
+    : `⏱ <b>${g.config.levelMinutes}</b> דקות לרמה · <b>${(g.config.ladder || LADDER).length}</b> רמות בסולם`);
+  const lead = g.playerIds.map(pid => ({ pid, n: entriesOf(g, pid) })).sort((a, b) => b.n - a.n)[0];
+  if (lead && lead.n > 1) out.push(`הכי הרבה כניסות הערב: <b>${esc(pname(lead.pid))}</b> (${lead.n})`);
+  const mvp = currentMvp();
+  if (mvp) out.push(`👑 MVP ${esc(heMonth(mvp.month))}: <b>${esc(pname(mvp.pid))}</b>`);
+  const lastBubble = liveGames()
+    .filter(x => x.status === 'done' && !isCash(x) && x.results && x.results.bubble)
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id))[0];
+  if (lastBubble) out.push(`🎈 הבאבל בוי האחרון: <b>${esc(pname(lastBubble.results.bubble))}</b>`);
+  const top = leaderboard(seasonGames())[0];
+  if (top) {
+    const label = S.settings.seasonName ? esc(S.settings.seasonName) : 'הטבלה';
+    out.push(`🏆 מוביל ${label} — <b>${esc(pname(top.pid))}</b> &nbsp; <bdi>${top.net > 0 ? '‎+' : top.net < 0 ? '‎−' : ''}₪${Math.abs(top.net).toLocaleString('he-IL')}</bdi>`);
+  }
+  return out;
+}
+function updateTvPanel(g) {
+  const el = document.getElementById('ck-panel');
+  if (!el) return;
+  const panels = tvPanels(g);
+  if (!panels.length) { el.innerHTML = ''; return; }
+  const i = Math.floor(Date.now() / TV_PANEL_MS) % panels.length;
+  if (el.dataset.i === String(i)) return;
+  el.dataset.i = String(i);
+  el.classList.add('fade');
+  setTimeout(() => {
+    el.innerHTML = panels[i];
+    el.classList.remove('fade');
+  }, el.innerHTML ? 320 : 0);
+}
+
+/* tick loop */
+let tickId = null;
+function startTick() {
+  if (tickId) return;
+  tickId = setInterval(() => {
+    const g = activeGame();
+    if (!g) { if (!TV_MODE) stopTick(); return; }
+    if (view === 'clock') {
+      const wasMode = timerMode(g);
+      updateClock();
+      if (timerMode(g) !== wasMode) render();
+    } else if (view === 'game') {
+      const adv = timerCatchUp(g);
+      if (adv) { render(); return; }
+      const rem = Math.max(0, timerRemaining(g));
+      const mm = Math.floor(rem / 60000), ss = Math.floor((rem % 60000) / 1000);
+      const elx = document.getElementById('strip-time');
+      if (elx) elx.textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+      const wk = isCash(g) ? 'r' + (g.timer.round || 1) : g.timer.idx;
+      if (timerMode(g) === 'level' && g.timer.running && rem <= 60000 && rem > 0 && !warned[wk]) { warned[wk] = true; playWarn(); }
+    } else if (view !== 'home') return;
+    else timerCatchUp(g);
+  }, 250);
+}
+function stopTick() { clearInterval(tickId); tickId = null; }
+
+/* ---- players ---- */
+function playersView() {
+  const app = document.getElementById('app');
+  const act = S.players.filter(p => p.active !== false && !p.guest);
+  const guests = S.players.filter(p => p.guest);
+  const inact = S.players.filter(p => p.active === false && !p.guest);
+  const st = allStats();
+  app.innerHTML = `
+    <div class="topbar"><h1>שחקנים</h1>${isAdmin() ? `<button class="btn-primary" onclick="quickAddPlayer()">+ שחקן</button>` : ''}</div>
+    ${act.length ? `<div class="card">` + act.map(p => {
+      const s = st[p.id];
+      const sk = streakOf(p.id);
+      return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p, isAdmin() && !p.avatar ? 'no-photo' : '')}
+      <div class="who"><div>${esc(p.name)}${mvpBadge(p.id)}</div>
+      ${nickLine(p.id)}
+      <div class="meta">${s ? s.games + ' משחקים' : 'עוד לא שיחק'}${sk && sk.n >= 2 ? (sk.hot ? ` · 🔥 ${sk.n} ברצף בכסף` : ` · ${sk.n} ברצף בלי כסף`) : ''}</div></div>
+      ${s ? money(s.net) : ''}</div>`;
+    }).join('') + `</div>` : `<div class="empty empty-lg">אין שחקנים עדיין — הוסיפו את החברים</div>`}
+    ${isAdmin() && act.some(p => !p.avatar) ? `<div class="empty" style="padding:8px 0 0;font-size:.76rem">📷 הקישו על שחקן כדי להוסיף לו תמונה — הטבלה נראית הרבה יותר טוב עם פרצופים.</div>` : ''}
+    ${guests.length ? `<h2>אורחים</h2><div class="card">` + guests.map(p => {
+      const s = st[p.id];
+      return `<div class="lb" style="cursor:pointer" onclick="openProfile('${p.id}')">${avatarHtml(p)}
+      <div class="who"><div>${esc(p.name)} <span class="guest-tag">אורח</span></div>
+      ${nickLine(p.id)}
+      <div class="meta">${s ? s.games + ' משחקים' : 'עוד לא שיחק'}</div></div>
+      ${s ? money(s.net) : ''}</div>`;
+    }).join('') + `</div>` : ''}
+    ${inact.length ? `<h2>לא פעילים</h2><div class="card">` + inact.map(p =>
+      `<div class="lb" style="cursor:pointer;opacity:.55" onclick="openProfile('${p.id}')">${avatarHtml(p)}<div class="who"><div>${esc(p.name)}</div>${nickLine(p.id)}</div></div>`).join('') + `</div>` : ''}`;
+}
+function quickAddPlayer(ctx) {
+  if (!requireDeal()) return;
+  npGuest = false;
+  sheet(`<h3>שחקן חדש</h3>
+    <label class="field"><span>שם</span><input type="text" id="np-name" autocomplete="off"></label>
+    <label class="field"><span>כינוי (לא חובה)</span><input type="text" id="np-nick" autocomplete="off"></label>
+    <label class="field"><span>סוג שחקן</span></label>
+    <div class="chips" id="np-kind" style="margin-bottom:14px">
+      <div class="chip on" onclick="setNpGuest(false)">שחקן קבוע</div>
+      <div class="chip" onclick="setNpGuest(true)">אורח לערב הזה</div>
+    </div>
+    <div class="empty" style="padding:0 0 12px;font-size:.75rem">אורח משתתף במשחק ובסטטיסטיקות, אבל לא נכנס לרשימת השחקנים הקבועים.</div>
+    <button class="btn-primary btn-big" onclick="saveNewPlayer('${ctx || ''}')">שמירה</button>`);
+  setTimeout(() => document.getElementById('np-name')?.focus(), 60);
+}
+function setNpGuest(v) {
+  npGuest = v;
+  const chips = document.querySelectorAll('#np-kind .chip');
+  chips[0].classList.toggle('on', !v);
+  chips[1].classList.toggle('on', v);
+}
+function saveNewPlayer(ctx) {
+  if (!requireDeal()) return;
+  const name = document.getElementById('np-name').value.trim();
+  const nick = document.getElementById('np-nick').value.trim();
+  if (!name) { toast('צריך שם 🙂'); return; }
+  const p = { id: uid(), name, nickname: nick || null, avatar: null, active: true, guest: npGuest || false, createdAt: Date.now(), updatedAt: Date.now() };
+  S.players.push(p); save(); closeSheet();
+  if (ctx === 'ng') { ngSel.add(p.id); render(); }
+  else if (ctx === 'game') { lateAdd(p.id); }
+  else if (ctx === 'manual') { manualState.players[p.id] = 1; render(); }
+  else render();
+  toast(`${nick || name} נוסף ✔`);
+}
+const cashStats = pid => liveGames().reduce((a, g) => {
+  if (!isCash(g) || g.status !== 'done' || !g.playerIds.includes(pid)) return a;
+  a.games++; a.net += payouts(g).nets[pid] || 0;
+  return a;
+}, { games: 0, net: 0 });
+function playerGames(pid) {
+  return liveGames().filter(g => g.status === 'done' && !isCash(g) && g.playerIds.includes(pid))
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id))
+    .map(g => {
+      const medal = g.results.first === pid ? '🥇' : g.results.second === pid ? (g.results.chop ? '🥇' : '🥈') : g.results.bubble === pid ? '🎈' : '';
+      return { date: g.date, net: payouts(g).nets[pid], entries: entriesOf(g, pid), medal };
+    });
+}
+function openProfile(pid) {
+  const p = player(pid); if (!p) return;
+  const s = allStats()[pid];
+  const hist = playerGames(pid);
+  const statsHtml = s ? `<div class="card" style="margin-bottom:14px"><table class="sheet">
+      <tr><td>משחקים</td><td class="num">${s.games}</td></tr>
+      <tr><td>ניצחונות 🥇</td><td class="num">${s.firsts}</td></tr>
+      <tr><td>מקום שני 🥈 / באבל בוי 🎈</td><td class="num">${s.seconds} / ${s.bubbles || 0}</td></tr>
+      <tr><td>כניסות (ממוצע למשחק)</td><td class="num">${s.entries} (${(s.entries / s.games).toFixed(1)})</td></tr>
+      <tr><td>הערב הטוב ביותר</td><td>${money(s.best === -Infinity ? 0 : s.best)}</td></tr>
+      <tr><td><b>רווח / הפסד כולל</b></td><td>${money(s.net)}</td></tr>
+      ${mvpTitles(pid) ? `<tr><td>👑 תארי MVP חודשיים</td><td class="num">${mvpTitles(pid)}</td></tr>` : ''}
+    </table></div>` : '<div class="empty">עוד לא שיחק</div>';
+  const itm = s ? s.firsts + s.seconds : 0;
+  const kpiHtml = s ? `<div class="card kpis" style="margin-bottom:14px">
+      <div><div class="v num">${s.games}</div><div class="k">משחקים</div></div>
+      <div><div class="v num">${Math.round(itm / s.games * 100)}%</div><div class="k">סיומים בכסף</div></div>
+      <div><div class="v">${money(Math.round(s.net / s.games))}</div><div class="k">ממוצע לערב</div></div>
+    </div>` : '';
+  const st = streakTag(pid);
+  const streakHtml = st ? `<div style="text-align:center;margin-bottom:14px">${st}</div>` : '';
+  const cum = hist.slice().reverse().reduce((a, h) => { a.push((a[a.length - 1] || 0) + h.net); return a; }, []);
+  const chartHtml = cum.length >= 2 ? `<h2>רווח מצטבר</h2>
+    <div class="card" style="margin-bottom:14px">
+      ${sparkHtml(cum)}
+      <div class="row" style="direction:ltr;justify-content:space-between;font-size:.68rem;color:var(--ink-dim);margin-top:2px">
+        <span>${heDateShort(hist[hist.length - 1].date)}</span>
+        <span>${money(cum[cum.length - 1])}</span>
+        <span>${heDateShort(hist[0].date)}</span>
+      </div>
+    </div>` : '';
+  const h2hHtml = s && s.games ? `<button class="btn-ghost" style="width:100%;margin-bottom:14px" onclick="openH2H('${pid}')">⚔️ השוואה מול שחקן אחר</button>` : '';
+  const cs = cashStats(pid);
+  const cashHtml = cs.games ? `<div class="card" style="margin-bottom:14px"><table class="sheet">
+      <tr><td>💵 ערבי קאש</td><td class="num">${cs.games}</td></tr>
+      <tr><td>מאזן בקאש</td><td>${money(cs.net)}</td></tr>
+    </table><div class="empty" style="padding:6px 0 0;font-size:.72rem;text-align:right">קאש נספר בנפרד ואינו משפיע על הטבלה או על ה-MVP.</div></div>` : '';
+  const mvpNow = currentMvp();
+  const mvpHtml = (mvpNow && mvpNow.pid === pid)
+    ? `<div class="card felt" style="text-align:center;margin-bottom:14px">
+         <div style="font-size:1.5rem">👑</div>
+         <div style="font-weight:700">MVP של ${heMonth(mvpNow.month)}</div>
+         <div style="color:var(--ink-dim);font-size:.82rem">הרווח הגדול בחודש · ${money(mvpNow.net)}</div>
+       </div>` : '';
+  const histHtml = hist.length ? `<h2>רווח והפסד לפי משחק</h2>
+    <div class="card" style="margin-bottom:14px;max-height:210px;overflow-y:auto">
+      ${hist.map(h => `<div class="hist-row">
+        <span>${h.medal} ${heDateShort(h.date)} <span style="color:var(--ink-dim);font-size:.78rem">· ${h.entries} כניסות</span></span>
+        <span>${money(h.net)}</span></div>`).join('')}
+    </div>` : '';
+  const wallHtml = `<h2>קיר ההודעות</h2>
+    <div class="card" style="margin-bottom:10px">
+      <div id="wall-list" style="max-height:190px;overflow-y:auto"></div>
+    </div>
+    <div class="row" style="margin-bottom:14px">
+      <input type="text" id="wall-input" class="grow" maxlength="300" placeholder="כתבו משהו לקיר של ${esc(pname(pid))}…">
+      <button class="btn-primary" onclick="postComment('${pid}')">שליחה</button>
+    </div>`;
+
+  if (!isAdmin()) {
+    sheet(`<h3>פרופיל שחקן</h3>
+      <div class="row" style="margin-bottom:14px">${avatarHtml(p, 'big')}
+        <div class="grow"><div style="font-weight:700;font-size:1.1rem">${esc(p.name)}${mvpBadge(p.id)}${p.guest ? ' <span class="guest-tag">אורח</span>' : ''}</div>
+        ${nickLine(p.id)}</div></div>
+      ${mvpHtml}
+      ${streakHtml}
+      ${kpiHtml}
+      ${statsHtml}
+      ${chartHtml}
+      ${h2hHtml}
+      ${cashHtml}
+      ${histHtml}
+      ${wallHtml}`);
+    renderWall(pid); pullComments(pid);
+    return;
+  }
+  sheet(`<h3>פרופיל שחקן</h3>
+    <div class="row" style="margin-bottom:14px">
+      <div onclick="pickAvatar('${pid}')" style="cursor:pointer;position:relative">${avatarHtml(p, 'big')}
+        <div style="position:absolute;bottom:-2px;inset-inline-start:-2px;background:var(--gold);color:#17130a;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:.8rem">📷</div></div>
+      <div class="grow">
+        <label class="field"><span>שם</span><input type="text" id="pf-name" value="${esc(p.name)}"></label>
+        <label class="field" style="margin-bottom:0"><span>כינוי</span><input type="text" id="pf-nick" value="${esc(p.nickname || '')}"></label>
+      </div>
+    </div>
+    <div class="chips" style="margin-bottom:14px">
+      <div class="chip ${!p.guest ? 'on' : ''}" onclick="setPlayerGuest('${pid}',false)">שחקן קבוע</div>
+      <div class="chip ${p.guest ? 'on' : ''}" onclick="setPlayerGuest('${pid}',true)">אורח</div>
+    </div>
+    ${mvpHtml}
+    ${streakHtml}
+    ${kpiHtml}
+    ${statsHtml}
+    ${chartHtml}
+    ${h2hHtml}
+    ${cashHtml}
+    ${histHtml}
+    ${wallHtml}
+    <button class="btn-primary btn-big" onclick="saveProfile('${pid}')">שמירה</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="togglePlayerActive('${pid}')">${p.active !== false ? 'העברה ללא פעילים' : 'החזרה לפעילים'}</button>
+    ${!s ? `<button class="btn-ghost btn-danger" style="width:100%;margin-top:8px" onclick="deletePlayer('${pid}')">מחיקת השחקן</button>` : ''}`);
+  renderWall(pid); pullComments(pid);
+}
+function openH2H(pid) {
+  const others = S.players.filter(p => p.id !== pid && allStats()[p.id]);
+  sheet(`<h3>⚔️ ${esc(pname(pid))} מול…</h3>
+    <div class="chips">${others.map(p => `<div class="chip" onclick="showH2H('${pid}','${p.id}')">${chipLabel(p)}</div>`).join('')
+      || '<div class="empty">אין עדיין שחקנים אחרים עם משחקים</div>'}</div>
+    <button class="btn-ghost" style="width:100%;margin-top:12px" onclick="closeSheet();openProfile('${pid}')">חזרה לפרופיל</button>`);
+}
+function showH2H(a, b) {
+  const h = headToHead(a, b);
+  const lead = h.aWins === h.bWins ? 'תיקו' : `${pname(h.aWins > h.bWins ? a : b)} מוביל`;
+  sheet(`<h3>⚔️ ראש בראש</h3>
+    <div class="card felt" style="margin-bottom:14px">
+      <div class="row" style="align-items:center">
+        <div style="flex:1;text-align:center">${avatarHtml(player(a), 'big')}
+          <div style="font-weight:700;margin-top:6px">${esc(pname(a))}</div></div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--gold);direction:ltr">${h.aWins} : ${h.bWins}</div>
+        <div style="flex:1;text-align:center">${avatarHtml(player(b), 'big')}
+          <div style="font-weight:700;margin-top:6px">${esc(pname(b))}</div></div>
+      </div>
+      <div style="text-align:center;color:var(--ink-dim);font-size:.8rem;margin-top:10px">
+        ${h.games ? `${h.games} ערבים משותפים · ${esc(lead)}` : 'עוד לא שיחקו יחד'}</div>
+    </div>
+    ${h.games ? `<div class="card"><table class="sheet">
+      <tr><th>&nbsp;</th><th>${esc(pname(a))}</th><th>${esc(pname(b))}</th></tr>
+      <tr><td>ערבים שסיים לפני השני</td><td class="num">${h.aWins}</td><td class="num">${h.bWins}</td></tr>
+      <tr><td>מאזן בערבים המשותפים</td><td>${money(h.aNet)}</td><td>${money(h.bNet)}</td></tr>
+    </table></div>` : ''}
+    <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="openH2H('${a}')">שחקן אחר</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet();openProfile('${a}')">חזרה לפרופיל</button>`);
+}
+function setPlayerGuest(pid, v) {
+  if (!requireAdmin()) return;
+  const p = player(pid); if (!p) return;
+  p.guest = v; p.updatedAt = Date.now(); save(); openProfile(pid); render();
+}
+function saveProfile(pid) {
+  if (!requireAdmin()) return;
+  const p = player(pid); if (!p) return;
+  p.name = document.getElementById('pf-name').value.trim() || p.name;
+  p.nickname = document.getElementById('pf-nick').value.trim() || null;
+  p.updatedAt = Date.now();
+  save(); closeSheet(); render(); toast('נשמר ✔');
+}
+function togglePlayerActive(pid) {
+  if (!requireAdmin()) return;
+  const p = player(pid); if (!p) return;
+  p.active = p.active === false; p.updatedAt = Date.now(); save(); closeSheet(); render();
+}
+function deletePlayer(pid) {
+  if (!requireAdmin()) return;
+  if (S.games.some(g => g.playerIds.includes(pid))) { toast('אי אפשר למחוק שחקן עם משחקים'); return; }
+  confirmDlg('למחוק את השחקן?', () => {
+    S.players = S.players.filter(p => p.id !== pid); save(); closeSheet(); render();
+  });
+}
+function pickAvatar(pid) {
+  if (!requireAdmin()) return;
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const ctx = c.getContext('2d');
+      const s = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256);
+      const p = player(pid);
+      p.avatar = c.toDataURL('image/jpeg', 0.82);
+      p.updatedAt = Date.now();
+      save(); openProfile(pid); render();
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(f);
+  };
+  inp.click();
+}
+
+/* ---- seasons ----
+   A season is just a start date: everything played on or after it counts. When
+   a new one opens the old one is archived with its champion, so the all-time
+   table keeps growing while the league still gets a fresh race. ---- */
+const seasonStart = () => S.settings.seasonStart || null;
+const seasonName = () => S.settings.seasonName || 'העונה הנוכחית';
+const inSeason = g => !seasonStart() || (g.date || '') >= seasonStart();
+const seasonGames = () => liveGames().filter(inSeason);
+const seasonsDone = () => (S.seasons || []).slice().sort((a, b) => (b.start || '').localeCompare(a.start || ''));
+const today = () => new Date().toISOString().slice(0, 10);
+const dayBefore = iso => {
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+};
+// how many nights a season starting on this date would pick up
+const gamesFrom = from => liveGames().filter(g => g.status === 'done' && !isCash(g) && (g.date || '') >= from).length;
+function closeSeason(name, nextName, nextStart) {
+  const start = nextStart || today();
+  const games = seasonGames().filter(g => g.status === 'done' && !isCash(g));
+  const lb = leaderboard(seasonGames());
+  const champ = lb[0] || null;
+  const rec = {
+    id: uid(), name: name || seasonName(),
+    start: seasonStart() || games.map(g => g.date).sort()[0] || start,
+    // one season ends where the next begins, so the two never overlap
+    end: dayBefore(start),
+    championPid: champ ? champ.pid : null, net: champ ? champ.net : 0,
+    games: games.length, updatedAt: Date.now(),
+  };
+  S.seasons = (S.seasons || []).concat([rec]);
+  S.settings.seasonStart = start;
+  S.settings.seasonName = nextName || '';
+  S.settings.updatedAt = Date.now();
+  save();
+  return rec;
+}
+
+/* ---- streaks: how the last few nights went, newest first ---- */
+function streakOf(pid) {
+  const gs = liveGames()
+    .filter(g => g.status === 'done' && !isCash(g) && g.playerIds.includes(pid) && g.results)
+    .sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  if (!gs.length) return null;
+  const itm = g => g.results.first === pid || g.results.second === pid;
+  const hot = itm(gs[0]);
+  let n = 0;
+  for (const g of gs) { if (itm(g) === hot) n++; else break; }
+  return { hot, n };
+}
+const streakTag = pid => {
+  const s = streakOf(pid);
+  if (!s || s.n < 2) return '';
+  return s.hot
+    ? `<span class="streak-tag">🔥 ${s.n} ערבים ברצף בכסף</span>`
+    : `<span class="streak-tag cold">${s.n} ערבים ברצף בלי כסף</span>`;
+};
+
+/* ---- head to head ---- */
+function headToHead(a, b) {
+  const shared = liveGames().filter(g => g.status === 'done' && !isCash(g)
+    && g.playerIds.includes(a) && g.playerIds.includes(b));
+  let aWins = 0, bWins = 0, aNet = 0, bNet = 0;
+  for (const g of shared) {
+    const p = payouts(g);
+    aNet += p.nets[a]; bNet += p.nets[b];
+    if (p.nets[a] > p.nets[b]) aWins++;
+    else if (p.nets[b] > p.nets[a]) bWins++;
+  }
+  return { games: shared.length, aWins, bWins, aNet, bNet };
+}
+
+/* ---- stats ---- */
+function allStats(list) {
+  const st = {};
+  for (const g of (list || liveGames())) {
+    if (g.status !== 'done' || isCash(g)) continue;   // cash nights stay out of the table
+    const p = payouts(g);
+    for (const pid of g.playerIds) {
+      const s = st[pid] || (st[pid] = { pid, games: 0, entries: 0, firsts: 0, seconds: 0, bubbles: 0, net: 0, best: -Infinity });
+      s.games++; s.entries += entriesOf(g, pid);
+      if (g.results.first === pid) s.firsts++;
+      if (g.results.second === pid) { if (g.results.chop) s.firsts++; else s.seconds++; }
+      if (g.results.bubble === pid) s.bubbles++;
+      s.net += p.nets[pid];
+      s.best = Math.max(s.best, p.nets[pid]);
+    }
+  }
+  return st;
+}
+function leaderboard(list) { return Object.values(allStats(list)).sort((a, b) => b.net - a.net); }
+
+/* ---- cumulative profit sparkline ---- */
+function sparkHtml(vals) {
+  if (!vals || vals.length < 2) return '';
+  const W = 300, H = 92, PAD = 8;
+  const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
+  const span = (max - min) || 1;
+  const x = i => PAD + i * (W - 2 * PAD) / (vals.length - 1);
+  const y = v => PAD + (max - v) / span * (H - 2 * PAD);
+  const d = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const zy = y(0).toFixed(1);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <line class="zero" x1="0" y1="${zy}" x2="${W}" y2="${zy}" vector-effect="non-scaling-stroke"/>
+    <path class="line" d="${d}" vector-effect="non-scaling-stroke"/>
+    <circle class="dot" cx="${x(vals.length - 1).toFixed(1)}" cy="${y(vals[vals.length - 1]).toFixed(1)}" r="3.6"/>
+  </svg>`;
+}
+let statsMode = null;   // 'season' | 'all'
+function statsView() {
+  const app = document.getElementById('app');
+  const hasSeason = !!seasonStart();
+  if (statsMode === null) statsMode = hasSeason ? 'season' : 'all';
+  if (!hasSeason) statsMode = 'all';
+  const list = statsMode === 'season' ? seasonGames() : liveGames();
+  const lb = leaderboard(list);
+  const gamesCount = list.filter(g => g.status === 'done' && !isCash(g)).length;
+  const past = seasonsDone();
+  app.innerHTML = `
+    <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.stats}</span> טבלה</h1>
+      <div class="sub">${gamesCount} משחקים</div></div>
+    ${hasSeason ? `<div class="tabs">
+      <div class="tab ${statsMode === 'season' ? 'on' : ''}" onclick="setStatsMode('season')">${esc(seasonName())}</div>
+      <div class="tab ${statsMode === 'all' ? 'on' : ''}" onclick="setStatsMode('all')">כל הזמנים</div>
+    </div>
+    ${statsMode === 'season' ? `<div class="empty" style="padding:0 0 10px;font-size:.74rem;text-align:right">מ-${heDateShort(seasonStart())} והלאה.</div>` : ''}` : ''}
+    ${lb.length ? `<div class="card">` + lb.map((r, i) =>
+      `<div class="lb" style="cursor:pointer" onclick="openProfile('${r.pid}')">
+        <div class="rank">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</div>
+        ${avatarHtml(player(r.pid))}
+        <div class="who"><div>${esc(pname(r.pid))}${mvpBadge(r.pid)}</div>
+        ${nickLine(r.pid)}
+        <div class="meta">${r.games} משחקים · ${r.firsts}🥇 ${r.seconds}🥈${r.bubbles ? ' ' + r.bubbles + '🎈' : ''} · שיא ${money(r.best === -Infinity ? 0 : r.best)}</div></div>
+        ${money(r.net)}</div>`).join('') + `</div>`
+      : `<div class="empty empty-lg">אין עדיין נתונים${statsMode === 'season' ? ' בעונה הזאת' : ''}.<br>שחקו משחק או הוסיפו משחקים ישנים בהיסטוריה 📜</div>`}
+    ${past.length ? `<h2>אלופי העונות</h2><div class="card">` + past.map(s =>
+      `<div class="lb">${s.championPid ? avatarHtml(player(s.championPid)) : '<div class="rank">🏆</div>'}
+        <div class="who"><div>${esc(s.name || 'עונה')} 🏆</div>
+        <div class="meta">${s.championPid ? esc(pname(s.championPid)) : 'ללא אלוף'} · ${s.games} משחקים · ${heDateShort(s.start)}–${heDateShort(s.end)}</div></div>
+        ${money(s.net || 0)}</div>`).join('') + `</div>` : ''}`;
+}
+function setStatsMode(m) { statsMode = m; render(); }
+
+/* ---- history + manual ---- */
+function historyView() {
+  const app = document.getElementById('app');
+  const done = liveGames().filter(g => g.status === 'done').sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  app.innerHTML = `
+    <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.history}</span> היסטוריה</h1>${isAdmin() ? `<button class="btn-primary" onclick="startManual()">+ משחק ישן</button>` : ''}</div>
+    <!-- games list first, recovery bin after -->
+    ${(() => {
+      if (!isAdmin()) return '';
+      const bin = S.games.filter(g => g.deleted && !g.purged)
+        .sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+      if (!bin.length) return '';
+      return `<h2>🗑 משחקים שנמחקו (${bin.length})</h2>
+        <div class="empty" style="padding:0 0 8px;font-size:.74rem;text-align:right">מוצג למנהל בלבד. שחקנים לא רואים את המשחקים האלה בשום מקום.</div>
+        ${bin.map(g => {
+          const p = payouts(g);
+          return `<div class="card" style="opacity:.72">
+            <div class="row"><div class="grow">
+              <div style="font-weight:600">${isCash(g) ? '💵 ' : ''}${heDateShort(g.date)}</div>
+              <div class="sub" style="color:var(--ink-dim);font-size:.78rem">${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות · ${shk(p.pool)}</div>
+            </div></div>
+            <div class="row" style="margin-top:10px">
+              <button class="btn-primary grow" onclick="restoreGame('${g.id}')">שחזור</button>
+              <button class="btn-ghost btn-danger grow" onclick="purgeGame('${g.id}')">מחיקה לצמיתות</button>
+            </div>
+          </div>`;
+        }).join('')}`;
+    })()}
+    ${done.length ? done.map(g => {
+      const p = payouts(g);
+      return `<div class="card" style="cursor:pointer" onclick="go('summary','${g.id}')">
+        <div class="row">${hasPhoto(g.id) ? `<span data-photo-slot><img class="photo-thumb" data-photo="${g.id}" alt=""></span>` : ''}<div class="grow">
+          <div style="font-weight:600">${isCash(g) ? '💵 ' : ''}${heDateShort(g.date)}${g.isManual ? ' <span style="font-size:.68rem;color:var(--ink-dim)">ידני</span>' : ''}</div>
+          <div class="sub" style="color:var(--ink-dim);font-size:.8rem">${isCash(g) ? 'קאש · בליינדים קבועים' : (g.results.chop ? `🤝 ${esc(pname(g.results.first))} + ${esc(pname(g.results.second))} (צ׳ופ)` : `🥇 ${esc(pname(g.results.first))} · 🥈 ${esc(pname(g.results.second))}`) + (g.results.bubble ? ' · 🎈 ' + esc(pname(g.results.bubble)) : '')} · ${g.playerIds.length} שחקנים · ${totalEntries(g)} כניסות</div>
+        </div><div style="color:var(--gold);font-weight:700">${shk(p.pool)}</div></div></div>`;
+    }).join('') : `<div class="empty empty-lg">אין משחקים שמורים.<br>הוסיפו משחקים ישנים כדי למלא את הסטטיסטיקות 🏆</div>`}`;
+}
+let manualState = null;
+function startManual() {
+  if (!requireAdmin()) return;
+  manualState = { date: new Date().toISOString().slice(0, 10), players: {}, first: null, second: null, bubble: null,
+                  chop: false, pctFirst: 50, editId: null };
+  go('manual');
+}
+// fix a finished cash night: entry counts and what each player took
+function editCashGame(g) {
+  if (!requireAdmin()) return;
+  cashEdit = { id: g.id, counts: {}, cashouts: Object.assign({}, (g.results && g.results.cashouts) || {}) };
+  for (const pid of g.playerIds) cashEdit.counts[pid] = entriesOf(g, pid);
+  closeSheet();
+  renderCashEdit();
+}
+let cashEdit = null;
+function renderCashEdit() {
+  const g = S.games.find(x => x.id === cashEdit.id);
+  if (!g) { cashEdit = null; go('history'); return; }
+  const e = cashEdit;
+  const onTable = Object.values(e.counts).reduce((a, b) => a + b, 0) * g.config.entryPrice;
+  const out = Object.keys(e.counts).reduce((s, pid) => s + (Number(e.cashouts[pid]) || 0), 0);
+  const diff = out - onTable;
+  sheet(`<h3>✏️ עריכת ערב קאש</h3>
+    <div class="card" style="margin-bottom:12px">
+      <div class="row"><div class="grow">על השולחן</div><div style="font-weight:700;color:var(--gold)">${shk(onTable)}</div></div>
+      <div class="row" style="margin-top:4px"><div class="grow">${diff === 0 ? '✔ מאוזן' : (diff < 0 ? 'חסר' : 'עודף')}</div>
+        <div style="font-weight:700;color:${diff === 0 ? 'var(--pos)' : 'var(--neg)'}">${diff === 0 ? '—' : shk(Math.abs(diff))}</div></div>
+    </div>
+    ${Object.keys(e.counts).map(pid => `
+      <div class="prow">${avatarHtml(player(pid))}
+        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+          <div class="meta">כניסות</div></div>
+        <div class="stepper">
+          <button onclick="cashEditStep('${pid}',-1)">−</button>
+          <div class="cnt num">${e.counts[pid]}</div>
+          <button onclick="cashEditStep('${pid}',1)">+</button>
+        </div>
+        <input type="number" inputmode="numeric" style="width:86px;text-align:center" placeholder="₪"
+               value="${e.cashouts[pid] != null ? e.cashouts[pid] : ''}"
+               onchange="cashEditOut('${pid}', this.value)">
+      </div>`).join('')}
+    <div style="height:12px"></div>
+    <button class="btn-primary btn-big" onclick="saveCashEdit()">שמירת השינויים</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="cashEdit=null;closeSheet()">ביטול</button>`);
+}
+function cashEditStep(pid, d) {
+  const v = (cashEdit.counts[pid] || 0) + d;
+  cashEdit.counts[pid] = Math.max(1, v);
+  renderCashEdit();
+}
+function cashEditOut(pid, v) {
+  const n = Math.round(Number(v));
+  if (v === '' || !isFinite(n)) delete cashEdit.cashouts[pid];
+  else cashEdit.cashouts[pid] = Math.max(0, n);
+  renderCashEdit();
+}
+function saveCashEdit() {
+  if (!requireAdmin()) return;
+  const g = S.games.find(x => x.id === cashEdit.id);
+  if (!g) { cashEdit = null; closeSheet(); return; }
+  const pids = Object.keys(cashEdit.counts);
+  g.playerIds = pids;
+  g.entries = pids.map(pid => ({ id: uid(), pid, delta: cashEdit.counts[pid], ts: g.startAt || Date.now() }));
+  g.entriesRev = (g.entriesRev || 0) + 1;
+  g.results = { cash: true, cashouts: Object.assign({}, cashEdit.cashouts) };
+  g.editedAt = Date.now();
+  touchGame(g); rememberFinished(g.id);
+  saveLocal(); pushState();
+  cashEdit = null; closeSheet(); render();
+  toast('השינויים נשמרו ✔');
+}
+// fix a mistake in a game that already happened
+function editGame(id) {
+  if (!requireAdmin()) return;
+  const g = S.games.find(x => x.id === id);
+  if (!g) { toast('המשחק לא נמצא'); return; }
+  if (isCash(g)) { editCashGame(g); return; }
+  const counts = {};
+  for (const pid of g.playerIds) counts[pid] = entriesOf(g, pid);
+  const r = g.results || {};
+  manualState = {
+    date: g.date, players: counts,
+    first: r.first || null, second: r.second || null, bubble: r.bubble || null,
+    chop: !!r.chop, pctFirst: r.pctFirst != null ? r.pctFirst : 50,
+    editId: g.id,
+  };
+  closeSheet();
+  go('manual');
+}
+function manualView() {
+  if (!manualState) { go('history'); return; }
+  const m = manualState;
+  const app = document.getElementById('app');
+  const act = S.players.filter(p => p.active !== false);
+  const chosen = Object.keys(m.players);
+  app.innerHTML = `
+    <div class="topbar"><h1>${m.editId ? 'עריכת משחק' : 'משחק ישן'}</h1><button class="btn-ghost" onclick="manualState=null;go(${m.editId ? `'summary','${m.editId}'` : `'history'`})">ביטול</button></div>
+    ${m.editId ? `<div class="card" style="padding:10px 14px"><div class="empty" style="padding:0;font-size:.78rem;text-align:right">עריכת משחק שכבר נשמר. דמי הבית והחיסכון של אותו ערב נשמרים כפי שהיו.</div></div>` : ''}
+    <label class="field"><span>תאריך</span><input type="date" value="${m.date}" onchange="manualState.date=this.value"></label>
+    <h2>סיום המשחק</h2>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip ${!m.chop ? 'on' : ''}" onclick="mSetChop(false)">🥇🥈 ראשון ושני</div>
+      <div class="chip ${m.chop ? 'on' : ''}" onclick="mSetChop(true)">🤝 צ׳ופ</div>
+      ${m.chop ? `<div class="chip">${m.pctFirst}/${100 - m.pctFirst}</div>` : ''}
+    </div>
+    ${m.chop ? `<label class="field"><span>אחוז ל${m.first ? esc(pname(m.first)) : 'מנצח א׳'} (%)</span>
+      <input type="number" inputmode="numeric" min="0" max="100" value="${m.pctFirst}" onchange="mSetPct(this.value)"></label>` : ''}
+    <h2>שחקנים וכניסות</h2>
+    <div class="chips" style="margin-bottom:12px">${act.filter(p => !m.players[p.id]).map(p =>
+      `<div class="chip" onclick="manualState.players['${p.id}']=1;render()">${chipLabel(p)}</div>`).join('')}
+      <div class="chip" onclick="quickAddPlayer('manual')">+ שחקן חדש</div></div>
+    ${chosen.map(pid => `
+      <div class="prow">${avatarHtml(player(pid))}
+        <div class="name"><div class="nick">${esc(pname(pid))}</div>
+          ${nickLine(pid)}
+          <div class="meta">
+            <span class="chip ${m.first === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('first','${pid}')">${m.chop ? '🤝א' : '🥇'}</span>
+            <span class="chip ${m.second === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('second','${pid}')">${m.chop ? '🤝ב' : '🥈'}</span>
+            <span class="chip ${m.bubble === pid ? 'on' : ''}" style="padding:2px 10px;font-size:.72rem" onclick="mSetPlace('bubble','${pid}')">🎈</span>
+          </div></div>
+        <div class="stepper">
+          <button onclick="mStep('${pid}',-1)">−</button>
+          <div class="cnt num">${m.players[pid]}</div>
+          <button onclick="mStep('${pid}',1)">+</button>
+        </div></div>`).join('')}
+    ${chosen.length ? `<div class="card" style="margin-top:6px;color:var(--ink-dim);font-size:.85rem">
+      קופה: <b style="color:var(--gold)">₪${(Object.values(m.players).reduce((a, b) => a + b, 0) * S.settings.entryPrice).toLocaleString('he-IL')}</b>
+      · ${Object.values(m.players).reduce((a, b) => a + b, 0)} כניסות</div>` : ''}
+    <div style="height:10px"></div>
+    <button class="btn-primary btn-big" ${chosen.length < 2 || !m.first || !m.second ? 'disabled' : ''} onclick="saveManual()">${m.editId ? 'שמירת השינויים' : 'שמירת המשחק'}</button>
+    ${chosen.length >= 2 && (!m.first || !m.second) ? `<div class="empty" style="padding:10px">סמנו ${m.chop ? 'את שני המנצחים בצ׳ופ' : '🥇 ו-🥈'} ליד השחקנים</div>` : ''}`;
+}
+function mStep(pid, d) {
+  const m = manualState;
+  const v = (m.players[pid] || 1) + d;
+  if (v <= 0) { delete m.players[pid]; for (const k of ['first', 'second', 'bubble']) if (m[k] === pid) m[k] = null; }
+  else m.players[pid] = Math.min(v, S.settings.maxRebuys + 1);
+  render();
+}
+function mSetChop(v) { manualState.chop = v; render(); }
+function mSetPct(v) {
+  let n = Math.round(Number(v));
+  if (!isFinite(n)) n = 50;
+  manualState.pctFirst = Math.max(0, Math.min(100, n));
+  render();
+}
+function mSetPlace(place, pid) {
+  const m = manualState;
+  for (const k of ['first', 'second', 'bubble']) if (k !== place && m[k] === pid) m[k] = null;
+  m[place] = m[place] === pid ? null : pid;
+  render();
+}
+function saveManual() {
+  if (!requireAdmin()) return;
+  const m = manualState;
+  const pids = Object.keys(m.players);
+  if (pids.length < 2 || !m.first || !m.second) return;
+  const results = { first: m.first, second: m.second, bubble: m.bubble || null,
+                    chop: !!m.chop, pctFirst: m.chop ? m.pctFirst : undefined };
+
+  if (m.editId) {
+    const eg = S.games.find(x => x.id === m.editId);
+    if (!eg) { toast('המשחק לא נמצא'); manualState = null; go('history'); return; }
+    eg.date = m.date;
+    eg.playerIds = pids;
+    // the entry list is rewritten wholesale, so mark the revision — a device
+    // holding the old list must not merge its entries back in
+    eg.entries = pids.map(pid => ({ id: uid(), pid, delta: m.players[pid], ts: eg.startAt || Date.now() }));
+    eg.entriesRev = (eg.entriesRev || 0) + 1;
+    eg.results = results;
+    eg.status = 'done';
+    eg.editedAt = Date.now();
+    touchGame(eg);
+    rememberFinished(eg.id);
+    saveLocal(); pushState();
+    manualState = null;
+    go('summary', eg.id); toast('השינויים נשמרו ✔');
+    return;
+  }
+
+  const g = {
+    id: uid(), date: m.date, startAt: null, endAt: null, status: 'done', isManual: true,
+    config: {
+      entryPrice: S.settings.entryPrice, houseFee: S.settings.houseFee,
+      savingsFee: 0, // historical games predate the savings fund
+      splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
+      maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
+      breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
+    },
+    playerIds: pids,
+    entries: pids.map(pid => ({ id: uid(), pid, delta: m.players[pid], ts: Date.now() })),
+    updatedAt: Date.now(),
+    results, timer: null,
+  };
+  S.games.push(g); save(); manualState = null;
+  go('summary', g.id); toast('המשחק נוסף להיסטוריה ✔');
+}
+
+/* ---- settings ---- */
+function settingsView() {
+  const s = S.settings;
+  const app = document.getElementById('app');
+  const sessionCard = `
+    <h2>חשבון</h2>
+    <div class="card">
+      <div class="row">
+        <div class="grow">מחובר: <b>${isAdmin() ? `<span class="gi" style="color:var(--gold)">${ICONS.key}</span> מנהל` : isDealer() ? `🃏 ${esc(SESSION.name)} · דילר` : `<span class="gi">${ICONS.user}</span> ` + esc(SESSION.name)}</b>
+        <div id="sync-badge" style="font-size:.75rem;color:var(--ink-dim);margin-top:2px">${syncBadgeText()}</div></div>
+        <button onclick="logout()">התנתקות</button>
+      </div>
+    </div>`;
+  if (!isAdmin()) {
+    app.innerHTML = `
+      <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.settings}</span> הגדרות</h1></div>
+      ${sessionCard}
+      <div class="empty">${isDealer()
+        ? 'כדילר אפשר להוסיף כניסות, לצרף שחקנים ולהפעיל את השעון.<br>סיום משחק, עריכה, מחיקה והגדרות — למנהל בלבד 🔒'
+        : 'שינוי הגדרות, פתיחת משחקים והוספת משחקים —<br>למנהל בלבד 🔒<br><br>כדי להתחבר כמנהל, התנתקו ובחרו «מנהל» במסך הכניסה.'}</div>`;
+    return;
+  }
+  app.innerHTML = `
+    <div class="topbar"><h1><span class="gi" style="color:var(--gold)">${ICONS.settings}</span> הגדרות</h1></div>
+    ${sessionCard}
+    <h2>כסף</h2>
+    <div class="card">
+      <label class="field"><span>מחיר כניסה (₪)</span><input type="number" inputmode="numeric" id="st-entry" value="${s.entryPrice}"></label>
+      <div class="row">
+        <label class="field grow"><span>חיסכון לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-savings" value="${s.savingsFee}"></label>
+        <label class="field grow"><span>דמי בית לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-fee" value="${s.houseFee}"></label>
+      </div>
+      <div class="empty" style="padding:0 0 10px;font-size:.75rem;text-align:right">סה״כ ${shk((s.savingsFee || 0) + (s.houseFee || 0))} מכל שחקן בערב.</div>
+      <div class="row">
+        <label class="field grow"><span>מקום 1 (%)</span><input type="number" inputmode="numeric" id="st-s1" value="${s.splitFirst}"></label>
+        <label class="field grow"><span>מקום 2 (%)</span><input type="number" inputmode="numeric" id="st-s2" value="${s.splitSecond}"></label>
+        <label class="field grow"><span>בית (%)</span><input type="number" inputmode="numeric" id="st-sh" value="${s.splitHouse}"></label>
+      </div>
+      <label class="field"><span>תקרת רי-באי לשחקן</span><input type="number" inputmode="numeric" id="st-cap" value="${s.maxRebuys}"></label>
+    </div>
+    <h2>קאש 💵</h2>
+    <div class="card">
+      <div class="row">
+        <label class="field grow"><span>כניסה בקאש (₪)</span><input type="number" inputmode="numeric" id="st-cash-entry" value="${s.cashEntryPrice}"></label>
+        <label class="field grow"><span>דמי בית בקאש (₪)</span><input type="number" inputmode="numeric" id="st-cash-fee" value="${s.cashHouseFee}"></label>
+      </div>
+      <div class="row">
+        <label class="field grow"><span>צ׳יפים לכניסה</span><input type="number" inputmode="numeric" id="st-cash-chips" value="${s.cashChips}"></label>
+        <label class="field grow"><span>אורך סבב (דק')</span><input type="number" inputmode="numeric" id="st-cash-round" value="${s.cashRoundMinutes}"></label>
+      </div>
+      <div class="empty" style="padding:0;font-size:.75rem;text-align:right">בקאש הבליינדים קבועים על 10/20 והשעון סופר סבב ומתחיל מחדש. אין חלוקת פרסים ואין חיסכון — כל שחקן לוקח את הצ׳יפים שלו, והבית גובה דמי בית בלבד.<br>ערבי קאש נשמרים בהיסטוריה אך לא נכנסים לטבלה או ל-MVP.</div>
+    </div>
+
+    <h2>שעון</h2>
+    <div class="card">
+      <label class="field"><span>אורך רמה</span>
+        <select id="st-lvlmin">
+          ${[10, 12, 15, 20].map(v => `<option value="${v}" ${s.levelMinutes === v ? 'selected' : ''}>${v} דקות ${v === 10 ? '(טורבו)' : v === 15 ? '(רגיל)' : v === 20 ? '(רגוע)' : ''}</option>`).join('')}
+        </select></label>
+      <div class="row">
+        <label class="field grow"><span>הפסקה אוטומטית אחרי רמה (0 = ללא)</span><input type="number" inputmode="numeric" id="st-brkafter" value="${s.breakAfter}"></label>
+        <label class="field grow"><span>אורך הפסקה (דק')</span><input type="number" inputmode="numeric" id="st-brkmin" value="${s.breakMinutes}"></label>
+      </div>
+      <div class="row" style="margin-top:4px">
+        <div class="chip ${s.sound ? 'on' : ''}" onclick="S.settings.sound=!S.settings.sound;save();render()">🔔 צלילים</div>
+        <div class="chip ${s.voice ? 'on' : ''}" onclick="S.settings.voice=!S.settings.voice;save();render()">🗣 הכרזה קולית</div>
+        <div class="chip ${s.haptics !== false ? 'on' : ''}" onclick="S.settings.haptics=!(S.settings.haptics!==false);save();render()">📳 רטט</div>
+      </div>
+      <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
+        סולם בליינדים: 10/20 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← 200/400 ← 300/600 ← 400/800 ← 500/1000 ← 750/1500 ← 1000/2000 ← 1500/3000 ← 2000/4000 ← 3000/6000 ← 4000/8000 ← 5000/10000 (אחרונה). כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
+        אין סבב אוטומטי אחרי 40/80 — הפסקות נקבעות ידנית מכפתורי ☕ / 🚬 שליד השעון.
+      </div>
+    </div>
+    <button class="btn-primary btn-big" onclick="saveSettings()">שמירת הגדרות</button>
+    <h2>קופת חיסכון</h2>
+    <div class="card">
+      <div style="font-weight:700;font-size:1.35rem;color:var(--gold)">₪${savingsBalance().toLocaleString('he-IL')}</div>
+      <div class="empty" style="padding:8px 0 0;font-size:.76rem;text-align:right">נצבר מכל המשחקים — ${shk(s.savingsFee)} מכל שחקן בערב, לציוד, בלאי ותיקונים.<br>כסף החיסכון נפרד לחלוטין מכספי הבית.</div>
+    </div>
+
+    <h2>🃏 קוד דילר</h2>
+    <div class="card">
+      <div id="dealer-code" style="font-size:1.35rem;font-weight:700;color:var(--gold);direction:ltr;text-align:center;letter-spacing:.14em;font-family:'Frank Ruhl Libre',serif">·····</div>
+      <div class="row" style="margin-top:12px">
+        <button class="grow" onclick="copyDealerCode()">📋 העתקה</button>
+        <button class="grow" onclick="shareDealerCode()">שיתוף</button>
+      </div>
+      <div class="empty" style="padding:10px 0 0;font-size:.76rem;text-align:right">מי שנכנס עם הקוד הזה יכול להוסיף כניסות, לצרף שחקנים ולהפעיל את השעון — ותו לא. הוא לא יכול לסיים משחק, למחוק, לערוך או לשנות הגדרות, והשרת חוסם אותו גם אם ינסה.<br>הקוד נגזר מהסיסמה שלכם: שינוי הסיסמה מחליף אותו.</div>
+    </div>
+
+    <h2>🏆 עונה</h2>
+    <div class="card">
+      <div class="row"><div class="grow">
+        <div style="font-weight:700">${seasonStart() ? esc(seasonName()) : 'אין עונה פתוחה'}</div>
+        <div class="sub" style="color:var(--ink-dim);font-size:.78rem">${seasonStart()
+          ? `מ-${heDateShort(seasonStart())} · ${seasonGames().filter(g => g.status === 'done' && !isCash(g)).length} משחקים`
+          : 'הטבלה מציגה כרגע רק את כל הזמנים'}</div>
+      </div></div>
+      <button class="btn-ghost" style="width:100%;margin-top:12px" onclick="newSeasonDlg()">${seasonStart() ? 'סגירת העונה ופתיחת חדשה' : 'פתיחת עונה חדשה'}</button>
+      ${seasonsDone().length ? `<div class="empty" style="padding:10px 0 0;font-size:.76rem;text-align:right">${seasonsDone().length} עונות סגורות — האלופים מוצגים בתחתית הטבלה.</div>` : ''}
+    </div>
+
+    <h2>גיבוי וייצוא</h2>
+    <div class="card">
+      <div class="row">
+        <button class="grow" onclick="exportBackup()">⬇️ ייצוא גיבוי</button>
+        <button class="grow" onclick="importBackup()">⬆️ שחזור מגיבוי</button>
+      </div>
+      <button style="width:100%;margin-top:8px" onclick="exportCsv()">📊 ייצוא לאקסל (CSV)</button>
+      <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">גיבוי JSON מחזיר את הכול בדיוק כפי שהוא. קובץ ה-CSV נותן שורה לכל שחקן בכל משחק — נוח לגיליון.<br>הנתונים נשמרים במכשיר ובענן; כדאי לייצא גיבוי מדי פעם.</div>
+    </div>
+    <div class="card">
+      <button class="btn-ghost btn-danger" style="width:100%" onclick="wipeAll()">🗑 מחיקת כל הנתונים</button>
+    </div>`;
+}
+function saveSettings() {
+  if (!requireAdmin()) return;
+  const v = id => parseInt(document.getElementById(id).value, 10);
+  const s1 = v('st-s1'), s2 = v('st-s2'), sh = v('st-sh');
+  if (s1 + s2 + sh !== 100) { toast(`האחוזים חייבים להסתכם ב-100 (עכשיו ${s1 + s2 + sh})`); return; }
+  Object.assign(S.settings, {
+    entryPrice: Math.max(1, v('st-entry')), houseFee: Math.max(0, v('st-fee')),
+    savingsFee: Math.max(0, v('st-savings')),
+    cashEntryPrice: Math.max(1, v('st-cash-entry')), cashHouseFee: Math.max(0, v('st-cash-fee')),
+    cashChips: Math.max(1, v('st-cash-chips')), cashRoundMinutes: Math.max(1, v('st-cash-round')),
+    splitFirst: s1, splitSecond: s2, splitHouse: sh,
+    maxRebuys: Math.max(0, v('st-cap')),
+    levelMinutes: parseInt(document.getElementById('st-lvlmin').value, 10),
+    breakAfter: Math.max(0, v('st-brkafter')), breakMinutes: Math.max(1, v('st-brkmin')),
+  });
+  S.settings.updatedAt = Date.now();
+  save(); toast('ההגדרות נשמרו ✔ (יחולו ממשחק חדש)');
+}
+function settingsExtras() {
+  const el = document.getElementById('dealer-code');
+  if (!el || !isAdmin() || !SESSION.key) return;
+  dealerCodeFor(SESSION.key).then(c => { el.textContent = prettyCode(c); }).catch(() => {});
+}
+async function copyDealerCode() {
+  if (!requireAdmin()) return;
+  const code = prettyCode(await dealerCodeFor(SESSION.key));
+  try { await navigator.clipboard.writeText(code); toast('הקוד הועתק 📋'); }
+  catch (e) { toast(code); }
+}
+async function shareDealerCode() {
+  if (!requireAdmin()) return;
+  const code = prettyCode(await dealerCodeFor(SESSION.key));
+  const text = `קוד דילר לערב פוקר: ${code}\nנכנסים באפליקציה דרך «דילר» במסך הכניסה.`;
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+function newSeasonDlg() {
+  if (!requireAdmin()) return;
+  const open = !!seasonStart();
+  // a season usually wants to start where the games already are, not today
+  const earliest = liveGames().filter(g => g.status === 'done' && !isCash(g)).map(g => g.date).sort()[0];
+  const suggested = open ? today() : (earliest || today());
+  sheet(`<h3>🏆 ${open ? 'סגירת עונה ופתיחת חדשה' : 'פתיחת עונה'}</h3>
+    ${open ? `<label class="field"><span>שם העונה שנסגרת</span><input type="text" id="se-old" value="${esc(seasonName())}"></label>` : ''}
+    <label class="field"><span>שם העונה החדשה</span><input type="text" id="se-new" placeholder="לדוגמה: עונה 2026"></label>
+    <label class="field"><span>העונה מתחילה בתאריך</span>
+      <input type="date" id="se-date" value="${suggested}" oninput="seasonPreview()"></label>
+    <div class="card" style="padding:10px 14px;margin-bottom:12px">
+      <div class="empty" id="se-preview" style="padding:0;font-size:.8rem;text-align:right">${seasonPreviewText(suggested)}</div>
+    </div>
+    <div class="empty" style="padding:0 0 12px;font-size:.76rem;text-align:right">${open
+      ? 'העונה הנוכחית נסגרת עם האלוף שלה ונשמרת ברשימת האלופים. אפשר להתחיל את החדשה בתאריך אחר — למשל בתחילת החודש.'
+      : 'אפשר להתחיל את העונה בעבר כדי שהמשחקים שכבר שיחקתם ייכנסו אליה. טבלת כל הזמנים לא משתנה — פשוט נוספת לה לשונית.'}</div>
+    <button class="btn-primary btn-big" onclick="startSeason()">${open ? 'סגירה ופתיחה' : 'פתיחת עונה'}</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">ביטול</button>`);
+  setTimeout(() => document.getElementById('se-new')?.focus(), 60);
+}
+function seasonPreviewText(from) {
+  if (!from) return 'בחרו תאריך התחלה.';
+  const n = gamesFrom(from);
+  if (from > today()) return `העונה תתחיל ב-${heDateShort(from)} — עדיין בעתיד, אז היא תתחיל ריקה.`;
+  return n
+    ? `${n} ${n === 1 ? 'משחק ייכנס' : 'משחקים ייכנסו'} לעונה החדשה (מ-${heDateShort(from)}).`
+    : `אף משחק קיים לא ייכנס — העונה תתחיל ריקה מ-${heDateShort(from)}.`;
+}
+function seasonPreview() {
+  const el = document.getElementById('se-preview');
+  const d = document.getElementById('se-date');
+  if (el && d) el.textContent = seasonPreviewText(d.value);
+}
+function startSeason() {
+  if (!requireAdmin()) return;
+  const newName = (document.getElementById('se-new').value || '').trim();
+  const oldEl = document.getElementById('se-old');
+  const start = (document.getElementById('se-date').value || '').trim() || today();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) { toast('תאריך לא תקין'); return; }
+  if (seasonStart()) {
+    if (start < seasonStart()) { toast('העונה החדשה לא יכולה להתחיל לפני הקודמת'); return; }
+    const rec = closeSeason((oldEl && oldEl.value.trim()) || seasonName(), newName, start);
+    closeSheet(); statsMode = 'season'; render();
+    toast(rec.championPid ? `אלוף ${rec.name}: ${pname(rec.championPid)} 🏆` : 'העונה נסגרה');
+    return;
+  }
+  S.settings.seasonStart = start;
+  S.settings.seasonName = newName || 'עונה חדשה';
+  S.settings.updatedAt = Date.now();
+  save(); closeSheet(); statsMode = 'season'; render();
+  toast(`העונה נפתחה 🏆 · ${gamesFrom(start)} משחקים`);
+}
+function downloadFile(name, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+// one row per player per night — the shape a spreadsheet actually wants
+function exportCsv() {
+  const rows = [['תאריך', 'סוג', 'שחקן', 'כינוי', 'כניסות', 'שולם', 'זכייה', 'מאזן', 'סיום']];
+  const games = liveGames().filter(g => g.status === 'done')
+    .sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+  for (const g of games) {
+    const p = payouts(g);
+    for (const pid of g.playerIds) {
+      const cash = isCash(g);
+      const place = cash ? ''
+        : g.results.first === pid ? (g.results.chop ? 'צ׳ופ' : '1')
+        : g.results.second === pid ? (g.results.chop ? 'צ׳ופ' : '2')
+        : g.results.bubble === pid ? 'באבל בוי' : '';
+      const win = cash ? (Number((g.results.cashouts || {})[pid]) || 0)
+        : ((g.results.first === pid ? p.first : 0) + (g.results.second === pid ? p.second : 0));
+      const paid = entriesOf(g, pid) * g.config.entryPrice + (g.config.houseFee || 0) + (cash ? 0 : savingsFeeOf(g.config));
+      rows.push([g.date, cash ? 'קאש' : 'טורניר', pname(pid), pnick(pid) || '',
+                 entriesOf(g, pid), paid, win, p.nets[pid], place]);
+    }
+  }
+  const csv = '\ufeff' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  downloadFile(`pokernight-${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv;charset=utf-8');
+  toast(`יוצאו ${rows.length - 1} שורות ✔`);
+}
+function exportBackup() {
+  const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `pokernight-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('הגיבוי ירד ✔');
+}
+function importBackup() {
+  if (!requireAdmin()) return;
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (!Array.isArray(data.players) || !Array.isArray(data.games)) throw new Error('bad');
+        confirmDlg('השחזור יחליף את כל הנתונים הקיימים. להמשיך?', () => {
+          S = data; S.settings = Object.assign({}, DEFAULT_SETTINGS, S.settings || {});
+          save(); render(); toast('שוחזר בהצלחה ✔');
+        });
+      } catch (e) { toast('קובץ גיבוי לא תקין'); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+function wipeAll() {
+  if (!requireAdmin()) return;
+  confirmDlg('למחוק את <b>כל</b> הנתונים לצמיתות?<br>שחקנים, משחקים וסטטיסטיקות — מהמכשיר ומהענן.', () => {
+    confirmDlg('בטוחים לגמרי? אין דרך חזרה.', () => {
+      S = { players: [], games: [], settings: Object.assign({}, DEFAULT_SETTINGS) };
+      save(); go('home'); toast('הכול נמחק');
+    });
+  });
+}
+
+/* ================= sheet / dialogs ================= */
+function sheet(html) {
+  closeSheet();
+  const ov = document.createElement('div');
+  ov.className = 'overlay'; ov.id = 'sheet-ov';
+  ov.onclick = e => { if (e.target === ov) closeSheet(); };
+  ov.innerHTML = `<div class="sheet-modal">${html}</div>`;
+  document.body.appendChild(ov);
+}
+function closeSheet() { document.getElementById('sheet-ov')?.remove(); }
+function confirmDlg(msg, onYes) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.style.alignItems = 'center';
+  ov.innerHTML = `<div class="sheet-modal" style="border-radius:20px;max-width:340px;margin:0 16px">
+    <div style="margin-bottom:16px;line-height:1.5">${msg}</div>
+    <div class="row"><button class="grow" id="cd-no">ביטול</button>
+    <button class="grow btn-primary" id="cd-yes">אישור</button></div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#cd-no').onclick = () => ov.remove();
+  ov.querySelector('#cd-yes').onclick = () => { ov.remove(); onYes(); };
+}
+
+/* ================= boot ================= */
+window.addEventListener('load', () => {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('service-worker.js').then(reg => {
+    if (!reg) return;
+    // a build already sitting in the wings, or one that lands while we watch
+    const watch = w => w && w.addEventListener('statechange', () => {
+      if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdateBar('יש גרסה חדשה של האפליקציה');
+    });
+    if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar('יש גרסה חדשה של האפליקציה');
+    reg.addEventListener('updatefound', () => watch(reg.installing));
+    setInterval(() => reg.update().catch(() => {}), 300000);
+  }).catch(() => {});
+});
+const _g = activeGame();
+if (_g) {
+  timerCatchUp(_g, true);
+  view = 'game';
+  try {
+    const last = JSON.parse(localStorage.getItem(VIEW_KEY));
+    if (last && (last.v === 'clock' || last.v === 'game')) { view = last.v; viewParam = last.param ?? null; }
+  } catch (e) {}
+}
+if (TV_MODE) { view = 'clock'; viewParam = null; document.getElementById('nav').hidden = true; }
+render();
+if (_g || TV_MODE) startTick();
+acquireWake();
+if (SESSION) { pullState(); pullPhotoIndex(true); }
+</script>
+</body>
+</html>
