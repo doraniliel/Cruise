@@ -118,6 +118,51 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
     return pay.first === 81 && pay.second === 54 && pay.first + pay.second === pay.pool - pay.house10;
   }));
 
+  /* ---- the starting stack is a setting, not a constant ---- */
+  ok('the finished game pinned the default stack',
+     await p.evaluate(() => chipsOf(S.games.find(x => x.status === 'done')) === 1500));
+  ok('settings start at the default stack',
+     await p.evaluate(() => S.settings.chipsPerEntry === 1500));
+
+  await p.evaluate(() => go('settings')); await p.waitForTimeout(400);
+  ok('settings offer a stack field', await p.locator('#st-chips').count() === 1);
+  ok('the field shows the current stack', (await p.inputValue('#st-chips')) === '1500');
+  await p.fill('#st-chips', '5000');
+  await p.locator('button', { hasText: 'שמירת הגדרות' }).click(); await p.waitForTimeout(500);
+  ok('the new stack is saved', await p.evaluate(() => S.settings.chipsPerEntry === 5000));
+
+  await p.evaluate(() => go('newgame')); await p.waitForTimeout(300);
+  ok('the new-game screen quotes the new stack',
+     (await p.textContent('#app')).includes('5,000') || (await p.textContent('#app')).includes('5000'));
+  for (const n of ['דניאל', 'יוסי', 'טל']) await p.locator('#ng-chips .chip', { hasText: n }).first().click();
+  await p.locator('button', { hasText: 'התחלת טורניר' }).click(); await p.waitForTimeout(500);
+  ok('a new tournament pins the chosen stack',
+     await p.evaluate(() => activeGame().config.chipsPerEntry === 5000));
+  ok('and the old game keeps the stack it was played with',
+     await p.evaluate(() => chipsOf(S.games.find(x => x.status === 'done')) === 1500));
+
+  // 3 players, 3 entries x 5000 = 15,000 chips, 5,000 average
+  const stack = await p.evaluate(() => {
+    const g = activeGame();
+    return { total: totalEntries(g) * chipsOf(g), avg: Math.round(totalEntries(g) * chipsOf(g) / g.playerIds.length) };
+  });
+  ok('chips in play follow the setting', stack.total === 15000);
+  ok('the average stack follows the setting', stack.avg === 5000);
+
+  // a rebuy adds one more stack to the table
+  await p.evaluate(() => go('game')); await p.waitForTimeout(300);
+  await p.locator('.prow', { hasText: 'דניאל' }).locator('.btn-plus').click();
+  await p.waitForTimeout(400);
+  ok('a rebuy adds a full stack to the table',
+     await p.evaluate(() => totalEntries(activeGame()) * chipsOf(activeGame()) === 20000));
+
+  // a silly value cannot be saved
+  await p.evaluate(() => go('settings')); await p.waitForTimeout(400);
+  await p.fill('#st-chips', '0');
+  await p.locator('button', { hasText: 'שמירת הגדרות' }).click(); await p.waitForTimeout(400);
+  ok('a stack of zero is clamped to at least one',
+     await p.evaluate(() => S.settings.chipsPerEntry >= 1));
+
   console.log(errs.length ? 'JS ERRORS: ' + errs.join('; ') : 'No JS errors.');
   await b.close(); server.close();
   process.exit(failures ? 1 : 0);

@@ -206,7 +206,7 @@
     display: flex; margin-top: 3.2vh;
     flex-wrap: wrap; justify-content: center; max-width: 96vw;
   }
-  #clock .stats > div { text-align: center; margin: .6vh max(18px, 6vmin); }
+  #clock .stats > div { text-align: center; margin: .7vh max(14px, 4vmin); }
   #clock .stats .v { font-size: max(1.15rem, 4.6vmin); font-weight: 700; line-height: 1.1; }
   #clock .stats .k { font-size: max(.72rem, 1.9vmin); color: var(--ink-dim); margin-top: .35em; letter-spacing: .04em; }
   #clock.break-mode { background: linear-gradient(rgba(46, 37, 15, .8), rgba(10, 8, 2, .92)), url(bg.jpg) center / cover no-repeat var(--bg); }
@@ -505,7 +505,9 @@
 /* ================= state ================= */
 const LS_KEY = 'pokernight_v1';
 // bumped on every deploy; a device holding an older build is told to refresh
-const APP_BUILD = 37;
+const APP_BUILD = 38;
+// the starting stack a buy-in is worth; only the fallback for games saved
+// before it became a setting, and for history that never pinned one
 const CHIPS_PER_ENTRY = 1500;
 const LADDER = [
   [10, 20], [20, 40], [30, 60], [40, 80],
@@ -518,6 +520,7 @@ const DEFAULT_SETTINGS = {
   splitFirst: 65, splitSecond: 25, splitHouse: 10,
   maxRebuys: 12,
   levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
+  chipsPerEntry: CHIPS_PER_ENTRY,
   cashEntryPrice: 20, cashHouseFee: 10, cashChips: 1000, cashRoundMinutes: 15,
   sound: true, voice: true, haptics: true,
   seasonStart: null, seasonName: '',
@@ -1202,6 +1205,8 @@ const isDeleted = g => !!g && g.deleted === true;
 const liveGames = () => S.games.filter(g => !g.deleted);
 const isCash = g => !!g && g.type === 'cash';
 const chipsOf = g => (g && g.config && g.config.chipsPerEntry) || CHIPS_PER_ENTRY;
+// what a new tournament would hand out, from settings
+const tourChips = () => Math.max(1, S.settings.chipsPerEntry || CHIPS_PER_ENTRY);
 const CASH_BLINDS = [10, 20];
 const activeGame = () => S.games.find(g => g.status === 'active' && !g.deleted);
 const entriesOf = (g, pid) => g.entries.filter(e => e.pid === pid).reduce((s, e) => s + e.delta, 0);
@@ -1714,7 +1719,7 @@ function newGameView() {
     <button class="btn-primary btn-big" ${ngSel.size < 2 ? 'disabled' : ''} onclick="startGame()">התחלת ${cash ? 'קאש' : 'טורניר'} (${ngSel.size} שחקנים)</button>
     <div class="empty" style="padding-top:14px">${cash
       ? `בליינדים קבועים 10/20 · סבב ${S.settings.cashRoundMinutes} דק' · כל כניסה ${shk(S.settings.cashEntryPrice)} (${(S.settings.cashChips).toLocaleString()} צ'יפים) · דמי בית ${shk(S.settings.cashHouseFee)} לשחקן`
-      : `בליינדים עולים מ-10/20 · ${S.settings.levelMinutes} דק' לרמה · כל כניסה ${shk(S.settings.entryPrice)} (${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים)`}</div>`;
+      : `בליינדים עולים מ-10/20 · ${S.settings.levelMinutes} דק' לרמה · כל כניסה ${shk(S.settings.entryPrice)} (${tourChips().toLocaleString()} צ'יפים)`}</div>`;
 }
 function setNgType(t) { ngType = t; render(); }
 function ngToggle(pid) { ngSel.has(pid) ? ngSel.delete(pid) : ngSel.add(pid); render(); }
@@ -1739,7 +1744,7 @@ function startGame() {
     splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
     maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
     breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
-    chipsPerEntry: CHIPS_PER_ENTRY,
+    chipsPerEntry: tourChips(),
   };
   const g = {
     id: uid(), date: new Date().toISOString().slice(0, 10),
@@ -2304,6 +2309,7 @@ function clockView() {
       <div><div class="v num" id="ck-entries"></div><div class="k">כניסות</div></div>
       <div><div class="v num" id="ck-pool"></div><div class="k">קופה</div></div>
       <div><div class="v num" id="ck-avg"></div><div class="k">צ'יפ ממוצע</div></div>
+      <div><div class="v num" id="ck-chips"></div><div class="k">צ'יפים במשחק</div></div>
       <div><div class="v num" id="ck-elapsed"></div><div class="k">זמן משחק</div></div>
     </div>
     <div class="panel" id="ck-panel"></div>
@@ -2412,8 +2418,10 @@ function updateClock() {
   el('ck-players').textContent = g.playerIds.length;
   el('ck-entries').textContent = totalEntries(g);
   el('ck-pool').textContent = '₪' + poolOf(g).toLocaleString('he-IL');
-  const avg = g.playerIds.length ? Math.round(totalEntries(g) * chipsOf(g) / g.playerIds.length) : 0;
+  const chips = totalEntries(g) * chipsOf(g);
+  const avg = g.playerIds.length ? Math.round(chips / g.playerIds.length) : 0;
   el('ck-avg').textContent = avg.toLocaleString('he-IL');
+  el('ck-chips').textContent = chips.toLocaleString('he-IL');
   const mins = g.startAt ? Math.max(0, Math.floor((Date.now() - g.startAt) / 60000)) : 0;
   el('ck-elapsed').textContent = `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')}`;
   const poolLabel = document.querySelector('#clock .stats div:nth-child(3) .k');
@@ -2441,10 +2449,10 @@ function tvPanels(g) {
   if (!isCash(g)) out.push(`🥇 <b>₪${p.first.toLocaleString('he-IL')}</b> &nbsp; 🥈 <b>₪${p.second.toLocaleString('he-IL')}</b>`);
   else out.push(`🏠 דמי בית: <b>₪${p.houseFees.toLocaleString('he-IL')}</b>`);
   // these hold from the first night, so the panel always has somewhere to go
-  out.push(`🎲 <b>${(totalEntries(g) * chipsOf(g)).toLocaleString('he-IL')}</b> צ'יפים על השולחן`);
+  out.push(`🎲 <b>${(totalEntries(g) * chipsOf(g)).toLocaleString('he-IL')}</b>&nbsp;צ'יפים על השולחן`);
   out.push(isCash(g)
-    ? `⏱ סבב של <b>${g.config.levelMinutes}</b> דקות · בליינדים קבועים <b>10/20</b>`
-    : `⏱ <b>${g.config.levelMinutes}</b> דקות לרמה · <b>${(g.config.ladder || LADDER).length}</b> רמות בסולם`);
+    ? `⏱ סבב של <b>${g.config.levelMinutes}</b>&nbsp;דקות · בליינדים קבועים <b>10/20</b>`
+    : `⏱ <b>${g.config.levelMinutes}</b>&nbsp;דקות לרמה · <b>${(g.config.ladder || LADDER).length}</b>&nbsp;רמות בסולם`);
   const lead = g.playerIds.map(pid => ({ pid, n: entriesOf(g, pid) })).sort((a, b) => b.n - a.n)[0];
   if (lead && lead.n > 1) out.push(`הכי הרבה כניסות הערב: <b>${esc(pname(lead.pid))}</b> (${lead.n})`);
   const mvp = currentMvp();
@@ -3128,6 +3136,7 @@ function saveManual() {
       splitFirst: S.settings.splitFirst, splitSecond: S.settings.splitSecond, splitHouse: S.settings.splitHouse,
       maxRebuys: S.settings.maxRebuys, levelMinutes: S.settings.levelMinutes,
       breakAfter: S.settings.breakAfter, breakMinutes: S.settings.breakMinutes,
+      chipsPerEntry: tourChips(),
     },
     playerIds: pids,
     entries: pids.map(pid => ({ id: uid(), pid, delta: m.players[pid], ts: Date.now() })),
@@ -3165,7 +3174,11 @@ function settingsView() {
     ${sessionCard}
     <h2>כסף</h2>
     <div class="card">
-      <label class="field"><span>מחיר כניסה (₪)</span><input type="number" inputmode="numeric" id="st-entry" value="${s.entryPrice}"></label>
+      <div class="row">
+        <label class="field grow"><span>מחיר כניסה (₪)</span><input type="number" inputmode="numeric" id="st-entry" value="${s.entryPrice}"></label>
+        <label class="field grow"><span>צ׳יפים לכניסה</span><input type="number" inputmode="numeric" id="st-chips" value="${s.chipsPerEntry || CHIPS_PER_ENTRY}"></label>
+      </div>
+      <div class="empty" style="padding:0 0 10px;font-size:.75rem;text-align:right">כל כניסה שווה ${(s.chipsPerEntry || CHIPS_PER_ENTRY).toLocaleString('he-IL')} צ׳יפים. השעון מציג לפי זה את הצ׳יפ הממוצע ואת סך הצ׳יפים על השולחן.</div>
       <div class="row">
         <label class="field grow"><span>חיסכון לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-savings" value="${s.savingsFee}"></label>
         <label class="field grow"><span>דמי בית לשחקן (₪)</span><input type="number" inputmode="numeric" id="st-fee" value="${s.houseFee}"></label>
@@ -3207,7 +3220,7 @@ function settingsView() {
         <div class="chip ${s.haptics !== false ? 'on' : ''}" onclick="S.settings.haptics=!(S.settings.haptics!==false);save();render()">📳 רטט</div>
       </div>
       <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
-        סולם בליינדים: 10/20 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← 200/400 ← 300/600 ← 400/800 ← 500/1000 ← 750/1500 ← 1000/2000 ← 1500/3000 ← 2000/4000 ← 3000/6000 ← 4000/8000 ← 5000/10000 (אחרונה). כל כניסה = ${CHIPS_PER_ENTRY.toLocaleString()} צ'יפים.<br>
+        סולם בליינדים: 10/20 ← 20/40 ← 30/60 ← 40/80 ← 50/100 ← 75/150 ← 100/200 ← 150/300 ← 200/400 ← 300/600 ← 400/800 ← 500/1000 ← 750/1500 ← 1000/2000 ← 1500/3000 ← 2000/4000 ← 3000/6000 ← 4000/8000 ← 5000/10000 (אחרונה). כל כניסה = ${tourChips().toLocaleString()} צ'יפים (ניתן לשינוי למעלה, תחת «כסף»).<br>
         אין סבב אוטומטי אחרי 40/80 — הפסקות נקבעות ידנית מכפתורי ☕ / 🚬 שליד השעון.
       </div>
     </div>
@@ -3260,7 +3273,7 @@ function saveSettings() {
   if (s1 + s2 + sh !== 100) { toast(`האחוזים חייבים להסתכם ב-100 (עכשיו ${s1 + s2 + sh})`); return; }
   Object.assign(S.settings, {
     entryPrice: Math.max(1, v('st-entry')), houseFee: Math.max(0, v('st-fee')),
-    savingsFee: Math.max(0, v('st-savings')),
+    savingsFee: Math.max(0, v('st-savings')), chipsPerEntry: Math.max(1, v('st-chips')),
     cashEntryPrice: Math.max(1, v('st-cash-entry')), cashHouseFee: Math.max(0, v('st-cash-fee')),
     cashChips: Math.max(1, v('st-cash-chips')), cashRoundMinutes: Math.max(1, v('st-cash-round')),
     splitFirst: s1, splitSecond: s2, splitHouse: sh,

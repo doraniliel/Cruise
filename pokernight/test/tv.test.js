@@ -93,6 +93,9 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
   ok('the clock previews the level after that', upnext.includes('30/60'));
   // 4 players x 1 entry x 1500 chips = 6000 chips, 1500 average
   ok('the clock shows the average stack', (await tv.textContent('#ck-avg')).replace(/[^0-9]/g, '') === '1500');
+  ok('the clock shows every chip on the table', (await tv.textContent('#ck-chips')).replace(/[^0-9]/g, '') === '6000');
+  ok('both chip figures are labelled', (await tv.textContent('#clock .stats')).includes('צ\'יפ ממוצע')
+     && (await tv.textContent('#clock .stats')).includes('צ\'יפים במשחק'));
   ok('the clock shows elapsed game time', /^\d+:\d\d$/.test((await tv.textContent('#ck-elapsed')).trim()));
   ok('the pot is on screen', (await tv.textContent('#ck-pool')).includes('120'));
 
