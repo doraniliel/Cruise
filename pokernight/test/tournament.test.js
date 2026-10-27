@@ -1,5 +1,6 @@
 // Tournament checks. Run with: node test/tournament.test.js  (from the pokernight folder)
 const { chromium } = require('playwright-core');
+const { launch: launchBrowser } = require('./browser');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -21,7 +22,7 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
 
 (async () => {
   await new Promise(r => server.listen(8172, r));
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+  const b = await launchBrowser(chromium);
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
 

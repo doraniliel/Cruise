@@ -1,6 +1,7 @@
 // The wall screen (?tv=1) and the "your build is old" banner.
 // Run with: node test/tv.test.js  (from the pokernight folder)
 const { chromium } = require('playwright-core');
+const { launch: launchBrowser } = require('./browser');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -46,7 +47,7 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
 
 (async () => {
   const s1 = mkServer(), s2 = mkServer(); s1.listen(8196); s2.listen(8197);
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+  const b = await launchBrowser(chromium);
   const admin = await b.newPage({ viewport: { width: 390, height: 844 } });
   const tv = await b.newPage({ viewport: { width: 1920, height: 1080 } });
   const errs = [];

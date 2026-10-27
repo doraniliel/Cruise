@@ -2,6 +2,7 @@
 // worked out by hand from the games the test seeds.
 // Run with: node test/season.test.js  (from the pokernight folder)
 const { chromium } = require('playwright-core');
+const { launch: launchBrowser } = require('./browser');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -65,7 +66,7 @@ const mk = (id, date, first, second, third) => ({
 
 (async () => {
   const s = mkServer(); s.listen(8195);
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+  const b = await launchBrowser(chromium);
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
 

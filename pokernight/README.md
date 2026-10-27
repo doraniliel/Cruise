@@ -58,7 +58,8 @@ PWA בעברית מלאה (RTL), מותקנת למסך הבית, עובדת גם
 | `netlify/lib/dealer.mjs` | גזירת קוד הדילר ואכיפת מה מותר לו לשנות |
 | `netlify/functions/comments.mjs` | קיר ההודעות של השחקנים |
 | `netlify/functions/photos.mjs` | התמונות מהערבים — מפתח נפרד לכל משחק |
-| `test/*.test.js` | 268 בדיקות אוטומטיות (Playwright מול ענן מדומה) |
+| `test/*.test.js` | 274 בדיקות אוטומטיות (Playwright מול ענן מדומה) |
+| `test/browser.js` | איתור הדפדפן המובנה — הנתיב שלו משתנה בין גרסאות |
 | `netlify.toml`, `package.json` | הגדרות Netlify ותלות `@netlify/blobs` |
 | `manifest.json` | הגדרות PWA (התקנה למסך הבית) |
 | `service-worker.js` | עבודה אופליין |

@@ -1,6 +1,7 @@
 // Deleting a game must stick — through a refresh, through sync, and on every
 // other device. Run with: node test/delete.test.js  (from the pokernight folder)
 const { chromium } = require('playwright-core');
+const { launch: launchBrowser } = require('./browser');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -51,7 +52,7 @@ const adminLogin = async (p, port) => {
 
 (async () => {
   const s1 = mkServer(), s2 = mkServer(); s1.listen(8180); s2.listen(8181);
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+  const b = await launchBrowser(chromium);
   const phone = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errs = []; phone.on('pageerror', e => errs.push('phone: ' + e.message));
 

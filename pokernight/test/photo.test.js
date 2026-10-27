@@ -2,6 +2,7 @@
 // document, and only the people running the night can attach one.
 // Run with: node test/photo.test.js  (from the pokernight folder)
 const { chromium } = require('playwright-core');
+const { launch: launchBrowser } = require('./browser');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -91,7 +92,7 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
 
   const s1 = mkServer(), s2 = mkServer(), s3 = mkServer();
   s1.listen(8200); s2.listen(8201); s3.listen(8202);
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+  const b = await launchBrowser(chromium);
   const admin = await b.newPage({ viewport: { width: 390, height: 844 } });
   const mate  = await b.newPage({ viewport: { width: 390, height: 844 } });
   const deal  = await b.newPage({ viewport: { width: 390, height: 844 } });

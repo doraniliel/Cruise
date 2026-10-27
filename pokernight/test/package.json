@@ -1,0 +1,11 @@
+{
+  "name": "pokernight-tests",
+  "private": true,
+  "description": "Browser tests. After a fresh container: npm install in this folder, then node test/<name>.test.js from the parent.",
+  "scripts": {
+    "test": "for f in *.test.js; do node \"$f\" || exit 1; done"
+  },
+  "dependencies": {
+    "playwright-core": "^1.64.1"
+  }
+}

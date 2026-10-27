@@ -1,5 +1,6 @@
 // Blind-structure checks. Run with: node test/ladder.test.js  (from the pokernight folder)
 const { chromium } = require('playwright-core');
+const { launch: launchBrowser } = require('./browser');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -21,13 +22,14 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
 
 const EXPECTED = [
   [10,20],[20,40],[30,60],[40,80],[50,100],[75,150],[100,200],[150,300],[200,400],
-  [300,600],[400,800],[500,1000],[750,1500],[1000,2000],
+  [300,600],[400,800],[500,1000],
+  [600,1200],[700,1400],[800,1600],[900,1800],[1000,2000],
   [1500,3000],[2000,4000],[3000,6000],[4000,8000],[5000,10000],
 ];
 
 (async () => {
   await new Promise(r => server.listen(8170, r));
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+  const b = await launchBrowser(chromium);
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
 
@@ -44,6 +46,16 @@ const EXPECTED = [
      ladder.every((l, i) => i === 0 || l[1] <= ladder[i-1][1] * 2));
   ok('big blind is always twice the small blind', ladder.every(l => l[1] === l[0] * 2));
   ok('blinds always increase', ladder.every((l, i) => i === 0 || l[1] > ladder[i-1][1]));
+
+  // the climb from 500/1000 to 1000/2000 goes in four even steps now,
+  // and the old 750/1500 shortcut is gone
+  ok('750/1500 is no longer in the ladder',
+     !ladder.some(l => l[0] === 750));
+  ok('the middle of the ladder steps 600, 700, 800, 900',
+     JSON.stringify(ladder.slice(11, 17)) ===
+     JSON.stringify([[500,1000],[600,1200],[700,1400],[800,1600],[900,1800],[1000,2000]]));
+  ok('no step past 500/1000 raises the blinds by more than a fifth',
+     ladder.slice(12, 17).every((l, i) => l[1] / ladder[11 + i][1] <= 1.21));
 
   // start a game and confirm the clock walks the whole structure
   await p.evaluate(() => {
@@ -84,6 +96,15 @@ const EXPECTED = [
     return g.timer.idx === buildTimeline(g.config).length - 1
         && document.getElementById('app').innerHTML.length > 300;
   }));
+
+  // the ladder printed in settings is built from LADDER, so it can never
+  // fall out of step with the structure the games actually use
+  const blurb = await p.evaluate(() => { go('settings'); return document.getElementById('app').innerText; });
+  await p.waitForTimeout(200);
+  ok('settings print the ladder from the real structure',
+     EXPECTED.every(([sb, bb]) => blurb.includes(sb + '/' + bb)));
+  ok('settings no longer mention the removed level', !blurb.includes('750/1500'));
+  ok('settings name the number of levels', blurb.includes(String(EXPECTED.length) + ' רמות'));
 
   console.log(errs.length ? 'JS ERRORS: ' + errs.join('; ') : 'No JS errors.');
   await b.close(); server.close();

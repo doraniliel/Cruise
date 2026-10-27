@@ -1,6 +1,7 @@
 // A dealer runs the table and nothing else — in the UI and, more importantly,
 // on the server. Run with: node test/dealer.test.js  (from the pokernight folder)
 const { chromium } = require('playwright-core');
+const { launch: launchBrowser } = require('./browser');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -112,7 +113,7 @@ const ok = (n, c) => { if (!c) failures++; console.log((c ? 'PASS' : 'FAIL') + '
 
   /* ---------- part 2: the app ---------- */
   const s1 = mkServer(), s2 = mkServer(); s1.listen(8190); s2.listen(8191);
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' });
+  const b = await launchBrowser(chromium);
   const admin = await b.newPage({ viewport: { width: 390, height: 844 } });
   const dealer = await b.newPage({ viewport: { width: 390, height: 844 } });
   const errs = [];
