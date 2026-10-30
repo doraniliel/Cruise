@@ -490,6 +490,34 @@
     width: 100%; margin-bottom: 12px; border-style: dashed;
     border-color: rgba(212, 175, 55, .3); color: var(--gold-dim);
   }
+
+  /* ---- volume slider ---- */
+  input[type=range] {
+    width: 100%; height: 34px; padding: 0; background: transparent;
+    -webkit-appearance: none; appearance: none;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, rgba(212, 175, 55, .18), var(--gold-dim));
+  }
+  input[type=range]::-moz-range-track {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, rgba(212, 175, 55, .18), var(--gold-dim));
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 24px; height: 24px; border-radius: 50%; margin-top: -9px;
+    background: radial-gradient(circle at 35% 28%, #f4de85, #d4af37 55%, #967922);
+    border: 2px solid rgba(0, 0, 0, .35);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .5);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, #f4de85, #d4af37 55%, #967922);
+    border: 2px solid rgba(0, 0, 0, .35);
+  }
+  input[type=range]:focus { outline: none; }
+  input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(212, 175, 55, .22); }
 </style>
 </head>
 <body>
@@ -505,7 +533,7 @@
 /* ================= state ================= */
 const LS_KEY = 'pokernight_v1';
 // bumped on every deploy; a device holding an older build is told to refresh
-const APP_BUILD = 39;
+const APP_BUILD = 40;
 // the starting stack a buy-in is worth; only the fallback for games saved
 // before it became a setting, and for history that never pinned one
 const CHIPS_PER_ENTRY = 1500;
@@ -523,7 +551,7 @@ const DEFAULT_SETTINGS = {
   levelMinutes: 15, breakAfter: 0, breakMinutes: 10,
   chipsPerEntry: CHIPS_PER_ENTRY,
   cashEntryPrice: 20, cashHouseFee: 10, cashChips: 1000, cashRoundMinutes: 15,
-  sound: true, voice: true, haptics: true,
+  sound: true, voice: true, haptics: true, volume: 100, voiceLang: 'en',
   seasonStart: null, seasonName: '',
 };
 
@@ -1337,7 +1365,7 @@ function startBreak(g, min) {
 function breakFinished(g) {
   g.timer.mode = 'awaiting'; saveLocal();
   playGong();
-  if (S.settings.voice) speak('ההפסקה הסתיימה');
+  speak(heVoice() ? 'ההפסקה הסתיימה' : 'Break is over', { delay: 1300 });
   flashClock();
 }
 function resumeFromBreak(g) {
@@ -1414,39 +1442,77 @@ function timerJump(g, dir) {
 let warned = {};
 function levelChanged(g) {
   const tl = buildTimeline(g.config), cur = levelAt(tl, g.timer.idx);
-  cur.type === 'break' ? playBreakStart() : playLevelUp();
+  const isBreak = cur.type === 'break';
+  isBreak ? playBreakStart() : playLevelUp();
   vibe([80, 60, 80]);
-  if (S.settings.voice) {
-    if (cur.type === 'break') speak('הפסקה');
-    else speak(`הבליינדים עולים: ${cur.sb}, ${cur.bb}`);
-  }
+  if (isBreak) speak(heVoice() ? 'הפסקה' : 'Break time', { delay: 1100 });
+  else speak(heVoice() ? `הבליינדים עולים. ${cur.sb}, ${cur.bb}`
+                       : `Blinds going up. ${cur.sb}, ${cur.bb}`, { delay: LEVEL_UP_MS });
   flashClock();
 }
 
-/* sounds */
-let audioCtx;
+/* ---- sounds ----
+   Everything goes through one gain stage into a limiter. That is what lets
+   the alerts be genuinely loud over a talkative room without the clipping
+   buzz you get from simply turning the oscillators up. ---- */
+let audioCtx, masterGain, limiter;
+const volumeLevel = () => Math.max(0, Math.min(200, S.settings.volume == null ? 100 : S.settings.volume)) / 100;
 function ac() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    limiter = audioCtx.createDynamicsCompressor();
+    limiter.threshold.value = -8;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.25;
+    masterGain = audioCtx.createGain();
+    masterGain.connect(limiter);
+    limiter.connect(audioCtx.destination);
+  }
   if (audioCtx.state === 'suspended') audioCtx.resume();
+  masterGain.gain.value = volumeLevel();
   return audioCtx;
 }
-function tone(freq, dur, delay, vol) {
+// browsers keep audio muted until the page has been touched once
+function unlockAudio() { try { ac(); } catch (e) {} }
+function tone(freq, dur, delay, vol, type) {
   const ctx = ac(), o = ctx.createOscillator(), gn = ctx.createGain();
-  o.frequency.value = freq; o.type = 'sine';
-  gn.gain.setValueAtTime(0, ctx.currentTime + delay);
-  gn.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + 0.02);
-  gn.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
-  o.connect(gn).connect(ctx.destination);
-  o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + dur + 0.05);
+  o.frequency.value = freq; o.type = type || 'sine';
+  const t0 = ctx.currentTime + delay;
+  gn.gain.setValueAtTime(0, t0);
+  gn.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+  gn.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+  o.connect(gn); gn.connect(masterGain);
+  o.start(t0); o.stop(t0 + dur + 0.05);
 }
-function playGong() { if (!S.settings.sound) return; try { tone(660, 1.2, 0, .5); tone(880, 1.4, 0.15, .35); tone(440, 1.6, 0.05, .3); } catch (e) {} }
-// blinds up: a rising figure, so the room can tell it from a break ending
-function playLevelUp() { if (!S.settings.sound) return; try { tone(523, .5, 0, .38); tone(659, .5, .14, .38); tone(880, 1.1, .28, .42); } catch (e) {} }
+// a note with its harmonics stacked on top. A bare sine is polite and gets
+// lost; the overtones are what carry across a room.
+function bell(freq, dur, delay, vol) {
+  tone(freq, dur, delay, vol, 'triangle');
+  tone(freq * 2, dur * 0.7, delay, vol * 0.5);
+  tone(freq * 3, dur * 0.45, delay, vol * 0.26);
+  tone(freq * 4.2, dur * 0.3, delay, vol * 0.13);
+}
+function playGong() { if (!S.settings.sound) return; try { bell(660, 1.3, 0, .5); bell(880, 1.4, .15, .34); bell(440, 1.6, .05, .3); } catch (e) {} }
+/* blinds up: a bright rising figure played twice, so it reads as an
+   announcement rather than a notification. Long enough that the spoken line
+   can follow it instead of landing on top. */
+const LEVEL_UP_MS = 2250;
+function playLevelUp() {
+  if (!S.settings.sound) return;
+  try {
+    const figure = (t, v) => { bell(784, .40, t, v); bell(988, .40, t + .17, v); bell(1319, 1.0, t + .34, v * 1.12); };
+    figure(0, .62);
+    figure(1.0, .70);
+  } catch (e) {}
+}
 // break called: a soft descending figure
-function playBreakStart() { if (!S.settings.sound) return; try { tone(784, .45, 0, .3); tone(587, .55, .16, .3); tone(392, .9, .32, .26); } catch (e) {} }
+function playBreakStart() { if (!S.settings.sound) return; try { bell(784, .45, 0, .34); bell(587, .55, .16, .32); bell(392, .95, .32, .28); } catch (e) {} }
 // game over: a short fanfare
-function playFanfare() { if (!S.settings.sound) return; try { tone(523, .25, 0, .34); tone(659, .25, .16, .34); tone(784, .25, .32, .36); tone(1047, .9, .48, .4); } catch (e) {} }
-function playWarn() { if (!S.settings.sound) return; try { tone(880, .18, 0, .35); tone(880, .18, .28, .35); } catch (e) {} }
+function playFanfare() { if (!S.settings.sound) return; try { bell(523, .25, 0, .38); bell(659, .25, .16, .38); bell(784, .25, .32, .40); bell(1047, .95, .48, .46); } catch (e) {} }
+// one minute left: three clipped beeps, nothing like the level-up figure
+function playWarn() { if (!S.settings.sound) return; try { bell(1047, .17, 0, .42); bell(1047, .17, .26, .42); bell(1047, .2, .52, .42); } catch (e) {} }
 function playClick() { if (!S.settings.sound) return; try { tone(1200, .06, 0, .18); } catch (e) {} }
 const loginAudio = new Audio('login.mp3');
 loginAudio.preload = 'auto';
@@ -1478,12 +1544,38 @@ function playChipSynth() {
     tone(680, .10, 0.52, .32);
   } catch (e) {}
 }
-function speak(text) {
-  try {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'he-IL'; u.rate = 0.95;
-    speechSynthesis.speak(u);
-  } catch (e) {}
+/* The announcement used to fire at the same instant as the chime, so the two
+   fought each other — a good part of why it was hard to make out. It waits
+   for the chime now. It also picks a real installed voice instead of hoping
+   the browser guesses from a language tag, which on a TV often meant silence. */
+const heVoice = () => S.settings.voiceLang === 'he';
+function pickVoice(lang) {
+  let list = [];
+  try { list = speechSynthesis.getVoices() || []; } catch (e) { return null; }
+  const want = lang === 'he' ? ['he-il', 'he', 'iw'] : ['en-us', 'en-gb', 'en'];
+  for (const w of want) {
+    const v = list.find(x => x.lang && x.lang.toLowerCase().replace('_', '-').startsWith(w));
+    if (v) return v;
+  }
+  return null;
+}
+try { speechSynthesis.addEventListener('voiceschanged', () => {}); } catch (e) {}
+function speak(text, opts) {
+  if (!S.settings.voice) return;
+  const o = opts || {};
+  const say = () => {
+    try {
+      speechSynthesis.cancel();                 // never queue behind a stale line
+      const u = new SpeechSynthesisUtterance(text);
+      const lang = o.lang || (heVoice() ? 'he' : 'en');
+      const v = pickVoice(lang);
+      if (v) u.voice = v;
+      u.lang = v ? v.lang : (lang === 'he' ? 'he-IL' : 'en-US');
+      u.rate = 0.92; u.pitch = 1; u.volume = 1;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  };
+  o.delay ? setTimeout(say, o.delay) : say();
 }
 
 /* wake lock */
@@ -1499,7 +1591,8 @@ function releaseWake() { try { wakeLock && wakeLock.release(); } catch (e) {} wa
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') acquireWake();
 });
-document.addEventListener('click', acquireWake, { passive: true });
+document.addEventListener('click', () => { acquireWake(); unlockAudio(); }, { passive: true });
+document.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
 setInterval(acquireWake, 30000);
 
 /* ---- periodic refresh: reloads the app every 2 minutes so a display left
@@ -3220,6 +3313,17 @@ function settingsView() {
         <div class="chip ${s.voice ? 'on' : ''}" onclick="S.settings.voice=!S.settings.voice;save();render()">🗣 הכרזה קולית</div>
         <div class="chip ${s.haptics !== false ? 'on' : ''}" onclick="S.settings.haptics=!(S.settings.haptics!==false);save();render()">📳 רטט</div>
       </div>
+      <div class="row" style="margin-top:10px">
+        <div class="grow" style="font-size:.85rem;color:var(--ink-dim)">שפת ההכרזה</div>
+        <div class="chips">
+          <div class="chip ${s.voiceLang !== 'he' ? 'on' : ''}" onclick="S.settings.voiceLang='en';save();render()">English</div>
+          <div class="chip ${s.voiceLang === 'he' ? 'on' : ''}" onclick="S.settings.voiceLang='he';save();render()">עברית</div>
+        </div>
+      </div>
+      <label class="field" style="margin-top:12px"><span>עוצמת הצלילים — <b id="vol-val">${s.volume == null ? 100 : s.volume}%</b></span>
+        <input type="range" id="st-vol" min="0" max="200" step="10" value="${s.volume == null ? 100 : s.volume}" oninput="setVolume(this.value)"></label>
+      <button style="width:100%" onclick="testLevelSound()">🔊 בדיקת «הבליינדים עולים»</button>
+      <div class="empty" style="padding:10px 0 0;font-size:.75rem;text-align:right">מעל 100% הצליל נדחס במקום להתעוות, כדי שיישמע חזק גם מעל שולחן רועש. כדאי לכוון את זה מהמסך שמנגן בפועל — הטלוויזיה או הטאבלט.</div>
       <div class="empty" style="padding:10px 0 0;font-size:.78rem;text-align:right">
         סולם בליינדים (${LADDER.length} רמות): ${LADDER.map(([sb, bb]) => `${sb}/${bb}`).join(' ← ')} (אחרונה). כל כניסה = ${tourChips().toLocaleString()} צ'יפים (ניתן לשינוי למעלה, תחת «כסף»).<br>
         אין סבב אוטומטי אחרי 40/80 — הפסקות נקבעות ידנית מכפתורי ☕ / 🚬 שליד השעון.
@@ -3267,6 +3371,21 @@ function settingsView() {
       <button class="btn-ghost btn-danger" style="width:100%" onclick="wipeAll()">🗑 מחיקת כל הנתונים</button>
     </div>`;
 }
+function setVolume(v) {
+  S.settings.volume = Math.max(0, Math.min(200, Math.round(Number(v) || 0)));
+  const el = document.getElementById('vol-val');
+  if (el) el.textContent = S.settings.volume + '%';
+  if (masterGain) masterGain.gain.value = volumeLevel();
+}
+// hear exactly what the room will hear, chime and announcement together
+function testLevelSound() {
+  unlockAudio();
+  const sample = LADDER[6];                                // 100 / 200
+  playLevelUp();
+  speak(heVoice() ? `הבליינדים עולים. ${sample[0]}, ${sample[1]}`
+                  : `Blinds going up. ${sample[0]}, ${sample[1]}`, { delay: LEVEL_UP_MS });
+  toast('מנגן… ' + (S.settings.volume == null ? 100 : S.settings.volume) + '%');
+}
 function saveSettings() {
   if (!requireAdmin()) return;
   const v = id => parseInt(document.getElementById(id).value, 10);
@@ -3280,6 +3399,7 @@ function saveSettings() {
     splitFirst: s1, splitSecond: s2, splitHouse: sh,
     maxRebuys: Math.max(0, v('st-cap')),
     levelMinutes: parseInt(document.getElementById('st-lvlmin').value, 10),
+    volume: Math.max(0, Math.min(200, parseInt(document.getElementById('st-vol').value, 10) || 0)),
     breakAfter: Math.max(0, v('st-brkafter')), breakMinutes: Math.max(1, v('st-brkmin')),
   });
   S.settings.updatedAt = Date.now();
